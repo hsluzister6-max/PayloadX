@@ -13,10 +13,12 @@ const FEATURES = [
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
 const LATEST_DL = `${REPO_URL}/releases/latest/download`;
+const DOWNLOAD_LINK = "https://github.com/hsluzister6-max/PayloadX/releases/download/v1.0.0/PayloadX_1.0.0_aarch64.dmg";
 
 const PLATFORMS = [
-  { os: "macOS", arch: "Universal", icon: <FaApple />, primary: true, link: `${LATEST_DL}/PayloadX_x64.dmg` },
+  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: DOWNLOAD_LINK },
   { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${LATEST_DL}/PayloadX_x64-setup.exe` },
+  { os: "iOS", arch: "Beta", icon: <FaApple />, link: DOWNLOAD_LINK },
   { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.AppImage` },
   { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.deb` },
 ];
@@ -35,10 +37,12 @@ export default function App() {
     // Detect OS
     const ua = window.navigator.userAgent;
 
-    if (ua.indexOf("Win") !== -1) {
+    if (/iPad|iPhone|iPod/.test(ua)) {
+      setUserOS({ name: "iOS", link: DOWNLOAD_LINK, icon: <FaApple /> });
+    } else if (ua.indexOf("Win") !== -1) {
       setUserOS({ name: "Windows", link: `${LATEST_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
     } else if (ua.indexOf("Mac") !== -1) {
-      setUserOS({ name: "macOS", link: `${LATEST_DL}/PayloadX_x64.dmg`, icon: <FaApple /> });
+      setUserOS({ name: "macOS", link: DOWNLOAD_LINK, icon: <FaApple /> });
     } else if (ua.indexOf("Linux") !== -1) {
       setUserOS({ name: "Linux", link: `${LATEST_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> });
     }
@@ -58,7 +62,10 @@ export default function App() {
       {/* NAV */}
       <nav className={styles.nav}>
         <PayloadX size="28px" fontSize="10px" />
-        <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
+          <span className={styles.betaBadge}>Beta</span>
+        </div>
         <div className={styles.navSpacer} />
         <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
       </nav>
@@ -75,7 +82,10 @@ export default function App() {
 
           <h1 className={styles.title}>
             <span className={`${styles.titleChrome} metallic-app-name`} style={{ display: 'block', paddingBottom: '0.2em' }}>Payload</span>
-            <span className={`${styles.titleX} metallic-app-name`} style={{ display: 'block' }}>X</span>
+            <span className={`${styles.titleX} metallic-app-name`} style={{ display: 'block', position: 'relative', width: 'fit-content' }}>
+              X
+              <span className={styles.heroBeta}>BETA</span>
+            </span>
           </h1>
 
           <p className={styles.tagline}>API Testing,<br />Simplified.</p>
@@ -184,7 +194,7 @@ export default function App() {
       {/* FOOTER */}
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
-          <span className={styles.footerCopy}>© 2024 PayloadX</span>
+          <span className={styles.footerCopy}>© 2024 PayloadX <span className={styles.betaBadge} style={{ marginLeft: '4px' }}>Beta</span></span>
           <span className={styles.footerDivider}>·</span>
           <span className={styles.footerCreator}>
             Crafted by <span className={styles.metallicText}>Sundan Sharma</span>

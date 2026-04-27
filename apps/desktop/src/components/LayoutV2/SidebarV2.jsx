@@ -898,7 +898,7 @@ export default function SidebarV2({
           <div className="sdbv2-logo-row">
             <PayloadX className="w-5 h-5" fontSize="8px" />
             <div className="sdbv2-logo-text">
-              <span className="sdbv2-app-name"><span className="metallic-app-name">PayloadX</span> </span>
+              <span className="sdbv2-app-name"><span className="metallic-app-name">PayloadX</span> <span className="ml-1 px-1.5 py-0.5 text-[8px] font-bold bg-white/5 border border-white/10 rounded text-gray-500 uppercase tracking-wider">Beta</span></span>
               {currentTeam && (
                 <span className="sdbv2-team-tag">
                   {currentTeam.name}

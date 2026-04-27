@@ -261,9 +261,10 @@ export default function Docs({ onBack }) {
       <div className={styles.scanlines} aria-hidden />
 
       <nav className={styles.nav}>
-        <div onClick={onBack} className={styles.logoName}>
+        <div onClick={onBack} className={styles.logoName} style={{ display: 'flex', alignItems: 'center' }}>
            <PayloadX size="28px" fontSize="10px" />
            <span style={{ marginLeft: '10px' }} className="metallic-app-name py-2 px-1 text-2xl">PayloadX</span>
+           <span style={{ marginLeft: '8px', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#5a6070', border: '1px solid rgba(255,255,255,0.05)' }}>BETA</span>
         </div>
         <div className={styles.navSpacer} />
         <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer" className={styles.navLink}>

@@ -79,7 +79,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "PayloadX API Studio",
+        "title": "PayloadX API Studio (Beta)",
         "width": 1400,
         "height": 900,
         "minWidth": 1000,

@@ -66,6 +66,36 @@
   letter-spacing: 0.04em;
 }
 
+.betaBadge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #5a6070;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-transform: uppercase;
+}
+
+.heroBeta {
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #2e3445;
+  letter-spacing: 0.2em;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  position: absolute;
+  top: 10px;
+  left: calc(100% + 15px);
+}
+
 .navSpacer {
   flex: 1;
 }
