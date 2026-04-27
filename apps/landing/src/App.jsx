@@ -11,6 +11,7 @@ const FEATURES = [
   { icon: <Code size={18} />, tag: "DEV", title: "Type-Safe", desc: "Powered by TypeScript" },
 ];
 
+
 const STACK = [
   { name: "TypeScript", percentage: 50, color: "#3178c6", desc: "Type-Safe Frontend Logic" },
   { name: "Rust", percentage: 40, color: "#dea584", desc: "High-Performance Core Engine" },
