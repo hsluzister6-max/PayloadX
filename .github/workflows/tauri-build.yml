@@ -71,7 +71,7 @@ jobs:
           tagName: ${{ github.ref_name }}
 
       - name: Rename Release Assets
-        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        if: github.event_name == 'push'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -83,10 +83,20 @@ jobs:
             }
             const { owner, repo } = context.repo;
             const release = await github.rest.repos.getRelease({ owner, repo, release_id });
+            
+            // First, find and delete any assets that already have the 'static' names we want to use
+            const targetNames = new Set(release.data.assets.map(a => a.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '')));
+            
             for (const asset of release.data.assets) {
-              // Remove version like _1.0.0, -1.0.0, or _v1.0.0
               const newName = asset.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '');
               if (newName !== asset.name) {
+                // Check if an asset with newName already exists in the release
+                const existing = release.data.assets.find(a => a.name === newName);
+                if (existing) {
+                  console.log(`Deleting existing asset: ${newName}`);
+                  await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
+                }
+                
                 console.log(`Renaming ${asset.name} to ${newName}`);
                 try {
                   await github.rest.repos.updateReleaseAsset({

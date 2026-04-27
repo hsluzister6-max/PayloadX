@@ -20,14 +20,14 @@ const STACK = [
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
 const VERSION = "1.0.0";
-const RELEASE_URL = `${REPO_URL}/releases/download/v${VERSION}`;
+const STATIC_DL = `${REPO_URL}/releases/download/main`;
 
 const PLATFORMS = [
-  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: `${RELEASE_URL}/PayloadX_${VERSION}_aarch64.dmg` },
-  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${RELEASE_URL}/PayloadX_${VERSION}_x64-setup.exe` },
+  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: `${STATIC_DL}/PayloadX_aarch64.dmg` },
+  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${STATIC_DL}/PayloadX_x64-setup.exe` },
   { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#" },
-  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${RELEASE_URL}/payload-x_${VERSION}_amd64.AppImage` },
-  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${RELEASE_URL}/payload-x_${VERSION}_amd64.deb` },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.AppImage` },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.deb` },
 ];
 
 
@@ -37,7 +37,7 @@ export default function App() {
   const [active, setActive] = useState(null);
   const [tick, setTick] = useState(0);
   const [view, setView] = useState("hero"); // "hero" or "docs"
-  const [userOS, setUserOS] = useState({ name: "Windows", link: `${LATEST_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
+  const [userOS, setUserOS] = useState({ name: "Windows", link: `${STATIC_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => (t + 1) % 4), 2200);
@@ -46,13 +46,13 @@ export default function App() {
     const ua = window.navigator.userAgent;
 
     if (/iPad|iPhone|iPod/.test(ua)) {
-      setUserOS({ name: "iOS", link: DOWNLOAD_LINK, icon: <FaApple /> });
+      setUserOS({ name: "iOS", link: "#", icon: <FaApple /> });
     } else if (ua.indexOf("Win") !== -1) {
-      setUserOS({ name: "Windows", link: `${LATEST_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
+      setUserOS({ name: "Windows", link: `${STATIC_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
     } else if (ua.indexOf("Mac") !== -1) {
-      setUserOS({ name: "macOS", link: DOWNLOAD_LINK, icon: <FaApple /> });
+      setUserOS({ name: "macOS", link: `${STATIC_DL}/PayloadX_aarch64.dmg`, icon: <FaApple /> });
     } else if (ua.indexOf("Linux") !== -1) {
-      setUserOS({ name: "Linux", link: `${LATEST_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> });
+      setUserOS({ name: "Linux", link: `${STATIC_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> });
     }
 
     return () => clearInterval(id);
@@ -76,6 +76,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
           <span className={styles.betaBadge}>Beta</span>
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '600', opacity: 0.5, marginLeft: '4px' }}>v{VERSION}</span>
         </div>
         <div className={styles.navSpacer} />
         <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
