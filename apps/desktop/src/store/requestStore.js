@@ -8,6 +8,9 @@ import { useConnectivityStore } from '@/store/connectivityStore';
 import toast from 'react-hot-toast';
 import { deepClone } from '@/utils/perf';
 import { rustUrlParseParams, rustUrlBuild, jsBuildUrl, jsParseParams } from '@/lib/rust';
+import { useCollectionStore } from '@/store/collectionStore';
+import { useProjectStore } from '@/store/projectStore';
+import { useTeamStore } from '@/store/teamStore';
 
 const defaultRequest = () => ({
   _id: null,
@@ -16,7 +19,7 @@ const defaultRequest = () => ({
   protocol: 'http', // 'http' | 'ws' | 'socketio'
   url: '',
   headers: [{ id: uuidv4(), key: '', value: '', enabled: true }],
-  params:  [{ id: uuidv4(), key: '', value: '', enabled: true }],
+  params: [{ id: uuidv4(), key: '', value: '', enabled: true }],
   body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] },
   auth: { type: 'none', bearer: { token: '' }, basic: { username: '', password: '' }, apikey: { key: '', value: '', in: 'header' } },
   collectionId: null,
@@ -65,7 +68,7 @@ export const useRequestStore = create(
           headers: ensureIds(req.headers),
           url: jsBuildUrl(req.url || '', req.params || [])
         };
-        
+
         set((state) => {
           const tabId = newReq._id;
           // O(1) lookup via Map
@@ -73,7 +76,7 @@ export const useRequestStore = create(
             localStorageService.saveCurrentRequest(newReq);
             return { currentRequest: newReq, noActiveRequest: false, activeTabId: tabId };
           }
-          
+
           const newTabId = tabId || uuidv4();
           const newTab = {
             id: newTabId,
@@ -108,23 +111,23 @@ export const useRequestStore = create(
 
       closeTab: (id) => {
         set((state) => {
-           const newTabs = state.openTabs.filter(t => t.id !== id);
-           const newTabsById = new Map(state._tabsById);
-           newTabsById.delete(id);
-           const isClosingActive = state.activeTabId === id;
-           
-           if (newTabs.length === 0) {
-              return { openTabs: [], activeTabId: null, currentRequest: defaultRequest(), noActiveRequest: true, _tabsById: newTabsById };
-           }
-           
-           if (isClosingActive) {
-              const closingIndex = state.openTabs.findIndex(t => t.id === id);
-              const nextTab = newTabs[closingIndex - 1] || newTabs[0];
-              localStorageService.saveCurrentRequest(nextTab.request);
-              return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request, noActiveRequest: false, _tabsById: newTabsById };
-           }
-           
-           return { openTabs: newTabs, _tabsById: newTabsById };
+          const newTabs = state.openTabs.filter(t => t.id !== id);
+          const newTabsById = new Map(state._tabsById);
+          newTabsById.delete(id);
+          const isClosingActive = state.activeTabId === id;
+
+          if (newTabs.length === 0) {
+            return { openTabs: [], activeTabId: null, currentRequest: defaultRequest(), noActiveRequest: true, _tabsById: newTabsById };
+          }
+
+          if (isClosingActive) {
+            const closingIndex = state.openTabs.findIndex(t => t.id === id);
+            const nextTab = newTabs[closingIndex - 1] || newTabs[0];
+            localStorageService.saveCurrentRequest(nextTab.request);
+            return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request, noActiveRequest: false, _tabsById: newTabsById };
+          }
+
+          return { openTabs: newTabs, _tabsById: newTabsById };
         });
       },
 
@@ -136,7 +139,7 @@ export const useRequestStore = create(
         set((state) => {
           const tabToKeep = state.openTabs.find(t => t.id === id);
           if (!tabToKeep) return state;
-          
+
           localStorageService.saveCurrentRequest(tabToKeep.request);
           return { openTabs: [tabToKeep], activeTabId: tabToKeep.id, currentRequest: tabToKeep.request, noActiveRequest: false };
         });
@@ -146,9 +149,9 @@ export const useRequestStore = create(
         set((state) => {
           const index = state.openTabs.findIndex(t => t.id === id);
           if (index === -1) return state;
-          
+
           const newTabs = state.openTabs.slice(0, index + 1);
-          
+
           // If active tab was closed, switch to the target tab
           const activeIndex = state.openTabs.findIndex(t => t.id === state.activeTabId);
           if (activeIndex > index) {
@@ -156,7 +159,7 @@ export const useRequestStore = create(
             localStorageService.saveCurrentRequest(nextTab.request);
             return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request };
           }
-          
+
           return { openTabs: newTabs };
         });
       },
@@ -165,9 +168,9 @@ export const useRequestStore = create(
         set((state) => {
           const index = state.openTabs.findIndex(t => t.id === id);
           if (index <= 0) return state;
-          
+
           const newTabs = state.openTabs.slice(index);
-          
+
           // If active tab was closed, switch to the target tab
           const activeIndex = state.openTabs.findIndex(t => t.id === state.activeTabId);
           if (activeIndex < index) {
@@ -175,7 +178,7 @@ export const useRequestStore = create(
             localStorageService.saveCurrentRequest(nextTab.request);
             return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request };
           }
-          
+
           return { openTabs: newTabs };
         });
       },
@@ -263,16 +266,63 @@ export const useRequestStore = create(
           };
         }),
 
-      newRequest: () => {
-        const newReq = defaultRequest();
-        set({ currentRequest: newReq, response: null, noActiveRequest: false });
-        localStorageService.saveCurrentRequest(newReq);
+      newRequest: async () => {
+        const colStore = useCollectionStore.getState();
+        const projStore = useProjectStore.getState();
+        const teamStore = useTeamStore.getState();
+
+        let targetColId = colStore.currentCollection?._id;
+        let targetProjId = projStore.currentProject?._id;
+        let targetTeamId = teamStore.currentTeam?._id;
+
+        console.log('New Request Logic:', { targetColId, targetProjId, targetTeamId });
+
+        // 1. If no collection selected, use the first available one in the current project
+        if (!targetColId && targetProjId) {
+          const projectCols = (colStore.collections || []).filter(c => String(c.projectId) === String(targetProjId));
+          if (projectCols.length > 0) {
+            const firstCol = projectCols[0];
+            targetColId = firstCol._id;
+            colStore.setCurrentCollection(firstCol);
+          }
+        }
+
+        // 2. If still no collection but we have a project, create a default collection
+        if (!targetColId && targetProjId && targetTeamId) {
+          const tid = toast.loading('Creating collection...');
+          try {
+            const res = await colStore.createCollection({
+              name: 'My Collection',
+              projectId: targetProjId,
+              teamId: targetTeamId
+            });
+            if (res.success) {
+              targetColId = res.collection._id;
+              toast.success('Collection created', { id: tid });
+            } else {
+              toast.error(res.error || 'Failed to create collection', { id: tid });
+            }
+          } catch (err) {
+            toast.error('Error creating collection', { id: tid });
+            console.error(err);
+          }
+        }
+
+        const newReq = {
+          ...defaultRequest(),
+          collectionId: targetColId || null,
+          projectId: targetProjId || null,
+          teamId: targetTeamId || null,
+          folderId: colStore.currentFolderId || null
+        };
+
+        get().setCurrentRequest(newReq);
       },
 
       saveRequest: async () => {
         const req = get().currentRequest;
         set({ isSaving: true });
-        
+
         const handleOfflineSave = () => {
           syncService.queueChange('update_request', { id: req._id, ...req });
           set({ isSaving: false });
@@ -283,45 +333,45 @@ export const useRequestStore = create(
         try {
           if (req._id) {
             const { data } = await api.put(`/api/request/${req._id}`, req);
-            
+
             set(state => {
               const newTabs = [...state.openTabs];
               const idx = newTabs.findIndex(t => t.id === state.activeTabId);
               if (idx >= 0) newTabs[idx] = { ...newTabs[idx], request: data.request, originalRequest: deepClone(data.request), isDirty: false };
               return { currentRequest: data.request, openTabs: newTabs, isSaving: false };
             });
-            
+
             localStorageService.saveCurrentRequest(data.request);
             const { useSocketStore } = await import('@/store/socketStore');
             const { useAuthStore } = await import('@/store/authStore');
             const { useTeamStore } = await import('@/store/teamStore');
             useSocketStore.getState().emitRequestUpdate(
-              useTeamStore.getState().currentTeam?._id, 
-              data.request, 
+              useTeamStore.getState().currentTeam?._id,
+              data.request,
               useAuthStore.getState().user?._id
             );
             return { success: true };
           } else if (req.collectionId) {
             const { data } = await api.post('/api/request', req);
-            
+
             set(state => {
               const newTabs = [...state.openTabs];
               const idx = newTabs.findIndex(t => t.id === state.activeTabId);
               if (idx >= 0) newTabs[idx] = { id: data.request._id, request: data.request, originalRequest: deepClone(data.request), isDirty: false };
               return { currentRequest: data.request, openTabs: newTabs, activeTabId: data.request._id, isSaving: false };
             });
-            
+
             localStorageService.saveCurrentRequest(data.request);
             const { useSocketStore } = await import('@/store/socketStore');
             const { useAuthStore } = await import('@/store/authStore');
             const { useTeamStore } = await import('@/store/teamStore');
             const { useCollectionStore } = await import('@/store/collectionStore');
-            
+
             useCollectionStore.getState().addRequest(data.request);
 
             useSocketStore.getState().emitRequestCreated(
-              useTeamStore.getState().currentTeam?._id, 
-              data.request, 
+              useTeamStore.getState().currentTeam?._id,
+              data.request,
               useAuthStore.getState().user?._id
             );
             return { success: true, request: data.request };
@@ -329,12 +379,12 @@ export const useRequestStore = create(
         } catch (err) {
           const isNetError = !err.response && (err.code === 'ERR_NETWORK' || !navigator.onLine);
           if (isNetError && req._id) {
-             return handleOfflineSave();
+            return handleOfflineSave();
           }
           set({ isSaving: false });
           return { success: false, error: err.response?.data?.error || 'Save failed' };
         }
-      },      
+      },
       createRequest: async (requestData) => {
         const { collectionId } = requestData;
         const { useCollectionStore } = await import('@/store/collectionStore');
@@ -353,15 +403,15 @@ export const useRequestStore = create(
 
         try {
           const { data } = await api.post('/api/request', requestData);
-          
+
           if (data.request?._id) {
             collectionStore.addRequest(data.request);
             const { useSocketStore } = await import('@/store/socketStore');
             const { useAuthStore } = await import('@/store/authStore');
             const { useTeamStore } = await import('@/store/teamStore');
             useSocketStore.getState().emitRequestCreated(
-              useTeamStore.getState().currentTeam?._id, 
-              data.request, 
+              useTeamStore.getState().currentTeam?._id,
+              data.request,
               useAuthStore.getState().user?._id
             );
           }
@@ -370,7 +420,7 @@ export const useRequestStore = create(
         } catch (err) {
           const isNetError = !err.response && (err.code === 'ERR_NETWORK' || !navigator.onLine);
           if (isNetError) {
-             return handleOfflineCreate();
+            return handleOfflineCreate();
           }
           set({ isCreating: false });
           return { success: false, error: err.response?.data?.error || 'Failed to create request' };
@@ -379,7 +429,7 @@ export const useRequestStore = create(
 
       updateRequestName: async (id, name) => {
         const currentReq = get().currentRequest;
-        
+
         const handleOfflineUpdate = () => {
           syncService.queueChange('update_request', { id, name });
           if (currentReq?._id === id) {
@@ -402,7 +452,7 @@ export const useRequestStore = create(
         } catch (err) {
           const isNetError = !err.response && (err.code === 'ERR_NETWORK' || !navigator.onLine);
           if (isNetError) {
-             return handleOfflineUpdate();
+            return handleOfflineUpdate();
           }
           return { success: false, error: err.response?.data?.error || 'Failed to update request' };
         }
@@ -433,17 +483,17 @@ export const useRequestStore = create(
             if (currentReq?._id === id) {
               set({ currentRequest: cachedRequest });
             }
-            return { 
-              success: true, 
-              request: cachedRequest, 
+            return {
+              success: true,
+              request: cachedRequest,
               fromCache: true,
-              error: 'Failed to refresh. Using cached data.' 
+              error: 'Failed to refresh. Using cached data.'
             };
           }
-          return { 
-            success: false, 
+          return {
+            success: false,
             fromCache: false,
-            error: err.response?.data?.error || 'Failed to refresh request' 
+            error: err.response?.data?.error || 'Failed to refresh request'
           };
         }
       },
@@ -456,21 +506,21 @@ export const useRequestStore = create(
         // 2. Check open tabs Map (O(1))
         const tabsById = get()._tabsById;
         if (tabsById.has(id)) return tabsById.get(id).request;
-        
+
         // 3. Check collection requests (O(n) — unavoidable, but targeted)
         if (collectionId) {
           const collectionRequests = localStorageService.getRequests(collectionId);
           const found = collectionRequests.find(r => r._id === id);
           if (found) return found;
         }
-        
+
         // 4. Full scan of localStorage (last resort)
         const allRequests = localStorageService.get(localStorageService.KEYS.REQUESTS) || {};
         for (const collId in allRequests) {
           const found = allRequests[collId].find(r => r._id === id);
           if (found) return found;
         }
-        
+
         return null;
       },
 
@@ -483,7 +533,7 @@ export const useRequestStore = create(
             const { useCollectionStore } = await import('@/store/collectionStore');
             useCollectionStore.getState().removeRequest(id, collectionId);
           }
-          
+
           set((state) => {
             const isCurrent = state.currentRequest?._id === id;
             return {
@@ -504,12 +554,12 @@ export const useRequestStore = create(
 
         try {
           await api.delete(`/api/request/${id}`);
-          
+
           const { useSocketStore } = await import('@/store/socketStore');
           const { useAuthStore } = await import('@/store/authStore');
           const { useTeamStore } = await import('@/store/teamStore');
           useSocketStore.getState().emitRequestDeleted(
-            useTeamStore.getState().currentTeam?._id, 
+            useTeamStore.getState().currentTeam?._id,
             collectionId,
             id,
             useAuthStore.getState().user?._id
@@ -518,7 +568,7 @@ export const useRequestStore = create(
         } catch (err) {
           const isNetError = !err.response && (err.code === 'ERR_NETWORK' || !navigator.onLine);
           if (isNetError) {
-             return handleOfflineDelete();
+            return handleOfflineDelete();
           }
 
           // If not found on server, still clean up locally
@@ -528,10 +578,10 @@ export const useRequestStore = create(
           }
           await localCleanup();
         }
-        
+
         return { success: true };
       },
-      
+
       // Helper to reconcile IDs after sync
       reconcileIds: (requests, idMap) => {
         return requests.map(request => {
@@ -542,36 +592,36 @@ export const useRequestStore = create(
           return request;
         });
       },
-      
+
       // Check if server data has items we don't have locally (or deleted items)
       syncWithServerData: (serverRequests, collectionId) => {
         const currentRequests = localStorageService.getRequests(collectionId);
         const serverRequestIds = new Set(serverRequests.map(r => r._id));
         const idMap = syncService.idMap;
-        
+
         // Find requests that exist locally but not on server
         const requestsToRemove = currentRequests.filter(request => {
           const isTempId = request._id?.includes('-');
           if (isTempId) return false;
           return !serverRequestIds.has(request._id) && !idMap[request._id];
         });
-        
+
         const reconciledServerRequests = get().reconcileIds(serverRequests, idMap);
         const tempIdRequests = currentRequests.filter(r => r._id?.includes('-') && !idMap[r._id]);
-        
+
         const merged = [...reconciledServerRequests];
         tempIdRequests.forEach(tempRequest => {
           if (!merged.find(r => r._id === tempRequest._id)) {
             merged.push(tempRequest);
           }
         });
-        
+
         // Save merged to localStorage
         localStorageService.saveRequests(collectionId, merged);
-        
+
         return merged;
       },
-      
+
       // Syncs all requests for a project or team at once
       bulkSyncWithServerData: (serverRequests) => {
         // Group server requests by collectionId for easier reconciliation
@@ -593,10 +643,10 @@ export const useRequestStore = create(
 
           // 1. Reconcile matching and new items
           const reconciledServerReqs = get().reconcileIds(collectionServerReqs, idMap);
-          
+
           // 2. Keep local temp-ID requests that haven't synced yet
           const tempIdRequests = currentLocalReqs.filter(r => r._id?.includes('-') && !idMap[r._id]);
-          
+
           const merged = [...reconciledServerReqs];
           tempIdRequests.forEach(tempReq => {
             if (!merged.find(r => r._id === tempReq._id)) {
@@ -611,11 +661,11 @@ export const useRequestStore = create(
         // Actually, the user wants: "if those request who are present in laocl db but not come in in remove feom local db"
         // This is tricky if serverRequests is only a partial list. 
         // But if syncAll fetches ALL requests for a team, then any local request NOT in the list should be removed.
-        
+
         // Final save
         set({ requests: serverRequests }); // Update memory state
         localStorageService.set(localStorageService.KEYS.REQUESTS, updatedLocalRequestsMap);
-        
+
         return updatedLocalRequestsMap;
       },
 
@@ -636,7 +686,12 @@ export const useRequestStore = create(
     }),
     {
       name: 'syncnest-request',
-      partialize: (state) => ({ currentRequest: state.currentRequest, history: state.history }),
+      partialize: (state) => ({
+        currentRequest: state.currentRequest,
+        history: state.history,
+        openTabs: state.openTabs,
+        activeTabId: state.activeTabId
+      }),
       merge: (persistedState, currentState) => {
         if (persistedState?.currentRequest) {
           const ensureIds = (arr = []) =>
@@ -646,6 +701,13 @@ export const useRequestStore = create(
             }));
           persistedState.currentRequest.params = ensureIds(persistedState.currentRequest.params);
           persistedState.currentRequest.headers = ensureIds(persistedState.currentRequest.headers);
+        }
+        if (persistedState?.openTabs) {
+          const tabsById = new Map();
+          persistedState.openTabs.forEach(tab => {
+            tabsById.set(tab.id, tab);
+          });
+          return { ...currentState, ...persistedState, _tabsById: tabsById };
         }
         return { ...currentState, ...persistedState };
       },

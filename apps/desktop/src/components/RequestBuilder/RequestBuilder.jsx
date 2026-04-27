@@ -210,7 +210,7 @@ export default function RequestBuilder() {
   );
 }
 
-function EmptyState({ onNewRequest }) {
+function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 bg-[var(--bg-primary)] p-10 text-center">
       <div className="w-16 h-16 rounded-[18px] bg-[var(--surface-2)] border border-[var(--border-1)] flex items-center justify-center">
@@ -220,12 +220,8 @@ function EmptyState({ onNewRequest }) {
       </div>
       <div className="flex flex-col gap-1.5">
         <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">No request selected</h3>
-        <p className="text-xs text-[color:var(--text-muted)] max-w-[240px]">Create a new request or select one from the sidebar to begin.</p>
+        <p className="text-xs text-[color:var(--text-muted)] max-w-[240px]">Select a request from the sidebar to begin testing.</p>
       </div>
-      <button onClick={onNewRequest} className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-        New Request
-      </button>
     </div>
   );
 }

@@ -162,6 +162,50 @@ export function CreateCollectionModal() {
   );
 }
 
+export function CreateFolderModal() {
+  const { createFolder, updateFolder } = useCollectionStore();
+  const { setShowFolderModal, folderModalData } = useUIStore();
+  const [name, setName] = useState(folderModalData?.name || '');
+  const [loading, setLoading] = useState(false);
+
+  const isEdit = !!folderModalData?.folderId;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setLoading(true);
+    
+    let result;
+    if (isEdit) {
+      result = await updateFolder(folderModalData.collectionId, folderModalData.folderId, name.trim());
+    } else {
+      result = await createFolder(folderModalData.collectionId, name.trim(), '', folderModalData.parentId);
+    }
+    
+    setLoading(false);
+    if (result.success) {
+      setShowFolderModal(false);
+    }
+  };
+
+  return (
+    <ModalWrapper onClose={() => setShowFolderModal(false)} title={isEdit ? 'Rename Folder' : 'New Folder'}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Folder Name</label>
+          <input className="input" placeholder="e.g., Auth APIs" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={() => setShowFolderModal(false)} className="btn-ghost flex-1">Cancel</button>
+          <button type="submit" className="btn-primary flex-1" disabled={loading}>
+            {loading ? 'Saving...' : isEdit ? 'Rename' : 'Create Folder'}
+          </button>
+        </div>
+      </form>
+    </ModalWrapper>
+  );
+}
+
 export function InviteModal() {
   const { currentTeam, inviteMember, removeMember, fetchTeamDetails } = useTeamStore();
   const { user } = useAuthStore();

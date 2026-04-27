@@ -3,21 +3,23 @@ import { useUIStore } from '@/store/uiStore';
 
 export default function ConfirmDialog() {
   const { showConfirmDialog, confirmDialogConfig, setShowConfirmDialog } = useUIStore();
+  const [loading, setLoading] = useState(false);
 
   if (!showConfirmDialog || !confirmDialogConfig) return null;
 
-  const [loading, setLoading] = useState(false);
   const { title, message, itemName, onConfirm, onCancel, confirmText = 'Delete', danger = true } = confirmDialogConfig;
 
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await onConfirm();
-      setShowConfirmDialog(false, null);
+      if (onConfirm) {
+        await onConfirm();
+      }
     } catch (err) {
       console.error('Confirm action failed:', err);
     } finally {
       setLoading(false);
+      setShowConfirmDialog(false, null);
     }
   };
 

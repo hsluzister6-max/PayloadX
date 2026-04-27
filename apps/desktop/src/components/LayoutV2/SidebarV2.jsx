@@ -142,16 +142,17 @@ export default function SidebarV2({
     activeV2Nav,
     setActiveV2Nav,
     setContextMenu,
+    setShowFolderModal,
     setShowConfirmDialog,
     setShowEditNameModal,
     setShowInviteModal
   } = useUIStore();
-  const { 
-    currentRequest, 
-    setCurrentRequest, 
-    createRequest, 
-    updateRequestName, 
-    deleteRequest, 
+  const {
+    currentRequest,
+    setCurrentRequest,
+    createRequest,
+    updateRequestName,
+    deleteRequest,
     setNoActiveRequest,
     isCreating: isCreatingRequest,
     isDeleting: isDeletingRequest
@@ -568,6 +569,13 @@ export default function SidebarV2({
           }
         },
         {
+          id: 'add-folder',
+          label: 'New Folder',
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: collection._id })
+        },
+        { id: 'divider', divider: true },
+        {
           id: 'edit',
           label: 'Edit Name',
           icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
@@ -608,6 +616,88 @@ export default function SidebarV2({
         }
       ]
     });
+  };
+
+  const showFolderContextMenu = (e, colId, folder) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          id: 'add-request',
+          label: 'New Request',
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+          onClick: () => handleQuickCreateRequest(colId, folder.id)
+        },
+        {
+          id: 'add-subfolder',
+          label: 'New Subfolder',
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: colId, parentId: folder.id })
+        },
+        {
+          id: 'rename',
+          label: 'Rename',
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: colId, folderId: folder.id, name: folder.name })
+        },
+        {
+          id: 'delete',
+          label: 'Delete',
+          danger: true,
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+          onClick: () => {
+            const { deleteFolder } = useCollectionStore.getState();
+            setShowConfirmDialog(true, {
+              title: 'Delete Folder?',
+              message: `Delete folder "${folder.name}"? Requests will be moved to collection root.`,
+              itemName: folder.name,
+              onConfirm: async () => {
+                const result = await deleteFolder(colId, folder.id);
+                if (result.success) toast.success('Folder deleted');
+                else toast.error(result.error);
+              }
+            });
+          }
+        }
+      ]
+    });
+  };
+
+  const handleQuickCreateRequest = async (collectionId, folderId = null) => {
+    if (!currentProject || !currentTeam) {
+      toast.error('Select a project and team first');
+      return;
+    }
+
+    const result = await createRequest({
+      name: 'New Request',
+      method: 'GET',
+      protocol: 'http',
+      url: '',
+      collectionId,
+      projectId: currentProject._id,
+      teamId: currentTeam._id,
+      folderId
+    });
+
+    if (result.success) {
+      setCurrentRequest(result.request);
+      // Auto expand collection/folder
+      if (!expandedCollections.has(collectionId)) {
+        const next = new Set(expandedCollections);
+        next.add(collectionId);
+        setExpandedCollections(next);
+        localStorage.setItem('sidebar_expanded_collections', JSON.stringify([...next]));
+      }
+      if (folderId && !expandedFolders.has(folderId)) {
+        const next = new Set(expandedFolders);
+        next.add(folderId);
+        setExpandedFolders(next);
+      }
+    }
   };
 
 
@@ -812,7 +902,13 @@ export default function SidebarV2({
 
   const toggleFolder = (fid) => {
     const next = new Set(expandedFolders);
-    next.has(fid) ? next.delete(fid) : next.add(fid);
+    if (next.has(fid)) {
+      next.delete(fid);
+      if (currentFolderId === fid) setCurrentFolderId(null);
+    } else {
+      next.add(fid);
+      setCurrentFolderId(fid);
+    }
     setExpandedFolders(next);
   };
 
@@ -1033,8 +1129,8 @@ export default function SidebarV2({
                       return projectCollections.map((col) => {
                         // Load requests for this collection from storage if not already in store
                         const storeRequests = requests.filter(r => r.collectionId === col._id);
-                        const localRequests = storeRequests.length > 0 
-                          ? storeRequests 
+                        const localRequests = storeRequests.length > 0
+                          ? storeRequests
                           : localStorageService.getRequests(col._id);
 
                         if (localRequests.length === 0) return null;
@@ -1143,7 +1239,21 @@ export default function SidebarV2({
                                           <span className="sdbv2-tree-text flex-1 text-left">{col.name}</span>
                                         </button>
 
-                                        <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setShowFolderModal(true, { collectionId: col._id }); }}
+                                            className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                                            title="New Folder"
+                                          >
+                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id); }}
+                                            className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                                            title="New Request"
+                                          >
+                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                          </button>
                                           <RefreshButton
                                             onRefresh={async () => {
                                               setRefreshingColId(col._id);
@@ -1167,25 +1277,49 @@ export default function SidebarV2({
                                             </div>
                                           ) : (
                                             <>
-                                              {(col.folders || []).map(folder => {
-                                                const isFolderExp = expandedFolders.has(folder._id);
-                                                return (
-                                                  <div key={folder._id}>
-                                                    <button onClick={() => toggleFolder(folder._id)} className="sdbv2-tree-row">
-                                                      <svg className={`sdbv2-chevron ${isFolderExp ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                      </svg>
-                                                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                                      </svg>
-                                                      <span className="sdbv2-tree-text">{folder.name}</span>
-                                                    </button>
-                                                    {isFolderExp && requests.filter(r => r.folderId === folder._id).map(req => (
-                                                      <SidebarRequest key={req._id} request={req} onSelect={handleRequestSelect} isActive={currentRequest?._id === req._id} />
-                                                    ))}
-                                                  </div>
-                                                );
-                                              })}
+                                              {(() => {
+                                                const renderRecursiveFolders = (parentId = null, depth = 0) => {
+                                                  const levelFolders = (col.folders || []).filter(f => (f.parentId || null) === parentId);
+                                                  return levelFolders.map(folder => {
+                                                    const isFolderExp = expandedFolders.has(folder.id);
+                                                    return (
+                                                      <div key={folder.id} className={depth > 0 ? 'ml-3 border-l border-white/5 pl-1' : ''}>
+                                                        <button
+                                                          onClick={() => toggleFolder(folder.id)}
+                                                          onContextMenu={(e) => showFolderContextMenu(e, col._id, folder)}
+                                                          className="sdbv2-tree-row group"
+                                                        >
+                                                          <svg className={`sdbv2-chevron ${isFolderExp ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                          </svg>
+                                                          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                                          </svg>
+                                                          <span className="sdbv2-tree-text flex-1 truncate">{folder.name}</span>
+                                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                              onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id, folder.id); }}
+                                                              className="p-0.5 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                                                              title="New Request"
+                                                            >
+                                                              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                                            </button>
+                                                          </div>
+                                                        </button>
+                                                        {isFolderExp && (
+                                                          <>
+                                                            {renderRecursiveFolders(folder.id, depth + 1)}
+                                                            {requests.filter(r => r.folderId === folder.id).map(req => (
+                                                              <SidebarRequest key={req._id} request={req} onSelect={handleRequestSelect} isActive={currentRequest?._id === req._id} />
+                                                            ))}
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    );
+                                                  });
+                                                };
+                                                return renderRecursiveFolders(null, 0);
+                                              })()}
                                               {requests.filter(r => r.collectionId === col._id && !r.folderId).map(req => (
                                                 <SidebarRequest
                                                   key={req._id}

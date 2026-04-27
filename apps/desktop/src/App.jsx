@@ -18,6 +18,7 @@ import ImportModal from '@/components/ImportModal/ImportModal';
 import CreateTeamModal, {
   CreateProjectModal,
   CreateCollectionModal,
+  CreateFolderModal,
   InviteModal,
 } from '@/components/Modals/Modals';
 import SessionManagerModal from '@/components/Modals/SessionManagerModal';
@@ -69,6 +70,7 @@ export default function App() {
     showTeamModal,
     showProjectModal,
     showCollectionModal,
+    showFolderModal,
     showEnvironmentPanel,
     showInviteModal,
     showConfirmDialog,
@@ -315,6 +317,7 @@ export default function App() {
         {showTeamModal && <CreateTeamModal />}
         {showProjectModal && <CreateProjectModal />}
         {showCollectionModal && <CreateCollectionModal />}
+        {showFolderModal && <CreateFolderModal />}
         {showInviteModal && <InviteModal />}
         <ContextMenu />
         <ConfirmDialog />
@@ -445,6 +448,7 @@ export default function App() {
         {showTeamModal && <CreateTeamModal />}
         {showProjectModal && <CreateProjectModal />}
         {showCollectionModal && <CreateCollectionModal />}
+        {showFolderModal && <CreateFolderModal />}
         {showInviteModal && <InviteModal />}
         {showSessionModal && <SessionManagerModal />}
         <ContextMenu />

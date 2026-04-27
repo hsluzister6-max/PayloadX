@@ -24,6 +24,7 @@ export default function Sidebar() {
     setShowTeamModal,
     setShowProjectModal,
     setShowCollectionModal,
+    setShowFolderModal,
     setShowImportModal,
     setShowEnvironmentPanel,
     setShowInviteModal,
@@ -81,18 +82,61 @@ export default function Sidebar() {
         setInitializedCollections(prev => new Set(prev).add(id));
         await fetchCollectionRequests(id);
       }
+      setCurrentCollection(col);
     }
   };
 
   const toggleFolder = (folderId) => {
     const next = new Set(expandedFolders);
-    next.has(folderId) ? next.delete(folderId) : next.add(folderId);
+    if (next.has(folderId)) {
+      next.delete(folderId);
+      if (currentFolderId === folderId) setCurrentFolderId(null);
+    } else {
+      next.add(folderId);
+      setCurrentFolderId(folderId);
+    }
     setExpandedFolders(next);
+  };
+
+  const handleQuickCreateRequest = async (collectionId, folderId = null) => {
+    const { useRequestStore } = await import('@/store/requestStore');
+
+    if (!currentProject || !currentTeam) {
+      toast.error('Select a project and team first');
+      return;
+    }
+
+    const name = 'New Request';
+    const result = await useRequestStore.getState().createRequest({
+      name,
+      method: 'GET',
+      protocol: 'http',
+      url: '',
+      collectionId,
+      projectId: currentProject._id,
+      teamId: currentTeam._id,
+      folderId
+    });
+
+    if (result.success) {
+      setCurrentRequest(result.request);
+      // Auto expand collection/folder
+      if (!expandedCollections.has(collectionId)) {
+        const next = new Set(expandedCollections);
+        next.add(collectionId);
+        setExpandedCollections(next);
+      }
+      if (folderId && !expandedFolders.has(folderId)) {
+        const next = new Set(expandedFolders);
+        next.add(folderId);
+        setExpandedFolders(next);
+      }
+    }
   };
 
   const handleExportCollection = async (e, col) => {
     if (e) e.stopPropagation(); // Prevent toggling the collection
-    
+
     const toastId = toast.loading(`Preparing ${col.name} for export...`);
     try {
       // 1. Ensure we have all requests for this collection
@@ -104,7 +148,7 @@ export default function Sidebar() {
 
       // 2. Filter requests belonging to this collection
       const colRequests = filteredRequests(col._id);
-      
+
       // 3. Convert to Postman format
       const postmanData = exportToPostman(col, colRequests);
       const jsonString = JSON.stringify(postmanData, null, 2);
@@ -134,10 +178,63 @@ export default function Sidebar() {
       y: e.clientY,
       items: [
         {
+          id: 'add-folder',
+          label: 'New Folder',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: col._id })
+        },
+        {
+          id: 'add-request',
+          label: 'New Request',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+          onClick: () => handleQuickCreateRequest(col._id)
+        },
+        { type: 'separator' },
+        {
           id: 'export',
           label: 'Export as Postman',
-          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
           onClick: () => handleExportCollection(null, col)
+        }
+      ]
+    });
+  };
+
+  const showFolderContextMenu = (e, colId, folder) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        {
+          id: 'add-request',
+          label: 'New Request',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+          onClick: () => handleQuickCreateRequest(colId, folder.id)
+        },
+        {
+          id: 'add-subfolder',
+          label: 'New Subfolder',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: colId, parentId: folder.id })
+        },
+        {
+          id: 'rename',
+          label: 'Rename',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>,
+          onClick: () => setShowFolderModal(true, { collectionId: colId, folderId: folder.id, name: folder.name })
+        },
+        {
+          id: 'delete',
+          label: 'Delete',
+          icon: <svg className="w-3.5 h-3.5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+          onClick: () => {
+            const { deleteFolder } = useCollectionStore.getState();
+            if (confirm(`Delete folder "${folder.name}"? Requests will be moved to collection root.`)) {
+              deleteFolder(colId, folder.id);
+            }
+          }
         }
       ]
     });
@@ -149,12 +246,12 @@ export default function Sidebar() {
         r.collectionId === collectionId &&
         (searchQuery
           ? r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.url.toLowerCase().includes(searchQuery.toLowerCase())
+          r.url.toLowerCase().includes(searchQuery.toLowerCase())
           : true)
     );
 
   return (
-    <aside 
+    <aside
       className="flex flex-col h-full border-r border-[var(--border-1)] select-none"
       style={{ background: 'var(--bg-secondary)' }}
     >
@@ -192,7 +289,7 @@ export default function Sidebar() {
             onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
             title="New team"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           </button>
         </div>
         <div className="flex flex-col gap-0.5">
@@ -240,7 +337,7 @@ export default function Sidebar() {
           <div className="flex items-center justify-between mb-1 px-1">
             <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">Projects</span>
             <button onClick={() => setShowProjectModal(true)} className="text-surface-500 hover:text-brand-400 transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
@@ -248,11 +345,10 @@ export default function Sidebar() {
               <button
                 key={project._id}
                 onClick={() => setCurrentProject(project)}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${
-                  currentProject?._id === project._id
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${currentProject?._id === project._id
                     ? 'bg-surface-700 text-tx-primary'
                     : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
-                }`}
+                  }`}
               >
                 <div
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
@@ -272,10 +368,10 @@ export default function Sidebar() {
             <span className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider">Collections</span>
             <div className="flex items-center gap-1">
               <button onClick={() => setShowImportModal(true)} className="text-surface-500 hover:text-warning transition-colors" title="Import Postman collection">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
               </button>
               <button onClick={() => setShowCollectionModal(true)} className="text-surface-500 hover:text-brand-400 transition-colors" title="New collection">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               </button>
             </div>
           </div>
@@ -290,30 +386,47 @@ export default function Sidebar() {
                   <button
                     onClick={() => toggleCollection(col)}
                     onContextMenu={(e) => showCollectionContextMenu(e, col)}
-                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${
-                      currentCollection?._id === col._id
+                    className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${currentCollection?._id === col._id
                         ? 'bg-surface-750 text-tx-primary'
                         : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
-                    }`}
+                      }`}
                   >
                     <svg
                       className={`w-3 h-3 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <svg className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     <span className="truncate flex-1">{col.name}</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-50 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowFolderModal(true, { collectionId: col._id }); }}
+                        className="p-1 hover:text-tx-primary hover:opacity-100 hover:bg-surface-3 rounded transition-all"
+                        title="New Folder"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id); }}
+                        className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                        title="New Request"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
                       <button
                         onClick={(e) => handleExportCollection(e, col)}
                         className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
                         title="Export as Postman JSON"
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
                       </button>
                       {col.isImported && (
@@ -325,30 +438,52 @@ export default function Sidebar() {
                   {isExpanded && (
                     <div className="ml-3 pl-2 border-l border-[var(--border-1)] mt-0.5 flex flex-col gap-0.5 animate-in">
                       {/* Folders */}
-                      {col.folders?.map((folder) => {
-                        const folderReqs = colRequests.filter((r) => r.folderId === folder.id);
-                        const isFolderExpanded = expandedFolders.has(folder.id);
-                        return (
-                          <div key={folder.id}>
-                            <button
-                              onClick={() => toggleFolder(folder.id)}
-                              className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 w-full text-left"
-                            >
-                              <svg className={`w-2.5 h-2.5 flex-shrink-0 transition-transform ${isFolderExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-                              </svg>
-                              <svg className="w-3 h-3 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                              </svg>
-                              <span className="truncate">{folder.name}</span>
-                              <span className="text-tx-muted ml-auto text-[10px]">{folderReqs.length}</span>
-                            </button>
-                            {isFolderExpanded && folderReqs.map((req) => (
-                              <RequestItem key={req._id} request={req} onSelect={setCurrentRequest} />
-                            ))}
-                          </div>
-                        );
-                      })}
+                      {(() => {
+                        const renderRecursiveFolders = (parentId = null, depth = 0) => {
+                          const levelFolders = (col.folders || []).filter(f => (f.parentId || null) === parentId);
+                          return levelFolders.map(folder => {
+                            const folderReqs = colRequests.filter((r) => r.folderId === folder.id);
+                            const isFolderExpanded = expandedFolders.has(folder.id);
+                            return (
+                              <div key={folder.id} className={depth > 0 ? 'ml-3 border-l border-white/5 pl-1' : ''}>
+                                <button
+                                  onClick={() => toggleFolder(folder.id)}
+                                  onContextMenu={(e) => showFolderContextMenu(e, col._id, folder)}
+                                  className="group flex items-center gap-1.5 px-2 py-1 rounded text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 w-full text-left"
+                                >
+                                  <svg className={`w-2.5 h-2.5 flex-shrink-0 transition-transform ${isFolderExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                  <svg className="w-3 h-3 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                  </svg>
+                                  <span className="truncate">{folder.name}</span>
+                                  <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-50 transition-opacity">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id, folder.id); }}
+                                      className="p-0.5 hover:text-tx-primary hover:opacity-100 hover:bg-surface-3 rounded transition-all"
+                                      title="New Request"
+                                    >
+                                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </button>
+                                {isFolderExpanded && (
+                                  <>
+                                    {renderRecursiveFolders(folder.id, depth + 1)}
+                                    {folderReqs.map(req => (
+                                      <RequestItem key={req._id} request={req} onSelect={setCurrentRequest} />
+                                    ))}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          });
+                        };
+                        return renderRecursiveFolders(null, 0);
+                      })()}
 
                       {/* Root-level requests */}
                       {colRequests.filter((r) => !r.folderId).map((req) => (
@@ -373,7 +508,7 @@ export default function Sidebar() {
           onClick={() => setShowEnvironmentPanel(true)}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 transition-all"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
           Environments
         </button>
         <button
@@ -383,7 +518,7 @@ export default function Sidebar() {
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-3)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
           Team Members
         </button>
 
@@ -428,9 +563,9 @@ export default function Sidebar() {
 
         {/* Creator Note */}
         <div className="px-2 py-1.5 mt-1 border-t border-[var(--border-1)] opacity-40">
-           <p className="text-[10px] text-surface-500 font-medium">
-             Project by <span className="text-tx-secondary">Sundan Sharma</span>
-           </p>
+          <p className="text-[10px] text-surface-500 font-medium">
+            Project by <span className="text-tx-secondary">Sundan Sharma</span>
+          </p>
         </div>
 
         {/* User card with logout */}
@@ -450,7 +585,7 @@ export default function Sidebar() {
               <p className="text-[10px] text-surface-500 truncate leading-tight">{user?.email}</p>
             </div>
             <svg className={`w-3 h-3 flex-shrink-0 transition-transform ${showLogoutConfirm ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
 
@@ -465,7 +600,7 @@ export default function Sidebar() {
                 className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-danger hover:bg-danger/10 transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 Sign out
               </button>

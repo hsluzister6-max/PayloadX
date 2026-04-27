@@ -12,6 +12,7 @@ import Collection from '../../models/Collection.js';
 import Request from '../../models/Request.js';
 import User from '../../models/User.js';
 import { authenticate } from '../middleware/auth.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
@@ -99,6 +100,89 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (err) {
     console.error('[DELETE /api/collection/:id] Error:', err.message);
     res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+/** ── FOLDER MANAGEMENT ── **/
+
+// POST /api/collection/:id/folder
+router.post('/:id/folder', authenticate, async (req, res) => {
+  try {
+    const { name, description, parentId } = req.body;
+    if (!name) return res.status(400).json({ error: 'Folder name is required' });
+
+    const collection = await Collection.findById(req.params.id);
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+
+    const newFolder = {
+      id: uuidv4(),
+      name,
+      parentId: parentId || null,
+      description: description || '',
+      requestIds: [],
+      order: collection.folders.length,
+    };
+
+    collection.folders.push(newFolder);
+    await collection.save();
+
+    res.status(201).json({ collection, folder: newFolder });
+  } catch (err) {
+    console.error('[POST /folder] Error:', err.message);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+// PUT /api/collection/:id/folder/:folderId
+router.put('/:id/folder/:folderId', authenticate, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    const collection = await Collection.findById(req.params.id);
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+
+    const folder = collection.folders.find(f => f.id === req.params.folderId);
+    if (!folder) return res.status(404).json({ error: 'Folder not found' });
+
+    if (name) folder.name = name;
+    if (description !== undefined) folder.description = description;
+
+    await collection.save();
+    res.json({ collection, folder });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/collection/:id/folder/:folderId
+router.delete('/:id/folder/:folderId', authenticate, async (req, res) => {
+  try {
+    const { id, folderId } = req.params;
+    const collection = await Collection.findById(id);
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+
+    // Find all subfolders (recursive)
+    const folderIdsToDelete = [folderId];
+    let index = 0;
+    while (index < folderIdsToDelete.length) {
+      const pid = folderIdsToDelete[index++];
+      const subfolders = collection.folders.filter(f => f.parentId === pid);
+      subfolders.forEach(sf => folderIdsToDelete.push(sf.id));
+    }
+
+    // Remove folders from collection
+    collection.folders = collection.folders.filter(f => !folderIdsToDelete.includes(f.id));
+    await collection.save();
+
+    // Update requests to remove folderId (move to root)
+    await Request.updateMany(
+      { collectionId: id, folderId: { $in: folderIdsToDelete } },
+      { folderId: null }
+    );
+
+    res.json({ collection, message: 'Folders deleted, requests moved to root' });
+  } catch (err) {
+    console.error('[DELETE /folder] Error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

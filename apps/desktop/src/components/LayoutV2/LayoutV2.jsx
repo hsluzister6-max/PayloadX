@@ -139,6 +139,8 @@ export default function LayoutV2({
               onShowTeamModal={onShowTeamModal}
               onShowProjectModal={onShowProjectModal}
             />
+          ) : openTabs.length === 0 ? (
+            <Dashboard />
           ) : (
             <>
               {/* Tab Bar Map */}

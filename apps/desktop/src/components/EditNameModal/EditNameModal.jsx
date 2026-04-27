@@ -21,9 +21,12 @@ export default function EditNameModal() {
     if (!name.trim()) return;
 
     setLoading(true);
-    await onSave(name.trim());
-    setLoading(false);
-    setShowEditNameModal(false, null);
+    try {
+      await onSave(name.trim());
+    } finally {
+      setLoading(false);
+      setShowEditNameModal(false, null);
+    }
   };
 
   const handleClose = () => {

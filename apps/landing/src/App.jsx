@@ -92,10 +92,8 @@ export default function App() {
           </div>
 
           <h1 className={styles.title}>
-            <span className={`${styles.titleChrome} metallic-app-name`} style={{ display: 'block', paddingBottom: '0.2em' }}>Payload</span>
-            <span className={`${styles.titleX} metallic-app-name`} style={{ display: 'block', position: 'relative', width: 'fit-content' }}>
-              X
-            </span>
+            <span className={`${styles.titleChrome} metallic-app-name`}>Payload</span>
+            <span className={`${styles.titleX} metallic-app-name`}>X</span>
           </h1>
 
           <p className={styles.tagline}>API Testing,<br />Simplified.</p>
@@ -117,6 +115,37 @@ export default function App() {
             </a> */}
           </div>
 
+          {/* TERMINAL PREVIEW */}
+          <div className={styles.terminal}>
+            <div className={styles.termHeader}>
+              <span className={styles.termDot} style={{ background: "#ff5f57" }} />
+              <span className={styles.termDot} style={{ background: "#febc2e" }} />
+              <span className={styles.termDot} style={{ background: "#28c840" }} />
+              <span className={styles.termTitle}>payloadx — bash</span>
+            </div>
+            <div className={styles.termBody}>
+              <span className={styles.termPrompt}>$ </span>
+              <span className={styles.termCmd}>payloadx run collection.json</span>
+              <br />
+              <span className={styles.termOk}>✓</span>
+              <span className={styles.termMuted}> GET /api/users </span>
+              <span className={styles.termStatus}>200</span>
+              <span className={styles.termTime}> 12ms</span>
+              <br />
+              <span className={styles.termOk}>✓</span>
+              <span className={styles.termMuted}> POST /api/auth </span>
+              <span className={styles.termStatus}>201</span>
+              <span className={styles.termTime}> 8ms</span>
+              <br />
+              <span className={styles.termErr}>✗</span>
+              <span className={styles.termMuted}> DELETE /api/item </span>
+              <span className={styles.termStatusErr}>404</span>
+              <span className={styles.termTime}> 3ms</span>
+              <br />
+              <span className={styles.termPrompt}>$ <span className={styles.termCursor}>▋</span></span>
+            </div>
+          </div>
+
           {/* stat strip */}
           <div className={styles.stats}>
             <div className={styles.stat}><span className={styles.statNum}>2.4ms</span><span className={styles.statLabel}>avg latency</span></div>
@@ -130,19 +159,60 @@ export default function App() {
         {/* RIGHT COLUMN */}
         <div className={styles.right}>
 
-          {/* FEATURE TILES */}
-          <div className={styles.featGrid}>
-            {FEATURES.map((f, i) => (
-              <div
-                key={i}
-                className={`${styles.featCard} ${tick === i ? styles.featCardActive : ""}`}
-              >
-                <span className={styles.featTag}>{f.tag}</span>
-                <div className={styles.featIcon}>{f.icon}</div>
-                <div className={styles.featTitle}>{f.title}</div>
-                <div className={styles.featDesc}>{f.desc}</div>
+          {/* APP MOCKUP */}
+          <div className={styles.appMockup}>
+            <div className={styles.mockHeader}>
+              <div className={styles.mockDots}>
+                <span className={styles.mockDot} style={{ background: '#ff5f57' }} />
+                <span className={styles.mockDot} style={{ background: '#febc2e' }} />
+                <span className={styles.mockDot} style={{ background: '#28c840' }} />
               </div>
-            ))}
+              <div className={styles.mockTitle}>PayloadX Studio</div>
+            </div>
+            <div className={styles.mockBody}>
+              <div className={styles.mockSidebar}>
+                <div className={styles.mockSideItemActive}>
+                  <Zap size={12} style={{ color: '#60a5fa' }} />
+                  <span>Get Users</span>
+                </div>
+                <div className={styles.mockSideItem}>
+                  <Code size={12} style={{ color: '#94a3b8' }} />
+                  <span>Auth User</span>
+                </div>
+                <div className={styles.mockSideItem}>
+                  <Users size={12} style={{ color: '#94a3b8' }} />
+                  <span>Team Sync</span>
+                </div>
+                <div className={styles.mockSideItem}>
+                  <Lock size={12} style={{ color: '#94a3b8' }} />
+                  <span>List Vaults</span>
+                </div>
+              </div>
+              <div className={styles.mockMain}>
+                <div className={styles.mockUrlBar}>
+                  <div className={styles.mockMethod}>GET</div>
+                  <div className={styles.mockUrl}>https://api.payloadx.app/v1/users</div>
+                  <div className={styles.mockSend}>Send</div>
+                </div>
+                <div className={styles.mockResponse}>
+                  <div className={styles.mockResHeader}>
+                    <span>Response</span>
+                    <span className={styles.mockStatus}>200 OK</span>
+                    <span className={styles.mockTime}>12ms</span>
+                  </div>
+                  <div className={styles.mockCode}>
+{`{
+  "status": "success",
+  "data": {
+    "user": "sundan",
+    "role": "architect",
+    "region": "global-1"
+  }
+}`}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* DOWNLOAD STRIP */}
@@ -194,36 +264,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* TERMINAL PREVIEW */}
-          <div className={styles.terminal}>
-            <div className={styles.termHeader}>
-              <span className={styles.termDot} style={{ background: "#ff5f57" }} />
-              <span className={styles.termDot} style={{ background: "#febc2e" }} />
-              <span className={styles.termDot} style={{ background: "#28c840" }} />
-              <span className={styles.termTitle}>payloadx — bash</span>
-            </div>
-            <div className={styles.termBody}>
-              <span className={styles.termPrompt}>$ </span>
-              <span className={styles.termCmd}>payloadx run collection.json</span>
-              <br />
-              <span className={styles.termOk}>✓</span>
-              <span className={styles.termMuted}> GET /api/users </span>
-              <span className={styles.termStatus}>200</span>
-              <span className={styles.termTime}> 12ms</span>
-              <br />
-              <span className={styles.termOk}>✓</span>
-              <span className={styles.termMuted}> POST /api/auth </span>
-              <span className={styles.termStatus}>201</span>
-              <span className={styles.termTime}> 8ms</span>
-              <br />
-              <span className={styles.termErr}>✗</span>
-              <span className={styles.termMuted}> DELETE /api/item </span>
-              <span className={styles.termStatusErr}>404</span>
-              <span className={styles.termTime}> 3ms</span>
-              <br />
-              <span className={styles.termPrompt}>$ <span className={styles.termCursor}>▋</span></span>
-            </div>
-          </div>
 
         </div>
       </main>

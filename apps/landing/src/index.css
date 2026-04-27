@@ -23,11 +23,13 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   background-color: #0f0f0f;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 #root {

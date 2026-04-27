@@ -11,6 +11,8 @@ export const useUIStore = create(
       showTeamModal: false,
       showProjectModal: false,
       showCollectionModal: false,
+      showFolderModal: false,
+      folderModalData: null, // { collectionId, folderId (for edit), name (for edit) }
       showEnvironmentPanel: false,
       rightSidebarOpen: false,
       rightSidebarActiveTab: 'environment', // 'environment' | 'cookies'
@@ -30,32 +32,33 @@ export const useUIStore = create(
       workspaceOrientation: 'vertical', // 'vertical' | 'horizontal'
       activeV2Nav: 'collections',       // 'collections', 'docs', 'environments', etc.
 
-      setSidebarWidth:        (w) => set({ sidebarWidth: Math.max(200, Math.min(400, w)) }),
-      setResponseHeight:      (h) => set({ responseHeight: Math.max(150, Math.min(600, h)) }),
-      toggleSidebar:          () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
-      setShowImportModal:     (v) => set({ showImportModal: v }),
-      setShowTeamModal:       (v) => set({ showTeamModal: v }),
-      setShowProjectModal:    (v) => set({ showProjectModal: v }),
+      setSidebarWidth: (w) => set({ sidebarWidth: Math.max(200, Math.min(400, w)) }),
+      setResponseHeight: (h) => set({ responseHeight: Math.max(150, Math.min(600, h)) }),
+      toggleSidebar: () => set((s) => ({ isSidebarCollapsed: !s.isSidebarCollapsed })),
+      setShowImportModal: (v) => set({ showImportModal: v }),
+      setShowTeamModal: (v) => set({ showTeamModal: v }),
+      setShowProjectModal: (v) => set({ showProjectModal: v }),
       setShowCollectionModal: (v) => set({ showCollectionModal: v }),
-      setShowEnvironmentPanel:(v) => set({ showEnvironmentPanel: v }),
-      
+      setShowFolderModal: (v, data = null) => set({ showFolderModal: v, folderModalData: data }),
+      setShowEnvironmentPanel: (v) => set({ showEnvironmentPanel: v }),
+
       // Right sidebar actions
-      setRightSidebarOpen:    (v) => set({ rightSidebarOpen: v }),
+      setRightSidebarOpen: (v) => set({ rightSidebarOpen: v }),
       setRightSidebarActiveTab: (v) => set({ rightSidebarActiveTab: v }),
-      setRightSidebarWidth:   (w) => set({ rightSidebarWidth: Math.max(300, Math.min(800, w)) }),
-      toggleRightSidebar:     () => set((s) => ({ rightSidebarOpen: !s.rightSidebarOpen })),
-      openRightSidebarTab:    (tab) => set({ rightSidebarActiveTab: tab, rightSidebarOpen: true }),
-      
-      setShowInviteModal:     (v) => set({ showInviteModal: v }),
-      setShowConfirmDialog:   (v, config = null) => set({ showConfirmDialog: v, confirmDialogConfig: config }),
-      setShowEditNameModal:   (v, config = null) => set({ showEditNameModal: v, editNameModalConfig: config }),
-      setShowSessionModal:    (v) => set({ showSessionModal: v }),
-      setContextMenu:         (config) => set({ contextMenu: config }),
-      closeContextMenu:       () => set({ contextMenu: null }),
-      setIsLoading:           (v) => set({ isLoading: v }),
-      setActiveMainTab:       (v) => set({ activeMainTab: v }),
-      setActiveV2Nav:         (v) => set({ activeV2Nav: v }),
-      setLayoutVersion:       (v) => set({ layoutVersion: v }),
+      setRightSidebarWidth: (w) => set({ rightSidebarWidth: Math.max(300, Math.min(800, w)) }),
+      toggleRightSidebar: () => set((s) => ({ rightSidebarOpen: !s.rightSidebarOpen })),
+      openRightSidebarTab: (tab) => set({ rightSidebarActiveTab: tab, rightSidebarOpen: true }),
+
+      setShowInviteModal: (v) => set({ showInviteModal: v }),
+      setShowConfirmDialog: (v, config = null) => set({ showConfirmDialog: v, confirmDialogConfig: config }),
+      setShowEditNameModal: (v, config = null) => set({ showEditNameModal: v, editNameModalConfig: config }),
+      setShowSessionModal: (v) => set({ showSessionModal: v }),
+      setContextMenu: (config) => set({ contextMenu: config }),
+      closeContextMenu: () => set({ contextMenu: null }),
+      setIsLoading: (v) => set({ isLoading: v }),
+      setActiveMainTab: (v) => set({ activeMainTab: v }),
+      setActiveV2Nav: (v) => set({ activeV2Nav: v }),
+      setLayoutVersion: (v) => set({ layoutVersion: v }),
 
       toggleTheme: () =>
         set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),

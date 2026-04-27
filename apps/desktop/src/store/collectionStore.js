@@ -10,6 +10,8 @@ import { buildIndexMap } from '@/utils/perf';
 export const useCollectionStore = create((set, get) => ({
   collections: localStorageService.get(localStorageService.KEYS.COLLECTIONS) || [],
   currentCollection: localStorageService.get(localStorageService.KEYS.CURRENT_COLLECTION) || null,
+  currentFolderId: null,
+  setCurrentFolderId: (id) => set({ currentFolderId: id }),
   requests: [],
   // O(1) request lookup Map — mirrors the requests array
   _requestsById: new Map(),
@@ -427,6 +429,49 @@ export const useCollectionStore = create((set, get) => ({
         return handleOfflineUpdate();
       }
       return { success: false, error: err.response?.data?.error || 'Failed to update collection' };
+    }
+  },
+
+  createFolder: async (collectionId, name, description, parentId = null) => {
+    try {
+      const { data } = await api.post(`/api/collection/${collectionId}/folder`, { name, description, parentId });
+      // Update local state
+      get().updateCollection(data.collection);
+      toast.success(`Folder "${name}" created!`);
+      return { success: true, folder: data.folder };
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create folder');
+      return { success: false, error: err.message };
+    }
+  },
+
+  updateFolder: async (collectionId, folderId, name, description) => {
+    try {
+      const { data } = await api.put(`/api/collection/${collectionId}/folder/${folderId}`, { name, description });
+      get().updateCollection(data.collection);
+      toast.success('Folder updated');
+      return { success: true };
+    } catch (err) {
+      toast.error('Failed to update folder');
+      return { success: false };
+    }
+  },
+
+  deleteFolder: async (collectionId, folderId) => {
+    try {
+      const { data } = await api.delete(`/api/collection/${collectionId}/folder/${folderId}`);
+      get().updateCollection(data.collection);
+      
+      // Update requests that were in this folder (move to root locally)
+      set((state) => ({
+        requests: state.requests.map(r => r.folderId === folderId ? { ...r, folderId: null } : r)
+      }));
+      
+      toast.success('Folder deleted');
+      return { success: true };
+    } catch (err) {
+      toast.error('Failed to delete folder');
+      return { success: false };
     }
   },
 
