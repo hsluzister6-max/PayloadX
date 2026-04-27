@@ -31,7 +31,7 @@ export default function App() {
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => (t + 1) % 4), 2200);
-    
+
     // Detect OS
     const ua = window.navigator.userAgent;
 
@@ -61,8 +61,6 @@ export default function App() {
         <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
         <div className={styles.navSpacer} />
         <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
-        <a href={REPO_URL} target="_blank" rel="noreferrer" className={styles.navLink}>GitHub</a>
-        <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer" className={styles.navCta}>Live Demo →</a>
       </nav>
 
       {/* MAIN GRID */}
@@ -94,9 +92,9 @@ export default function App() {
                 Download for {userOS.name}
               </span>
             </a>
-            <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className={styles.btnGhost}>
+            {/* <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className={styles.btnGhost}>
               All Platforms →
-            </a>
+            </a> */}
           </div>
 
           {/* stat strip */}
@@ -193,9 +191,6 @@ export default function App() {
           </span>
         </div>
         <div className={styles.footerLinks}>
-          <a href={REPO_URL} target="_blank" rel="noreferrer">GitHub</a>
-          <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer">Live Demo</a>
-          <a href="#">Changelog</a>
         </div>
       </footer>
     </div>
