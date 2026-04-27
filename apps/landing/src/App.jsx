@@ -19,15 +19,15 @@ const STACK = [
 ];
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
-const LATEST_DL = `${REPO_URL}/releases/latest/download`;
-const DOWNLOAD_LINK = "https://github.com/hsluzister6-max/PayloadX/releases/download/v1.0.0/PayloadX_1.0.0_aarch64.dmg";
+const VERSION = "1.0.0";
+const RELEASE_URL = `${REPO_URL}/releases/download/v${VERSION}`;
 
 const PLATFORMS = [
-  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: DOWNLOAD_LINK },
-  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${LATEST_DL}/PayloadX_x64-setup.exe` },
-  { os: "iOS", arch: "Beta", icon: <FaApple />, link: DOWNLOAD_LINK },
-  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.AppImage` },
-  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.deb` },
+  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: `${RELEASE_URL}/PayloadX_${VERSION}_aarch64.dmg` },
+  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${RELEASE_URL}/PayloadX_${VERSION}_x64-setup.exe` },
+  { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#" },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${RELEASE_URL}/payload-x_${VERSION}_amd64.AppImage` },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${RELEASE_URL}/payload-x_${VERSION}_amd64.deb` },
 ];
 
 
