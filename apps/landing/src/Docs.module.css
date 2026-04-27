@@ -1,12 +1,12 @@
 .root {
-  position: fixed;
-  inset: 0;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #07090d;
   color: #d0d4de;
   font-family: 'DM Mono', monospace;
-  overflow: hidden;
+  overflow-x: hidden;
+  position: relative;
 }
 
 .scanlines {
@@ -62,7 +62,6 @@
 .container {
   flex: 1;
   display: flex;
-  overflow: hidden;
   padding: 2rem;
   gap: 3rem;
   max-width: 1200px;
@@ -115,12 +114,9 @@
 
 .content {
   flex: 1;
-  overflow-y: auto;
-  padding-right: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  mask-image: linear-gradient(to bottom, black 95%, transparent);
 }
 
 .content::-webkit-scrollbar {
@@ -215,7 +211,8 @@
 @media (max-width: 900px) {
   .container {
     flex-direction: column;
-    padding: 1rem;
+    padding: 1.5rem;
+    gap: 2rem;
   }
   .sidebar {
     width: 100%;
@@ -223,11 +220,48 @@
     overflow-x: auto;
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar::-webkit-scrollbar {
+    display: none;
   }
   .sidebarSection {
-    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .sidebarTitle {
+    display: none;
+  }
+  .sidebarLink {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
   }
   .metallicTitle {
     font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 0.75rem 1rem;
+  }
+  .container {
+    padding: 1rem;
+  }
+  .metallicTitle {
+    font-size: 1.5rem;
+  }
+  .sectionTitle {
+    font-size: 0.95rem;
+  }
+  .text {
+    font-size: 0.75rem;
+  }
+  .codeBlock {
+    padding: 1rem;
+    font-size: 0.7rem;
+    overflow-x: auto;
   }
 }

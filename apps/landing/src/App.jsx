@@ -5,10 +5,16 @@ import { FaApple, FaWindows, FaLinux } from 'react-icons/fa6';
 import PayloadX from "./components/core/Logo";
 
 const FEATURES = [
-  { icon: <Zap size={18} />, tag: "PERFORMANCE", title: "Lightning Fast", desc: "Rust-powered engine" },
+  { icon: <Zap size={18} />, tag: "PERFORMANCE", title: "Lightning Fast", desc: "TypeScript & Rust engine" },
   { icon: <Lock size={18} />, tag: "SECURITY", title: "Encrypted", desc: "JWT + local vault" },
   { icon: <Users size={18} />, tag: "TEAMS", title: "Sync", desc: "Real-time collab" },
-  { icon: <Code size={18} />, tag: "DEV", title: "Portable", desc: "Postman importer" },
+  { icon: <Code size={18} />, tag: "DEV", title: "Type-Safe", desc: "Powered by TypeScript" },
+];
+
+const STACK = [
+  { name: "TypeScript", percentage: 50, color: "#3178c6", desc: "Type-Safe Frontend Logic" },
+  { name: "Rust", percentage: 40, color: "#dea584", desc: "High-Performance Core Engine" },
+  { name: "CSS", percentage: 10, color: "#563d7c", desc: "Premium Metallic Styling" },
 ];
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
@@ -59,6 +65,9 @@ export default function App() {
       {/* scanline overlay */}
       <div className={styles.scanlines} aria-hidden />
 
+      {/* mesh background */}
+      <div className={styles.mesh} aria-hidden />
+
       {/* NAV */}
       <nav className={styles.nav}>
         <PayloadX size="28px" fontSize="10px" />
@@ -84,7 +93,6 @@ export default function App() {
             <span className={`${styles.titleChrome} metallic-app-name`} style={{ display: 'block', paddingBottom: '0.2em' }}>Payload</span>
             <span className={`${styles.titleX} metallic-app-name`} style={{ display: 'block', position: 'relative', width: 'fit-content' }}>
               X
-              <span className={styles.heroBeta}>BETA</span>
             </span>
           </h1>
 
@@ -153,6 +161,33 @@ export default function App() {
                   </span>
                   <span className={styles.pillArch}>{p.arch}</span>
                 </a>
+              ))}
+            </div>
+          </div>
+
+          {/* STACK SECTION */}
+          <div className={styles.stackSection}>
+            <div className={styles.stackHeader}>
+              <span className={styles.stackTitle}>ENGINE ARCHITECTURE</span>
+              <span className={styles.stackLabel}>TAURI · RUST · REACT</span>
+            </div>
+            <div className={styles.stackBar}>
+              {STACK.map((s, i) => (
+                <div
+                  key={i}
+                  className={styles.stackSegment}
+                  style={{ width: `${s.percentage}%`, background: s.color }}
+                  title={`${s.name}: ${s.percentage}%`}
+                />
+              ))}
+            </div>
+            <div className={styles.stackLegend}>
+              {STACK.map((s, i) => (
+                <div key={i} className={styles.stackItem}>
+                  <div className={styles.stackDot} style={{ background: s.color }} />
+                  <span className={styles.stackItemName}>{s.name}</span>
+                  <span className={styles.stackItemPct}>{s.percentage}%</span>
+                </div>
               ))}
             </div>
           </div>
