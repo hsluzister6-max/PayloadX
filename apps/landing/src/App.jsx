@@ -23,6 +23,7 @@ const PLATFORMS = [
   { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.deb` },
 ];
 
+
 import Docs from "./Docs";
 
 export default function App() {
