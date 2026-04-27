@@ -11,11 +11,14 @@ const FEATURES = [
   { icon: <Code size={18} />, tag: "DEV", title: "Portable", desc: "Postman importer" },
 ];
 
+const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
+const LATEST_DL = `${REPO_URL}/releases/latest/download`;
+
 const PLATFORMS = [
-  { os: "macOS", arch: "Universal", icon: <FaApple />, primary: true, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64.dmg" },
-  { os: "Windows", arch: "x64", icon: <FaWindows />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64-setup.exe" },
-  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/payload-x_1.4.7_amd64.AppImage" },
-  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/payload-x_1.4.7_amd64.deb" },
+  { os: "macOS", arch: "Universal", icon: <FaApple />, primary: true, link: `${LATEST_DL}/PayloadX_x64.dmg` },
+  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${LATEST_DL}/PayloadX_x64-setup.exe` },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.AppImage` },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${LATEST_DL}/payload-x_amd64.deb` },
 ];
 
 import Docs from "./Docs";
@@ -24,22 +27,20 @@ export default function App() {
   const [active, setActive] = useState(null);
   const [tick, setTick] = useState(0);
   const [view, setView] = useState("hero"); // "hero" or "docs"
-  const [userOS, setUserOS] = useState({ name: "Windows", link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64-setup.exe", icon: <FaWindows /> });
+  const [userOS, setUserOS] = useState({ name: "Windows", link: `${LATEST_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => (t + 1) % 4), 2200);
     
     // Detect OS
     const ua = window.navigator.userAgent;
-    const version = "1.4.7";
-    const baseUrl = `https://github.com/Sundanpatyad/api-test/releases/download/v${version}`;
 
     if (ua.indexOf("Win") !== -1) {
-      setUserOS({ name: "Windows", link: `${baseUrl}/PayloadX_${version}_x64-setup.exe`, icon: <FaWindows /> });
+      setUserOS({ name: "Windows", link: `${LATEST_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
     } else if (ua.indexOf("Mac") !== -1) {
-      setUserOS({ name: "macOS", link: `${baseUrl}/PayloadX_${version}_x64.dmg`, icon: <FaApple /> });
+      setUserOS({ name: "macOS", link: `${LATEST_DL}/PayloadX_x64.dmg`, icon: <FaApple /> });
     } else if (ua.indexOf("Linux") !== -1) {
-      setUserOS({ name: "Linux", link: `${baseUrl}/payload-x_${version}_amd64.AppImage`, icon: <FaLinux /> });
+      setUserOS({ name: "Linux", link: `${LATEST_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> });
     }
 
     return () => clearInterval(id);
@@ -60,7 +61,7 @@ export default function App() {
         <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
         <div className={styles.navSpacer} />
         <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
-        <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer" className={styles.navLink}>GitHub</a>
+        <a href={REPO_URL} target="_blank" rel="noreferrer" className={styles.navLink}>GitHub</a>
         <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer" className={styles.navCta}>Live Demo →</a>
       </nav>
 
@@ -93,7 +94,7 @@ export default function App() {
                 Download for {userOS.name}
               </span>
             </a>
-            <a href="https://github.com/Sundanpatyad/api-test/releases" target="_blank" rel="noreferrer" className={styles.btnGhost}>
+            <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className={styles.btnGhost}>
               All Platforms →
             </a>
           </div>
@@ -192,7 +193,7 @@ export default function App() {
           </span>
         </div>
         <div className={styles.footerLinks}>
-          <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer">GitHub</a>
+          <a href={REPO_URL} target="_blank" rel="noreferrer">GitHub</a>
           <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer">Live Demo</a>
           <a href="#">Changelog</a>
         </div>
