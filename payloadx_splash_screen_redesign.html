@@ -1,0 +1,85 @@
+
+<div style="min-height:520px;background:#09090B;display:flex;align-items:center;justify-content:center;border-radius:16px;position:relative;overflow:hidden;">
+
+<style>
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fillBar{from{width:0}to{width:100%}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
+.splash-root{display:flex;flex-direction:column;align-items:center;gap:0;text-align:center;}
+.s1{animation:fadeUp .5s ease both}
+.s2{animation:fadeUp .5s .15s ease both}
+.s3{animation:fadeUp .5s .3s ease both}
+.s4{animation:fadeUp .5s .45s ease both}
+</style>
+
+<!-- Subtle radial glow bg -->
+<div style="position:absolute;inset:0;pointer-events:none;">
+  <div style="position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);width:320px;height:200px;background:radial-gradient(ellipse,rgba(255,255,255,.06) 0%,transparent 70%);border-radius:50%;"></div>
+</div>
+
+<div class="splash-root">
+
+  <!-- Logo -->
+  <div class="s1" style="margin-bottom:28px;">
+    <div style="position:relative;display:inline-block;">
+      <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(145deg,#2a2a2e 0%,#1a1a1e 100%);border:.5px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+        <!-- Icon: stylised P glyph -->
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="8" y="6" width="5" height="20" rx="2.5" fill="rgba(255,255,255,0.9)"/>
+          <rect x="13" y="6" width="9" height="5" rx="2.5" fill="rgba(255,255,255,0.9)"/>
+          <rect x="13" y="14" width="7" height="5" rx="2.5" fill="rgba(255,255,255,0.9)"/>
+          <rect x="19" y="6" width="5" height="13" rx="2.5" fill="rgba(255,255,255,0.9)"/>
+        </svg>
+        <!-- shimmer sweep -->
+        <div style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.15) 50%,transparent 70%);animation:shimmer 2.8s ease-in-out infinite;"></div>
+      </div>
+      <!-- glow halo -->
+      <div style="position:absolute;inset:-6px;border-radius:22px;background:rgba(255,255,255,.04);z-index:-1;animation:pulse 3s ease-in-out infinite;"></div>
+    </div>
+  </div>
+
+  <!-- Wordmark -->
+  <div class="s2" style="margin-bottom:6px;">
+    <p style="font-size:28px;font-weight:500;color:#fff;letter-spacing:-.5px;margin:0;line-height:1;">PayloadX</p>
+  </div>
+
+  <!-- Sub-label -->
+  <div class="s3">
+    <p style="font-size:11px;font-weight:400;color:rgba(255,255,255,.3);letter-spacing:.22em;text-transform:uppercase;margin:0 0 40px;">API Studio</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="s4" style="width:200px;">
+    <div style="height:1.5px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;margin-bottom:14px;">
+      <div id="bar" style="height:100%;width:0;background:rgba(255,255,255,.55);border-radius:2px;transition:width .45s ease;"></div>
+    </div>
+    <p id="status" style="font-size:11px;color:rgba(255,255,255,.3);margin:0;font-weight:400;letter-spacing:.03em;min-height:16px;transition:opacity .3s;"></p>
+  </div>
+
+  <!-- Footer -->
+  <p style="font-size:10px;color:rgba(255,255,255,.12);margin:44px 0 0;letter-spacing:.12em;text-transform:uppercase;animation:fadeUp .6s .8s ease both;opacity:0;animation-fill-mode:both;">Ver 1.2.0 &nbsp;·&nbsp; By Sundan Sharma</p>
+
+</div>
+
+<script>
+const steps=[
+  {p:18,t:'Initializing…'},
+  {p:40,t:'Loading workspace…'},
+  {p:62,t:'Connecting to services…'},
+  {p:82,t:'Restoring sessions…'},
+  {p:100,t:'Welcome to PayloadX'}
+];
+const bar=document.getElementById('bar');
+const status=document.getElementById('status');
+let i=0;
+function tick(){
+  if(i>=steps.length)return;
+  bar.style.width=steps[i].p+'%';
+  status.style.opacity='0';
+  setTimeout(()=>{status.textContent=steps[i].t;status.style.opacity='1';i++;},200);
+  if(i<steps.length-1)setTimeout(tick,700);
+}
+setTimeout(tick,600);
+</script>
+</div>

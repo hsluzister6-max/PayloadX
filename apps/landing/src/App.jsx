@@ -1,0 +1,202 @@
+import React, { useState, useEffect } from "react";
+import styles from "./App.module.css";
+import { Zap, Lock, Users, Code, Download } from 'lucide-react';
+import { FaApple, FaWindows, FaLinux } from 'react-icons/fa6';
+import PayloadX from "./components/core/Logo";
+
+const FEATURES = [
+  { icon: <Zap size={18} />, tag: "PERFORMANCE", title: "Lightning Fast", desc: "Rust-powered engine" },
+  { icon: <Lock size={18} />, tag: "SECURITY", title: "Encrypted", desc: "JWT + local vault" },
+  { icon: <Users size={18} />, tag: "TEAMS", title: "Sync", desc: "Real-time collab" },
+  { icon: <Code size={18} />, tag: "DEV", title: "Portable", desc: "Postman importer" },
+];
+
+const PLATFORMS = [
+  { os: "macOS", arch: "Universal", icon: <FaApple />, primary: true, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64.dmg" },
+  { os: "Windows", arch: "x64", icon: <FaWindows />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64-setup.exe" },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/payload-x_1.4.7_amd64.AppImage" },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/payload-x_1.4.7_amd64.deb" },
+];
+
+import Docs from "./Docs";
+
+export default function App() {
+  const [active, setActive] = useState(null);
+  const [tick, setTick] = useState(0);
+  const [view, setView] = useState("hero"); // "hero" or "docs"
+  const [userOS, setUserOS] = useState({ name: "Windows", link: "https://github.com/Sundanpatyad/api-test/releases/download/v1.4.7/PayloadX_1.4.7_x64-setup.exe", icon: <FaWindows /> });
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => (t + 1) % 4), 2200);
+    
+    // Detect OS
+    const ua = window.navigator.userAgent;
+    const version = "1.4.7";
+    const baseUrl = `https://github.com/Sundanpatyad/api-test/releases/download/v${version}`;
+
+    if (ua.indexOf("Win") !== -1) {
+      setUserOS({ name: "Windows", link: `${baseUrl}/PayloadX_${version}_x64-setup.exe`, icon: <FaWindows /> });
+    } else if (ua.indexOf("Mac") !== -1) {
+      setUserOS({ name: "macOS", link: `${baseUrl}/PayloadX_${version}_x64.dmg`, icon: <FaApple /> });
+    } else if (ua.indexOf("Linux") !== -1) {
+      setUserOS({ name: "Linux", link: `${baseUrl}/payload-x_${version}_amd64.AppImage`, icon: <FaLinux /> });
+    }
+
+    return () => clearInterval(id);
+  }, []);
+
+  if (view === "docs") {
+    return <Docs onBack={() => setView("hero")} />;
+  }
+
+  return (
+    <div className={styles.root}>
+      {/* scanline overlay */}
+      <div className={styles.scanlines} aria-hidden />
+
+      {/* NAV */}
+      <nav className={styles.nav}>
+        <PayloadX size="28px" fontSize="10px" />
+        <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
+        <div className={styles.navSpacer} />
+        <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
+        <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer" className={styles.navLink}>GitHub</a>
+        <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer" className={styles.navCta}>Live Demo →</a>
+      </nav>
+
+      {/* MAIN GRID */}
+      <main className={styles.main}>
+
+        {/* LEFT COLUMN */}
+        <div className={styles.left}>
+          <div className={styles.badge}>
+            <span className={styles.badgeDot} />
+            OPEN SOURCE · FREE FOREVER
+          </div>
+
+          <h1 className={styles.title}>
+            <span className={`${styles.titleChrome} metallic-app-name`} style={{ display: 'block', paddingBottom: '0.2em' }}>Payload</span>
+            <span className={`${styles.titleX} metallic-app-name`} style={{ display: 'block' }}>X</span>
+          </h1>
+
+          <p className={styles.tagline}>API Testing,<br />Simplified.</p>
+
+          <p className={styles.sub}>
+            The modern, lightweight alternative to Postman —
+            built for developers who move fast.
+          </p>
+
+          <div className={styles.ctaRow}>
+            <a href={userOS.link} className={styles.btnPrimary}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {userOS.icon}
+                Download for {userOS.name}
+              </span>
+            </a>
+            <a href="https://github.com/Sundanpatyad/api-test/releases" target="_blank" rel="noreferrer" className={styles.btnGhost}>
+              All Platforms →
+            </a>
+          </div>
+
+          {/* stat strip */}
+          <div className={styles.stats}>
+            <div className={styles.stat}><span className={styles.statNum}>2.4ms</span><span className={styles.statLabel}>avg latency</span></div>
+            <div className={styles.statDiv} />
+            <div className={styles.stat}><span className={styles.statNum}>4</span><span className={styles.statLabel}>platforms</span></div>
+            <div className={styles.statDiv} />
+            <div className={styles.stat}><span className={styles.statNum}>100%</span><span className={styles.statLabel}>free</span></div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className={styles.right}>
+
+          {/* FEATURE TILES */}
+          <div className={styles.featGrid}>
+            {FEATURES.map((f, i) => (
+              <div
+                key={i}
+                className={`${styles.featCard} ${tick === i ? styles.featCardActive : ""}`}
+              >
+                <span className={styles.featTag}>{f.tag}</span>
+                <div className={styles.featIcon}>{f.icon}</div>
+                <div className={styles.featTitle}>{f.title}</div>
+                <div className={styles.featDesc}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* DOWNLOAD STRIP */}
+          <div className={styles.dlStrip}>
+            <span className={styles.dlLabel}>DOWNLOAD FOR</span>
+            <div className={styles.dlPills}>
+              {PLATFORMS.map((p, i) => (
+                <a
+                  key={i}
+                  href={p.link}
+                  className={`${styles.dlPill} ${active === i ? styles.dlPillActive : ""} ${p.primary ? styles.dlPillPrimary : ""}`}
+                  onMouseEnter={() => setActive(i)}
+                  onMouseLeave={() => setActive(null)}
+                >
+                  <span className={styles.pillOs}>
+                    <span className={styles.pillIcon}>{p.icon}</span>
+                    {p.os}
+                  </span>
+                  <span className={styles.pillArch}>{p.arch}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* TERMINAL PREVIEW */}
+          <div className={styles.terminal}>
+            <div className={styles.termHeader}>
+              <span className={styles.termDot} style={{ background: "#ff5f57" }} />
+              <span className={styles.termDot} style={{ background: "#febc2e" }} />
+              <span className={styles.termDot} style={{ background: "#28c840" }} />
+              <span className={styles.termTitle}>payloadx — bash</span>
+            </div>
+            <div className={styles.termBody}>
+              <span className={styles.termPrompt}>$ </span>
+              <span className={styles.termCmd}>payloadx run collection.json</span>
+              <br />
+              <span className={styles.termOk}>✓</span>
+              <span className={styles.termMuted}> GET /api/users </span>
+              <span className={styles.termStatus}>200</span>
+              <span className={styles.termTime}> 12ms</span>
+              <br />
+              <span className={styles.termOk}>✓</span>
+              <span className={styles.termMuted}> POST /api/auth </span>
+              <span className={styles.termStatus}>201</span>
+              <span className={styles.termTime}> 8ms</span>
+              <br />
+              <span className={styles.termErr}>✗</span>
+              <span className={styles.termMuted}> DELETE /api/item </span>
+              <span className={styles.termStatusErr}>404</span>
+              <span className={styles.termTime}> 3ms</span>
+              <br />
+              <span className={styles.termPrompt}>$ <span className={styles.termCursor}>▋</span></span>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className={styles.footer}>
+        <div className={styles.footerBrand}>
+          <span className={styles.footerCopy}>© 2024 PayloadX</span>
+          <span className={styles.footerDivider}>·</span>
+          <span className={styles.footerCreator}>
+            Crafted by <span className={styles.metallicText}>Sundan Sharma</span>
+          </span>
+        </div>
+        <div className={styles.footerLinks}>
+          <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://sundanpatyad.github.io/api-test/" target="_blank" rel="noreferrer">Live Demo</a>
+          <a href="#">Changelog</a>
+        </div>
+      </footer>
+    </div>
+  );
+}

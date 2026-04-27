@@ -1,0 +1,93 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --no-open",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "PayloadX",
+    "version": "1.4.7"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "fs": {
+        "all": false,
+        "readFile": true,
+        "writeFile": true,
+        "exists": true,
+        "scope": ["$APPDATA/*", "$APPDATA/payloadx/*"]
+      },
+      "dialog": {
+        "all": false,
+        "open": true,
+        "save": true,
+        "message": true,
+        "confirm": true,
+        "ask": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["nsis", "msi", "deb", "appimage", "dmg"],
+      "identifier": "com.payloadx.apistudio",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "",
+      "category": "DeveloperTool",
+      "shortDescription": "PayloadX - Premium API Studio",
+      "longDescription": "PayloadX API Studio is a powerful, cross-platform API testing tool with real-time team collaboration.",
+      "deb": {
+        "depends": ["libgtk-3-0", "libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0", "libappindicator3-1"]
+      },
+      "macOS": {
+        "signingIdentity": "Developer ID Application",
+        "hardenedRuntime": true
+      },
+      "windows": {
+        "wix": {
+          "language": "en-US",
+          "template": null
+        },
+        "nsis": {
+          "installMode": "both",
+          "displayLanguageSelector": true,
+          "installerIcon": "icons/icon.ico"
+        }
+      }
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 http://localhost:4000 https://api-test-backend.vercel.app https:; img-src 'self' data: https:"
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "PayloadX API Studio",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1000,
+        "minHeight": 600,
+        "center": true,
+        "decorations": true,
+        "transparent": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "payloadx-api-studio",
+  "version": "1.4.5",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/realtime",
+    "apps/desktop",
+    "apps/landing"
+  ],
+  "scripts": {
+    "backend": "cd apps/backend && npm run dev",
+    "realtime": "cd apps/realtime && npm start",
+    "desktop": "cd apps/desktop && npm run tauri dev",
+    "dev": "concurrently \"npm run backend\" \"npm run realtime\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}

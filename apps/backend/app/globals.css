@@ -1,0 +1,153 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+
+  /* Metallic Silver — Professional Chrome Theme */
+  --bg: #0A0C10;         /* Deep Graphite App Background */
+  --bg-soft: #080A0C;    /* Sidebar / Rail level bg */
+  --surface: #12161B;    /* Polished Steel Cards */
+  --surface-elevated: #1A1F26;
+
+  --border: rgba(255, 255, 255, 0.08); /* Hairline Metallic Border */
+  --border-strong: rgba(255, 255, 255, 0.15); /* Stronger Metallic Edge */
+
+  /* Metallic Accents */
+  --accent-silver: #D1D5DB;
+  --accent-chrome: #F3F4F6;
+  --accent-blue-gray: #94A3B8; /* Slate Blue for depth */
+  
+  --accent-primary: var(--accent-silver);
+  --accent-soft: #9CA3AF;
+  --accent-glow: rgba(209, 213, 219, 0.15);
+
+  /* Typography */
+  --white: #F9FAFB;
+  --off: #D1D5DB;
+  --muted: #8B949E;
+
+  /* Functional */
+  --green: #22C55E;
+  --amber: #F59E0B;
+  --blue: #3B82F6;
+  
+  /* Utils */
+  --hover-overlay: rgba(255, 255, 255, 0.05);
+  --shadow-soft: rgba(0, 0, 0, 0.5);
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes drift {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+
+  33% {
+    transform: translateY(-6px) translateX(4px);
+  }
+
+  66% {
+    transform: translateY(4px) translateX(-3px);
+  }
+}
+
+@keyframes pulseDot {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}

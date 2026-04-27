@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: payloadx-realtime
+    runtime: node
+    rootDir: apps/realtime
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGIN
+        # Set this in Render dashboard to your actual frontend URLs
+        value: https://your-frontend.vercel.app,tauri://localhost

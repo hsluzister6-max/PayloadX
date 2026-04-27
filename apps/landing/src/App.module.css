@@ -1,0 +1,742 @@
+/* ============================================
+   App.module.css — PayloadX Metallic UI
+   Single-screen, non-scrollable, responsive
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@300;400;500&display=swap');
+
+/* ---- ROOT ---- */
+.root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #07090d;
+  color: #d0d4de;
+  font-family: 'DM Mono', monospace;
+  overflow: hidden;
+}
+
+/* scanline texture */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.07) 2px,
+      rgba(0, 0, 0, 0.07) 4px);
+}
+
+/* ---- NAV ---- */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(7, 9, 13, 0.95);
+  flex-shrink: 0;
+}
+
+.logoMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.logoMark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoName {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #9ca3b0;
+  letter-spacing: 0.04em;
+}
+
+.navSpacer {
+  flex: 1;
+}
+
+.navLink {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #3d4455;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.navLink:hover {
+  color: #8a909e;
+}
+
+.navCta {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #9ca3b0;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.35rem 0.85rem;
+  border-radius: 5px;
+  transition: all 0.2s;
+}
+
+.navCta:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d0d4de;
+}
+
+/* ---- MAIN GRID ---- */
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ---- LEFT ---- */
+.left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2.5rem 1.5rem 2.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 0.85rem;
+  overflow: hidden;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: #3d4455;
+  text-transform: uppercase;
+}
+
+.badgeDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9ca3b0, #5a6070);
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(3.5rem, 7vw, 6.5rem);
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+  margin: 0;
+}
+
+.titleChrome {
+  background: linear-gradient(175deg,
+      #f0f2f5 0%,
+      #c4c8d4 20%,
+      #8a8f9e 45%,
+      #b8bcc8 65%,
+      #e4e6ec 80%,
+      #9ca3b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: block;
+}
+
+.titleX {
+  display: block;
+  color: #1e2230;
+  font-size: 1.4em;
+  line-height: 0.75;
+}
+
+.tagline {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(0.95rem, 1.6vw, 1.3rem);
+  font-weight: 700;
+  color: #5a6070;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.sub {
+  font-size: clamp(0.72rem, 1vw, 0.82rem);
+  color: #2e3445;
+  line-height: 1.7;
+  max-width: 360px;
+  margin: 0;
+  font-weight: 300;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0.7rem 1.4rem;
+  border-radius: 7px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  background: linear-gradient(140deg, #c8cdd8, #7a8090, #a8adb8, #d4d8e0);
+  color: #0d1017;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(160, 168, 190, 0.18);
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.7rem 1.25rem;
+  border-radius: 7px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  color: #4a5060;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnGhost:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #8a909e;
+  transform: translateY(-2px);
+}
+
+/* stats */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  margin-top: auto;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statNum {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+.statLabel {
+  font-size: 0.6rem;
+  color: #2e3445;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.statDiv {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---- RIGHT ---- */
+.right {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  gap: 1rem;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* feature grid */
+.featGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.featCard {
+  background: #0b0d13;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.4s, background 0.4s;
+  position: relative;
+  overflow: hidden;
+}
+
+.featCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(180, 185, 200, 0.03), transparent 60%);
+  pointer-events: none;
+}
+
+.featCardActive {
+  border-color: rgba(160, 168, 190, 0.2);
+  background: #0e111a;
+}
+
+.featTag {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  color: #2e3445;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.featIcon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.featTitle {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #7a8090;
+  letter-spacing: 0.01em;
+}
+
+.featDesc {
+  font-size: 0.7rem;
+  color: #2a3040;
+  font-weight: 300;
+}
+
+/* download strip */
+.dlStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dlLabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: #2a3040;
+  text-transform: uppercase;
+}
+
+.dlPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dlPill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 7px;
+  background: #0b0d13;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #4a5060;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'DM Mono', monospace;
+}
+
+.dlPill:hover,
+.dlPillActive {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #10131c;
+  color: #8a909e;
+  transform: translateY(-1px);
+}
+
+.dlPillPrimary {
+  border-color: rgba(160, 168, 190, 0.2);
+  background: #0e111a;
+}
+
+.pillOs {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pillIcon {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+}
+
+.pillArch {
+  font-size: 0.62rem;
+  color: #2a3040;
+  letter-spacing: 0.04em;
+}
+
+/* terminal */
+.terminal {
+  background: #05070a;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.termHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: #080a0e;
+}
+
+.termDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.termTitle {
+  font-size: 0.62rem;
+  color: #2a3040;
+  letter-spacing: 0.06em;
+  margin-left: 4px;
+}
+
+.termBody {
+  padding: 0.9rem 1rem;
+  font-size: 0.75rem;
+  line-height: 1.9;
+  flex: 1;
+  overflow: hidden;
+}
+
+.termPrompt {
+  color: #3d4455;
+}
+
+.termCmd {
+  color: #7a8090;
+}
+
+.termOk {
+  color: #3a6b4a;
+}
+
+.termErr {
+  color: #6b3a3a;
+}
+
+.termMuted {
+  color: #2e3445;
+}
+
+.termStatus {
+  color: #5a8060;
+  font-weight: 500;
+}
+
+.termStatusErr {
+  color: #7a4040;
+  font-weight: 500;
+}
+
+.termTime {
+  color: #1e2530;
+}
+
+.termCursor {
+  display: inline-block;
+  animation: blink 1.1s step-end infinite;
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ---- FOOTER ---- */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(7, 9, 13, 0.95);
+  flex-shrink: 0;
+}
+
+.footerBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footerCopy {
+  font-size: 0.62rem;
+  color: #1e2530;
+  letter-spacing: 0.06em;
+}
+
+.footerDivider {
+  color: #1e2530;
+  font-size: 0.62rem;
+}
+
+.footerCreator {
+  font-size: 0.62rem;
+  color: #3d4455;
+  letter-spacing: 0.04em;
+}
+
+.metallicText {
+  background: linear-gradient(175deg,
+      #f0f2f5 0%,
+      #c4c8d4 20%,
+      #8a8f9e 45%,
+      #b8bcc8 65%,
+      #e4e6ec 80%,
+      #9ca3b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: inline-block;
+  font-family: 'Syne', sans-serif;
+}
+
+.footerLinks {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footerLinks a {
+  font-size: 0.62rem;
+  color: #2a3040;
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.footerLinks a:hover {
+  color: #6b7280;
+}
+
+/* ============================================
+   RESPONSIVE — TABLET (≤900px)
+   ============================================ */
+@media (max-width: 900px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .left {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.25rem 1.5rem;
+    gap: 0.6rem;
+    justify-content: flex-start;
+  }
+
+  .title {
+    font-size: clamp(2.8rem, 10vw, 4.5rem);
+  }
+
+  .titleX {
+    font-size: 1.2em;
+  }
+
+  .sub {
+    display: none;
+  }
+
+  .stats {
+    display: none;
+  }
+
+  .right {
+    padding: 1rem 1.5rem;
+    gap: 0.75rem;
+  }
+
+  .featCard {
+    padding: 0.75rem;
+  }
+
+  .featIcon {
+    font-size: 0.95rem;
+  }
+}
+
+/* ============================================
+   RESPONSIVE — MOBILE (≤600px)
+   ============================================ */
+@media (max-width: 600px) {
+  .nav {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .navLink {
+    display: none;
+  }
+
+  .logoName {
+    font-size: 0.9rem;
+  }
+
+  .left {
+    padding: 1rem;
+    gap: 0.55rem;
+  }
+
+  .title {
+    font-size: clamp(2.4rem, 13vw, 3.6rem);
+  }
+
+  .tagline {
+    font-size: 0.85rem;
+  }
+
+  .ctaRow {
+    gap: 7px;
+  }
+
+  .btnPrimary,
+  .btnGhost {
+    font-size: 0.72rem;
+    padding: 0.6rem 1rem;
+  }
+
+  .right {
+    padding: 0.85rem 1rem;
+    gap: 0.65rem;
+  }
+
+  .featGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .featCard {
+    padding: 0.65rem;
+  }
+
+  .featTag {
+    display: none;
+  }
+
+  .featDesc {
+    display: none;
+  }
+
+  .dlPills {
+    gap: 5px;
+  }
+
+  .dlPill {
+    padding: 0.4rem 0.7rem;
+  }
+
+  .pillOs {
+    font-size: 0.68rem;
+  }
+
+  .pillArch {
+    display: none;
+  }
+
+  .terminal {
+    flex: 1;
+  }
+
+  .termBody {
+    font-size: 0.68rem;
+    line-height: 1.75;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .footer {
+    padding: 0.6rem 1rem;
+  }
+
+  .footerLinks a {
+    letter-spacing: 0.04em;
+  }
+}
+
+/* ============================================
+   RESPONSIVE — SMALL MOBILE (≤380px)
+   ============================================ */
+@media (max-width: 380px) {
+  .title {
+    font-size: 2.2rem;
+  }
+
+  .featGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .featTitle {
+    font-size: 0.65rem;
+  }
+}

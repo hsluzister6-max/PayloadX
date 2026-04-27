@@ -1,0 +1,84 @@
+import { useRequestStore } from '@/store/requestStore';
+import { v4 as uuidv4 } from 'uuid';
+
+function HeaderRow({ item, onChange, onDelete }) {
+  return (
+    <div className="flex items-center gap-2 group">
+      <input
+        type="checkbox"
+        checked={item.enabled !== false}
+        onChange={(e) => onChange({ ...item, enabled: e.target.checked })}
+        className="w-3.5 h-3.5 accent-brand-500 flex-shrink-0"
+      />
+      <input
+        type="text"
+        placeholder="Content-Type"
+        value={item.key}
+        onChange={(e) => onChange({ ...item, key: e.target.value })}
+        className="bg-surface-800 border border-transparent hover:border-[var(--border-1)] focus:border-[var(--accent)] outline-none py-1 px-2 rounded-md text-[11px] flex-1 font-mono text-tx-primary transition-all placeholder-tx-muted"
+        list="common-headers"
+      />
+      <input
+        type="text"
+        placeholder="application/json"
+        value={item.value}
+        onChange={(e) => onChange({ ...item, value: e.target.value })}
+        className="bg-surface-800 border border-transparent hover:border-[var(--border-1)] focus:border-[var(--accent)] outline-none py-1 px-2 rounded-md text-[11px] flex-1 font-mono text-tx-primary transition-all placeholder-tx-muted"
+      />
+      <button
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 text-tx-muted hover:text-danger transition-all flex-shrink-0"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+const COMMON_HEADERS = [
+  'Accept', 'Authorization', 'Content-Type', 'Content-Length', 'User-Agent',
+  'X-Requested-With', 'X-API-Key', 'X-Custom-Header', 'Cache-Control', 'Origin',
+];
+
+export default function HeadersTab() {
+  const { currentRequest, updateField } = useRequestStore();
+  const headers = currentRequest.headers || [];
+
+  const setHeaders = (h) => updateField('headers', h);
+  const addRow = () => setHeaders([...headers, { id: uuidv4(), key: '', value: '', enabled: true }]);
+  const updateRow = (id, updated) => setHeaders(headers.map((h) => ((h.id || h._id) === id ? updated : h)));
+  const deleteRow = (id) => setHeaders(headers.filter((h) => (h.id || h._id) !== id));
+
+  return (
+    <div className="p-3 flex flex-col gap-2">
+      <datalist id="common-headers">
+        {COMMON_HEADERS.map((h) => <option key={h} value={h} />)}
+      </datalist>
+
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-semibold text-surface-400">Request Headers</span>
+        <button onClick={addRow} className="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Add
+        </button>
+      </div>
+
+      {headers.map((h, index) => {
+        const rowId = h.id || h._id;
+        return (
+          <HeaderRow
+            key={rowId || index}
+            item={h}
+            onChange={(updated) => updateRow(rowId, updated)}
+            onDelete={() => deleteRow(rowId)}
+          />
+        );
+      })}
+      {headers.length === 0 && (
+        <p className="text-tx-muted text-xs text-center py-4">No headers added yet.</p>
+      )}
+    </div>
+  );
+}

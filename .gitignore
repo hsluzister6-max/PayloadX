@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.next/
+dist/
+target/
+.DS_Store
+*.log
+.vercel/
+apps/backend/*.json
+!apps/backend/package.json
