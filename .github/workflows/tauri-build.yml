@@ -68,3 +68,36 @@ jobs:
           releaseDraft: false
           prerelease: false
           tagName: ${{ github.ref_name }}
+
+  rename-assets:
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Rename Release Assets
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = process.env.GITHUB_REF_NAME;
+            
+            try {
+              const release = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              for (const asset of release.data.assets) {
+                // Remove version like _1.4.7 or _v1.4.7
+                const newName = asset.name.replace(/_v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '');
+                if (newName !== asset.name) {
+                  console.log(`Renaming ${asset.name} to ${newName}`);
+                  await github.rest.repos.updateReleaseAsset({
+                    owner,
+                    repo,
+                    asset_id: asset.id,
+                    name: newName
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching release or renaming assets:', error);
+            }

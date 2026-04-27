@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "PayloadX",
-    "version": "1.4.7"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
