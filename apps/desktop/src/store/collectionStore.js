@@ -143,7 +143,8 @@ export const useCollectionStore = create((set, get) => ({
       // 5. Update state
       set({ 
         collections: syncedCollections, 
-        requests: serverRequests, // Flattened state for easy UI access
+        requests: serverRequests,
+        _requestsById: new Map(serverRequests.map(r => [r._id, r])),
         isRefreshing: false 
       });
 
@@ -218,9 +219,14 @@ export const useCollectionStore = create((set, get) => ({
         const existingRequests = state.requests.filter(r => r.collectionId !== collectionId);
         const newRequests = [...existingRequests, ...syncedRequests];
         const newLoadingCollections = { ...state.loadingCollections, [collectionId]: false };
+        
+        // Rebuild the index Map
+        const newMap = new Map(newRequests.map(r => [r._id, r]));
+
         return {
           currentCollection: data.collection,
           requests: newRequests,
+          _requestsById: newMap,
           isLoadingRequests: Object.values(newLoadingCollections).some(v => v),
           loadingCollections: newLoadingCollections
         };
@@ -238,9 +244,11 @@ export const useCollectionStore = create((set, get) => ({
       // Add cached requests to the store
       set((state) => {
         const existingRequests = state.requests.filter(r => r.collectionId !== collectionId);
+        const newRequests = [...existingRequests, ...cachedRequests];
         const newLoadingCollections = { ...state.loadingCollections, [collectionId]: false };
         return {
-          requests: [...existingRequests, ...cachedRequests],
+          requests: newRequests,
+          _requestsById: new Map(newRequests.map(r => [r._id, r])),
           isLoadingRequests: Object.values(newLoadingCollections).some(v => v),
           loadingCollections: newLoadingCollections
         };
@@ -267,7 +275,11 @@ export const useCollectionStore = create((set, get) => ({
       set((state) => {
         const existingRequests = state.requests.filter(r => r.collectionId !== collectionId);
         const mergedRequests = [...existingRequests, ...syncedRequests];
-        return { currentCollection: data.collection, requests: mergedRequests };
+        return { 
+          currentCollection: data.collection, 
+          requests: mergedRequests,
+          _requestsById: new Map(mergedRequests.map(r => [r._id, r]))
+        };
       });
 
       localStorageService.saveCurrentCollection(data.collection);
@@ -308,9 +320,11 @@ export const useCollectionStore = create((set, get) => ({
       set((state) => {
         // Merge with existing requests from other collections
         const existingRequests = state.requests.filter(r => r.collectionId !== collectionId);
+        const newRequests = [...existingRequests, ...cachedRequests];
         return {
           currentCollection: cachedCollection?._id === collectionId ? cachedCollection : state.currentCollection,
-          requests: [...existingRequests, ...cachedRequests]
+          requests: newRequests,
+          _requestsById: new Map(newRequests.map(r => [r._id, r]))
         };
       });
       return { success: true, collection: cachedCollection, requests: cachedRequests, fromCache: true };
@@ -463,9 +477,13 @@ export const useCollectionStore = create((set, get) => ({
       get().updateCollection(data.collection);
       
       // Update requests that were in this folder (move to root locally)
-      set((state) => ({
-        requests: state.requests.map(r => r.folderId === folderId ? { ...r, folderId: null } : r)
-      }));
+      set((state) => {
+        const newRequests = state.requests.map(r => r.folderId === folderId ? { ...r, folderId: null } : r);
+        return {
+          requests: newRequests,
+          _requestsById: new Map(newRequests.map(r => [r._id, r]))
+        };
+      });
       
       toast.success('Folder deleted');
       return { success: true };
@@ -493,22 +511,22 @@ export const useCollectionStore = create((set, get) => ({
 
   updateRequest: (request) => {
     set((state) => {
-      // O(1) update: only rebuild the affected item
-      if (!state._requestsById.has(request._id)) {
-        // Not tracked yet — fall back to full replace
-        const updated = [...state.requests, request];
-        const newMap = new Map(state._requestsById);
-        newMap.set(request._id, request);
-        const collectionRequests = updated.filter(r => r.collectionId === request.collectionId);
-        localStorageService.saveRequests(request.collectionId, collectionRequests);
-        return { requests: updated, _requestsById: newMap };
+      const existsInArray = state.requests.some(r => r._id === request._id);
+      
+      let updated;
+      if (existsInArray) {
+        updated = state.requests.map((r) => (r._id === request._id ? request : r));
+      } else {
+        updated = [...state.requests, request];
       }
 
-      const updated = state.requests.map((r) => (r._id === request._id ? request : r));
       const newMap = new Map(state._requestsById);
       newMap.set(request._id, request);
+      
+      // Save to local storage for the relevant collection
       const collectionRequests = updated.filter(r => r.collectionId === request.collectionId);
       localStorageService.saveRequests(request.collectionId, collectionRequests);
+      
       return { requests: updated, _requestsById: newMap };
     });
   },

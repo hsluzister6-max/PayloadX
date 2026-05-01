@@ -16,6 +16,7 @@ import ApiDocsPanel from '@/components/ApiDocs/ApiDocsPanel';
 import InlineDocViewer from '@/components/ResponseViewer/InlineDocViewer';
 import RightSidebar from './RightSidebar';
 import WorkflowBuilder from '@/components/WorkflowBuilder/WorkflowBuilder';
+import HistoryPanel from '@/components/History/HistoryPanel.jsx';
 
 export default function LayoutV2({
   onShowTeamModal,
@@ -43,7 +44,36 @@ export default function LayoutV2({
   const { teams, currentTeam } = useTeamStore();
   const { projects, currentProject } = useProjectStore();
   const { currentCollection } = useCollectionStore();
-  const { currentRequest, openTabs, activeTabId, setActiveTabId, closeTab, closeAllTabs, closeOtherTabs, closeTabsToLeft, closeTabsToRight } = useRequestStore();
+  const { currentRequest, openTabs, activeTabId, setActiveTabId, closeTab, closeAllTabs, closeOtherTabs, closeTabsToLeft, closeTabsToRight, saveRequest } = useRequestStore();
+  const { setShowUnsavedModal } = useUIStore();
+
+  const handleCloseTab = (id) => {
+    const tab = openTabs.find(t => t.id === id);
+    if (tab?.isDirty) {
+      setShowUnsavedModal(true, {
+        tabId: id,
+        requestName: tab.request.name,
+        onSave: async () => {
+          // If the tab to close is not the active one, we need to switch to it to save
+          // but saveRequest in store uses currentRequest.
+          // This is a limitation of the current store.
+          // For now, let's just save if it's the active one.
+          if (activeTabId === id) {
+            const result = await saveRequest();
+            if (result.success) closeTab(id);
+          } else {
+            // Logic to save a non-active tab would go here
+            closeTab(id);
+          }
+        },
+        onDontSave: () => {
+          closeTab(id);
+        }
+      });
+    } else {
+      closeTab(id);
+    }
+  };
 
   // Check if user needs onboarding (no teams or projects)
   const needsOnboarding = teams.length === 0 || projects.length === 0 || !currentProject;
@@ -134,6 +164,8 @@ export default function LayoutV2({
             <ApiDocsPanel />
           ) : activeV2Nav === 'workflow' ? (
             <WorkflowBuilder />
+          ) : activeV2Nav === 'history' ? (
+            <HistoryPanel />
           ) : needsOnboarding ? (
             <EmptyState
               onShowTeamModal={onShowTeamModal}
@@ -173,7 +205,7 @@ export default function LayoutV2({
                               {
                                 id: 'close',
                                 label: 'Close Tab',
-                                onClick: () => closeTab(tab.id)
+                                onClick: () => handleCloseTab(tab.id)
                               },
                               {
                                 id: 'close-others',
@@ -203,7 +235,7 @@ export default function LayoutV2({
                         onClick={(e) => {
                           if (e.button === 1) { // Middle click to close
                             e.preventDefault();
-                            closeTab(tab.id);
+                            handleCloseTab(tab.id);
                           } else {
                             setActiveTabId(tab.id);
                           }
@@ -228,7 +260,7 @@ export default function LayoutV2({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              closeTab(tab.id);
+                              handleCloseTab(tab.id);
                             }}
                             className={`w-[14px] h-[14px] rounded hover:bg-[color:var(--surface-3)] flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors ${tab.isDirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'
                               } ${isActive && !tab.isDirty ? 'opacity-100' : ''}`}

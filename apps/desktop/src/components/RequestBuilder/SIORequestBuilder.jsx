@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import ParamsTab from './tabs/ParamsTab';
 import HeadersTab from './tabs/HeadersTab';
 import AuthTab from './tabs/AuthTab';
+import JsonEditor from './tabs/JsonEditor';
 
 const STATUS_CONFIG = {
   idle: { label: 'Idle', color: 'var(--text-muted)', bg: 'transparent' },
@@ -241,13 +242,13 @@ export default function SIORequestBuilder() {
                 <div className="text-[10px] font-bold text-[color:var(--text-muted)] uppercase">Arguments</div>
                 <span className="text-[9px] text-[color:var(--text-muted)] opacity-60">Use JSON array for multiple args</span>
               </div>
-              <textarea
-                className="flex-1 w-full bg-[color:var(--surface-2)] border border-[color:var(--border-1)] rounded p-2 text-[12px] font-mono text-[color:var(--text-primary)] outline-none focus:border-[color:var(--accent)] resize-none"
-                placeholder='["hello", 42]'
-                value={message}
-                onChange={(e) => updateField('body', { ...currentRequest.body, raw: e.target.value })}
-                disabled={!isConnected}
-              />
+              <div className="flex-1 overflow-hidden border border-[color:var(--border-1)] rounded-lg">
+                <JsonEditor
+                  value={message}
+                  onChange={(val) => updateField('body', { ...currentRequest.body, raw: val })}
+                  className="h-full border-none"
+                />
+              </div>
               <div className="py-3">
                 <button
                   disabled={!isConnected}

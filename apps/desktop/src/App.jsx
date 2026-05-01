@@ -27,12 +27,15 @@ import LayoutV2 from '@/components/LayoutV2/LayoutV2';
 import ContextMenu from '@/components/ContextMenu/ContextMenu';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import EditNameModal from '@/components/EditNameModal/EditNameModal';
+import UnsavedChangesModal from '@/components/Modals/UnsavedChangesModal';
 import SyncStatusTag from '@/components/SyncStatusTag/SyncStatusTag';
 import OfflineSyncManager from '@/components/OfflineSyncManager/OfflineSyncManager';
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore, defaultWorkflow } from '@/store/workflowStore';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export default function App() {
+  useKeyboardShortcuts();
   const [showSplash, setShowSplash] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef(null);
@@ -217,7 +220,7 @@ export default function App() {
     const offRequestDeleted = onRequestDeleted(({ requestId, collectionId }) => {
       // Correctly remove from collection store
       useCollectionStore.getState().removeRequest(requestId, collectionId);
-      
+
       // If it was open in requestStore, handle closing it
       const reqStore = useRequestStore.getState();
       if (reqStore.currentRequest?._id === requestId) {
@@ -322,6 +325,7 @@ export default function App() {
         <ContextMenu />
         <ConfirmDialog />
         <EditNameModal />
+        <UnsavedChangesModal />
         {showSessionModal && <SessionManagerModal />}
 
 

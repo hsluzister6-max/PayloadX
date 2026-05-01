@@ -1143,14 +1143,15 @@ export default function SidebarV2({
                               </svg>
                               {col.name}
                             </div>
-                            {localRequests.map(req => (
-                              <SidebarRequest
-                                key={req._id}
-                                request={req}
-                                onSelect={() => { }} // No-op on click in workflow mode, just drag
-                                isActive={false}
-                              />
-                            ))}
+                            <RecursiveFolderListV2
+                              folders={col.folders || []}
+                              requests={localRequests}
+                              parentId={null}
+                              expandedFolders={expandedFolders}
+                              toggleFolder={toggleFolder}
+                              onSelectRequest={() => { }} // No-op on click in workflow mode, just drag
+                              currentRequestId={null}
+                            />
                           </div>
                         );
                       });
@@ -1277,58 +1278,16 @@ export default function SidebarV2({
                                             </div>
                                           ) : (
                                             <>
-                                              {(() => {
-                                                const renderRecursiveFolders = (parentId = null, depth = 0) => {
-                                                  const levelFolders = (col.folders || []).filter(f => (f.parentId || null) === parentId);
-                                                  return levelFolders.map(folder => {
-                                                    const isFolderExp = expandedFolders.has(folder.id);
-                                                    return (
-                                                      <div key={folder.id} className={depth > 0 ? 'ml-3 border-l border-white/5 pl-1' : ''}>
-                                                        <button
-                                                          onClick={() => toggleFolder(folder.id)}
-                                                          onContextMenu={(e) => showFolderContextMenu(e, col._id, folder)}
-                                                          className="sdbv2-tree-row group"
-                                                        >
-                                                          <svg className={`sdbv2-chevron ${isFolderExp ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                          </svg>
-                                                          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                                          </svg>
-                                                          <span className="sdbv2-tree-text flex-1 truncate">{folder.name}</span>
-                                                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                              onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id, folder.id); }}
-                                                              className="p-0.5 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
-                                                              title="New Request"
-                                                            >
-                                                              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                                            </button>
-                                                          </div>
-                                                        </button>
-                                                        {isFolderExp && (
-                                                          <>
-                                                            {renderRecursiveFolders(folder.id, depth + 1)}
-                                                            {requests.filter(r => r.folderId === folder.id).map(req => (
-                                                              <SidebarRequest key={req._id} request={req} onSelect={handleRequestSelect} isActive={currentRequest?._id === req._id} />
-                                                            ))}
-                                                          </>
-                                                        )}
-                                                      </div>
-                                                    );
-                                                  });
-                                                };
-                                                return renderRecursiveFolders(null, 0);
-                                              })()}
-                                              {requests.filter(r => r.collectionId === col._id && !r.folderId).map(req => (
-                                                <SidebarRequest
-                                                  key={req._id}
-                                                  request={req}
-                                                  onSelect={handleRequestSelect}
-                                                  isActive={currentRequest?._id === req._id}
-                                                  onContextMenu={(e) => showRequestContextMenu(e, req)}
-                                                />
-                                              ))}
+                                              <RecursiveFolderListV2
+                                                folders={col.folders || []}
+                                                requests={requests.filter(r => r.collectionId === col._id)}
+                                                parentId={null}
+                                                expandedFolders={expandedFolders}
+                                                toggleFolder={toggleFolder}
+                                                onSelectRequest={handleRequestSelect}
+                                                currentRequestId={currentRequest?._id}
+                                                onContextMenu={showRequestContextMenu}
+                                              />
                                               {requests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length === 0 && (
                                                 <div className="sdbv2-empty-note py-1 pl-4 opacity-50">Empty collection</div>
                                               )}
@@ -1454,6 +1413,80 @@ function SidebarRequest({ request, onSelect, isActive, onContextMenu }) {
         ⋮⋮
       </span>
     </div>
+  );
+}
+
+function RecursiveFolderListV2({
+  folders,
+  requests,
+  parentId,
+  expandedFolders,
+  toggleFolder,
+  onSelectRequest,
+  currentRequestId,
+  onContextMenu
+}) {
+  const normalizedParentId = parentId || null;
+
+  const currentLevelFolders = folders.filter(f => (f.parentId || null) === normalizedParentId);
+  const currentLevelRequests = requests.filter(r => (r.folderId || null) === normalizedParentId);
+
+  return (
+    <>
+      {currentLevelFolders.map((folder) => {
+        const folderId = folder.id || folder._id;
+        const isExpanded = expandedFolders.has(folderId);
+
+        const childRequests = requests.filter(r => (r.folderId || null) === folderId);
+        const childFolders = folders.filter(f => (f.parentId || null) === folderId);
+        const totalItems = childRequests.length + childFolders.length;
+
+        return (
+          <div key={folderId}>
+            <button
+              onClick={() => toggleFolder(folderId)}
+              className="sdbv2-tree-row"
+            >
+              <svg className={`sdbv2-chevron ${isExpanded ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              <span className="sdbv2-tree-text flex-1">{folder.name}</span>
+              {totalItems > 0 && (
+                <span className="text-[9px] opacity-30 font-mono ml-auto pr-1">{totalItems}</span>
+              )}
+            </button>
+
+            {isExpanded && (
+              <div className="sdbv2-indent animate-in">
+                <RecursiveFolderListV2
+                  folders={folders}
+                  requests={requests}
+                  parentId={folderId}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  onSelectRequest={onSelectRequest}
+                  currentRequestId={currentRequestId}
+                  onContextMenu={onContextMenu}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {currentLevelRequests.map((req) => (
+        <SidebarRequest
+          key={req._id || req.id}
+          request={req}
+          onSelect={onSelectRequest}
+          isActive={currentRequestId === req._id}
+          onContextMenu={onContextMenu ? (e) => onContextMenu(e, req) : undefined}
+        />
+      ))}
+    </>
   );
 }
 

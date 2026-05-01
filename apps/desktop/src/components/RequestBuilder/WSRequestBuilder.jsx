@@ -3,6 +3,7 @@ import { useWSStore } from '@/store/wsStore';
 import { useRequestStore } from '@/store/requestStore';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import toast from 'react-hot-toast';
+import JsonEditor from './tabs/JsonEditor';
 
 const STATUS_CONFIG = {
   idle: { label: 'Idle', color: 'var(--text-muted)', bg: 'transparent' },
@@ -167,15 +168,14 @@ export default function WSRequestBuilder() {
       {/* ── Main Area: Split between Composer & Log ── */}
       <div className="ws-main flex-1 flex flex-col overflow-hidden">
         {/* ── Message Composer ── */}
-        <div className="ws-composer">
-          <textarea
-            ref={textareaRef}
-            className="ws-message-input"
-            placeholder={isConnected ? '{"action":"ping","data":"hello"}' : 'Connect first to send messages…'}
-            value={message}
-            onChange={(e) => updateField('body', { ...currentRequest.body, raw: e.target.value })}
-            disabled={!isConnected}
-          />
+        <div className="ws-composer h-[180px] min-h-[120px] flex flex-col">
+          <div className="flex-1 overflow-hidden">
+            <JsonEditor
+              value={message}
+              onChange={(val) => updateField('body', { ...currentRequest.body, raw: val })}
+              className="h-full border-none"
+            />
+          </div>
           <div className="ws-composer-footer">
             <button
               className="ws-send-btn"

@@ -346,8 +346,8 @@ export default function Sidebar() {
                 key={project._id}
                 onClick={() => setCurrentProject(project)}
                 className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${currentProject?._id === project._id
-                    ? 'bg-surface-700 text-tx-primary'
-                    : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
+                  ? 'bg-surface-700 text-tx-primary'
+                  : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
                   }`}
               >
                 <div
@@ -387,8 +387,8 @@ export default function Sidebar() {
                     onClick={() => toggleCollection(col)}
                     onContextMenu={(e) => showCollectionContextMenu(e, col)}
                     className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all w-full text-left ${currentCollection?._id === col._id
-                        ? 'bg-surface-750 text-tx-primary'
-                        : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
+                      ? 'bg-surface-750 text-tx-primary'
+                      : 'text-surface-400 hover:text-tx-primary hover:bg-surface-800'
                       }`}
                   >
                     <svg
@@ -437,58 +437,15 @@ export default function Sidebar() {
 
                   {isExpanded && (
                     <div className="ml-3 pl-2 border-l border-[var(--border-1)] mt-0.5 flex flex-col gap-0.5 animate-in">
-                      {/* Folders */}
-                      {(() => {
-                        const renderRecursiveFolders = (parentId = null, depth = 0) => {
-                          const levelFolders = (col.folders || []).filter(f => (f.parentId || null) === parentId);
-                          return levelFolders.map(folder => {
-                            const folderReqs = colRequests.filter((r) => r.folderId === folder.id);
-                            const isFolderExpanded = expandedFolders.has(folder.id);
-                            return (
-                              <div key={folder.id} className={depth > 0 ? 'ml-3 border-l border-white/5 pl-1' : ''}>
-                                <button
-                                  onClick={() => toggleFolder(folder.id)}
-                                  onContextMenu={(e) => showFolderContextMenu(e, col._id, folder)}
-                                  className="group flex items-center gap-1.5 px-2 py-1 rounded text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 w-full text-left"
-                                >
-                                  <svg className={`w-2.5 h-2.5 flex-shrink-0 transition-transform ${isFolderExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                  <svg className="w-3 h-3 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                  </svg>
-                                  <span className="truncate">{folder.name}</span>
-                                  <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-50 transition-opacity">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id, folder.id); }}
-                                      className="p-0.5 hover:text-tx-primary hover:opacity-100 hover:bg-surface-3 rounded transition-all"
-                                      title="New Request"
-                                    >
-                                      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </button>
-                                {isFolderExpanded && (
-                                  <>
-                                    {renderRecursiveFolders(folder.id, depth + 1)}
-                                    {folderReqs.map(req => (
-                                      <RequestItem key={req._id} request={req} onSelect={setCurrentRequest} />
-                                    ))}
-                                  </>
-                                )}
-                              </div>
-                            );
-                          });
-                        };
-                        return renderRecursiveFolders(null, 0);
-                      })()}
-
-                      {/* Root-level requests */}
-                      {colRequests.filter((r) => !r.folderId).map((req) => (
-                        <RequestItem key={req._id} request={req} onSelect={setCurrentRequest} />
-                      ))}
+                      {/* Recursive Folders & Requests */}
+                      <RecursiveFolderList
+                        folders={col.folders || []}
+                        requests={colRequests}
+                        parentId={null}
+                        expandedFolders={expandedFolders}
+                        toggleFolder={toggleFolder}
+                        onSelectRequest={setCurrentRequest}
+                      />
 
                       {colRequests.length === 0 && (
                         <p className="text-tx-muted text-xs px-2 py-1 italic">No requests</p>
@@ -612,16 +569,76 @@ export default function Sidebar() {
   );
 }
 
+function RecursiveFolderList({ folders, requests, parentId, expandedFolders, toggleFolder, onSelectRequest }) {
+  // Use a normalized parentId for comparison (treat null, undefined, and empty string as the same for root)
+  const normalizedParentId = parentId || null;
+
+  const currentLevelFolders = folders.filter(f => (f.parentId || null) === normalizedParentId);
+  const currentLevelRequests = requests.filter(r => (r.folderId || null) === normalizedParentId);
+
+  return (
+    <>
+      {currentLevelFolders.map((folder) => {
+        const folderId = folder.id || folder._id; // Handle both generated id and MongoDB _id
+        const isExpanded = expandedFolders.has(folderId);
+
+        // Robust filtering for child items to show counts
+        const childRequests = requests.filter(r => (r.folderId || null) === folderId);
+        const childFolders = folders.filter(f => (f.parentId || null) === folderId);
+        const totalItems = childRequests.length + childFolders.length;
+
+        return (
+          <div key={folderId}>
+            <button
+              onClick={() => toggleFolder(folderId)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 w-full text-left transition-colors"
+            >
+              <svg className={`w-2.5 h-2.5 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <svg className="w-3 h-3 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              <span className="truncate flex-1">{folder.name}</span>
+              {totalItems > 0 && (
+                <span className="text-tx-muted text-[9px] opacity-50">{totalItems}</span>
+              )}
+            </button>
+
+            {isExpanded && (
+              <div className="ml-2.5 pl-2 border-l border-[var(--border-1)] flex flex-col gap-0.5 mt-0.5">
+                <RecursiveFolderList
+                  folders={folders}
+                  requests={requests}
+                  parentId={folderId}
+                  expandedFolders={expandedFolders}
+                  toggleFolder={toggleFolder}
+                  onSelectRequest={onSelectRequest}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {currentLevelRequests.map((req) => (
+        <RequestItem key={req._id || req.id} request={req} onSelect={onSelectRequest} />
+      ))}
+    </>
+  );
+}
+
 function RequestItem({ request, onSelect }) {
+  const method = request.method || 'GET';
   return (
     <button
       onClick={() => onSelect(request)}
       className="flex items-center gap-2 px-2 py-1 rounded text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 transition-all w-full text-left group"
     >
-      <span className={`${getMethodClass(request.method)} flex-shrink-0 text-[9px]`}>
-        {request.method}
+      <span className={`${getMethodClass(method)} flex-shrink-0 text-[9px] w-8`}>
+        {method}
       </span>
-      <span className="truncate group-hover:text-tx-primary transition-colors">{request.name}</span>
+      <span className="truncate group-hover:text-tx-primary transition-colors flex-1">{request.name}</span>
     </button>
   );
 }

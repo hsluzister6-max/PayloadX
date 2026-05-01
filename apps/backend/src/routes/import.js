@@ -14,31 +14,44 @@ const router = express.Router();
 /**
  * Postman Collection v2.1 → SyncNest internal schema converter
  */
-function parsePostmanItem(item, collectionId, projectId, teamId) {
+function parsePostmanItem(item, collectionId, projectId, teamId, parentId = null) {
   const requests = [];
   const folders = [];
 
-  if (item.item) {
+  if (!item) return { requests, folders };
+
+  const nativeId = item.id || item._postman_id || uuidv4();
+
+  if (item.item && Array.isArray(item.item)) {
     // It's a folder
-    const folderId = uuidv4();
     const folderRequestIds = [];
 
-    item.item.forEach((subItem) => {
-      if (subItem.item) {
-        // Nested folder — flatten one level
-        const { requests: subRequests } = parsePostmanItem(subItem, collectionId, projectId, teamId);
-        requests.push(...subRequests);
-      } else {
-        const req = buildRequest(subItem, collectionId, projectId, teamId, folderId);
-        folderRequestIds.push(req._id || uuidv4());
-        requests.push(req);
-      }
+    folders.push({ 
+      id: nativeId, 
+      name: item.name || 'Untitled Folder', 
+      parentId: parentId, 
+      requestIds: folderRequestIds 
     });
 
-    folders.push({ id: folderId, name: item.name, requestIds: folderRequestIds });
-  } else {
+    item.item.forEach((subItem) => {
+      const { requests: subRequests, folders: subFolders } = parsePostmanItem(
+        subItem, 
+        collectionId, 
+        projectId, 
+        teamId, 
+        nativeId
+      );
+      requests.push(...subRequests);
+      folders.push(...subFolders);
+      
+      if (subItem && !subItem.item && subItem.request) {
+        // Direct request
+        folderRequestIds.push(subRequests[0]?._id || uuidv4());
+      }
+    });
+  } else if (item.request) {
     // It's a request
-    requests.push(buildRequest(item, collectionId, projectId, teamId, null));
+    requests.push(buildRequest(item, collectionId, projectId, teamId, parentId));
   }
 
   return { requests, folders };

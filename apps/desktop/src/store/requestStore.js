@@ -83,6 +83,7 @@ export const useRequestStore = create(
             request: newReq,
             originalRequest: deepClone(newReq),
             isDirty: false,
+            activeTab: 'params', // Per-tab sub-tab state
           };
           const newTabsById = new Map(state._tabsById);
           newTabsById.set(newTabId, newTab);
@@ -92,6 +93,7 @@ export const useRequestStore = create(
             noActiveRequest: false,
             openTabs: [...state.openTabs, newTab],
             activeTabId: newTabId,
+            activeTab: 'params',
             _tabsById: newTabsById,
           };
         });
@@ -101,11 +103,15 @@ export const useRequestStore = create(
 
       setActiveTabId: (id) => {
         set((state) => {
-          // O(1) lookup via Map
           const tab = state._tabsById.get(id);
           if (!tab) return state;
           localStorageService.saveCurrentRequest(tab.request);
-          return { activeTabId: id, currentRequest: tab.request, noActiveRequest: false };
+          return {
+            activeTabId: id,
+            currentRequest: tab.request,
+            activeTab: tab.activeTab || 'params',
+            noActiveRequest: false
+          };
         });
       },
 
@@ -132,16 +138,32 @@ export const useRequestStore = create(
       },
 
       closeAllTabs: () => {
-        set({ openTabs: [], activeTabId: null, currentRequest: defaultRequest(), noActiveRequest: true });
+        set({
+          openTabs: [],
+          activeTabId: null,
+          currentRequest: defaultRequest(),
+          noActiveRequest: true,
+          _tabsById: new Map()
+        });
       },
 
       closeOtherTabs: (id) => {
         set((state) => {
-          const tabToKeep = state.openTabs.find(t => t.id === id);
+          const tabToKeep = state._tabsById.get(id);
           if (!tabToKeep) return state;
 
+          const newTabsById = new Map();
+          newTabsById.set(id, tabToKeep);
+
           localStorageService.saveCurrentRequest(tabToKeep.request);
-          return { openTabs: [tabToKeep], activeTabId: tabToKeep.id, currentRequest: tabToKeep.request, noActiveRequest: false };
+          return {
+            openTabs: [tabToKeep],
+            activeTabId: tabToKeep.id,
+            currentRequest: tabToKeep.request,
+            activeTab: tabToKeep.activeTab || 'params',
+            noActiveRequest: false,
+            _tabsById: newTabsById
+          };
         });
       },
 
@@ -151,16 +173,24 @@ export const useRequestStore = create(
           if (index === -1) return state;
 
           const newTabs = state.openTabs.slice(0, index + 1);
+          const newTabsById = new Map();
+          newTabs.forEach(t => newTabsById.set(t.id, t));
 
           // If active tab was closed, switch to the target tab
           const activeIndex = state.openTabs.findIndex(t => t.id === state.activeTabId);
           if (activeIndex > index) {
             const nextTab = newTabs[newTabs.length - 1];
             localStorageService.saveCurrentRequest(nextTab.request);
-            return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request };
+            return {
+              openTabs: newTabs,
+              activeTabId: nextTab.id,
+              currentRequest: nextTab.request,
+              activeTab: nextTab.activeTab || 'params',
+              _tabsById: newTabsById
+            };
           }
 
-          return { openTabs: newTabs };
+          return { openTabs: newTabs, _tabsById: newTabsById };
         });
       },
 
@@ -170,16 +200,24 @@ export const useRequestStore = create(
           if (index <= 0) return state;
 
           const newTabs = state.openTabs.slice(index);
+          const newTabsById = new Map();
+          newTabs.forEach(t => newTabsById.set(t.id, t));
 
           // If active tab was closed, switch to the target tab
           const activeIndex = state.openTabs.findIndex(t => t.id === state.activeTabId);
           if (activeIndex < index) {
             const nextTab = newTabs[0];
             localStorageService.saveCurrentRequest(nextTab.request);
-            return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request };
+            return {
+              openTabs: newTabs,
+              activeTabId: nextTab.id,
+              currentRequest: nextTab.request,
+              activeTab: nextTab.activeTab || 'params',
+              _tabsById: newTabsById
+            };
           }
 
-          return { openTabs: newTabs };
+          return { openTabs: newTabs, _tabsById: newTabsById };
         });
       },
 
@@ -194,8 +232,13 @@ export const useRequestStore = create(
                 const r = { ...s.currentRequest, params };
                 const openTabs = [...s.openTabs];
                 const tIdx = openTabs.findIndex(t => t.id === s.activeTabId);
-                if (tIdx >= 0) openTabs[tIdx] = { ...openTabs[tIdx], request: r, isDirty: true };
-                return { currentRequest: r, openTabs };
+                const newTabsById = new Map(s._tabsById);
+                if (tIdx >= 0) {
+                  const updatedTab = { ...openTabs[tIdx], request: r, isDirty: true };
+                  openTabs[tIdx] = updatedTab;
+                  newTabsById.set(s.activeTabId, updatedTab);
+                }
+                return { currentRequest: r, openTabs, _tabsById: newTabsById };
               });
             });
           } else if (field === 'params') {
@@ -204,23 +247,33 @@ export const useRequestStore = create(
                 const r = { ...s.currentRequest, url };
                 const openTabs = [...s.openTabs];
                 const tIdx = openTabs.findIndex(t => t.id === s.activeTabId);
-                if (tIdx >= 0) openTabs[tIdx] = { ...openTabs[tIdx], request: r, isDirty: true };
-                return { currentRequest: r, openTabs };
+                const newTabsById = new Map(s._tabsById);
+                if (tIdx >= 0) {
+                  const updatedTab = { ...openTabs[tIdx], request: r, isDirty: true };
+                  openTabs[tIdx] = updatedTab;
+                  newTabsById.set(s.activeTabId, updatedTab);
+                }
+                return { currentRequest: r, openTabs, _tabsById: newTabsById };
               });
-            });
-          }
-
-          if (field === 'name' && (req._id || req.collectionId)) {
-            import('@/store/collectionStore').then(({ useCollectionStore }) => {
-              useCollectionStore.getState().updateRequest(req);
             });
           }
 
           const openTabs = [...state.openTabs];
           const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
-          if (tIdx >= 0) openTabs[tIdx] = { ...openTabs[tIdx], request: req, isDirty: true };
+          const newTabsById = new Map(state._tabsById);
+          if (tIdx >= 0) {
+            const updatedTab = { ...openTabs[tIdx], request: req, isDirty: true };
+            openTabs[tIdx] = updatedTab;
+            newTabsById.set(state.activeTabId, updatedTab);
+          }
 
-          return { currentRequest: req, openTabs };
+          if (req._id) {
+            import('@/store/collectionStore').then(({ useCollectionStore }) => {
+              useCollectionStore.getState().updateRequest(req);
+            });
+          }
+
+          return { currentRequest: req, openTabs, _tabsById: newTabsById };
         });
       },
 
@@ -232,8 +285,18 @@ export const useRequestStore = create(
           };
           const openTabs = [...state.openTabs];
           const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
-          if (tIdx >= 0) openTabs[tIdx] = { ...openTabs[tIdx], request: req, isDirty: true };
-          return { currentRequest: req, openTabs };
+          const newTabsById = new Map(state._tabsById);
+          if (tIdx >= 0) {
+            const updatedTab = { ...openTabs[tIdx], request: req, isDirty: true };
+            openTabs[tIdx] = updatedTab;
+            newTabsById.set(state.activeTabId, updatedTab);
+          }
+          if (req._id) {
+            import('@/store/collectionStore').then(({ useCollectionStore }) => {
+              useCollectionStore.getState().updateRequest(req);
+            });
+          }
+          return { currentRequest: req, openTabs, _tabsById: newTabsById };
         }),
 
       updateAuth: (authUpdate) =>
@@ -244,11 +307,32 @@ export const useRequestStore = create(
           };
           const openTabs = [...state.openTabs];
           const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
-          if (tIdx >= 0) openTabs[tIdx] = { ...openTabs[tIdx], request: req, isDirty: true };
-          return { currentRequest: req, openTabs };
+          const newTabsById = new Map(state._tabsById);
+          if (tIdx >= 0) {
+            const updatedTab = { ...openTabs[tIdx], request: req, isDirty: true };
+            openTabs[tIdx] = updatedTab;
+            newTabsById.set(state.activeTabId, updatedTab);
+          }
+          if (req._id) {
+            import('@/store/collectionStore').then(({ useCollectionStore }) => {
+              useCollectionStore.getState().updateRequest(req);
+            });
+          }
+          return { currentRequest: req, openTabs, _tabsById: newTabsById };
         }),
 
-      setActiveTab: (tab) => set({ activeTab: tab }),
+      setActiveTab: (tab) =>
+        set((state) => {
+          const openTabs = [...state.openTabs];
+          const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
+          const newTabsById = new Map(state._tabsById);
+          if (tIdx >= 0) {
+            const updatedTab = { ...openTabs[tIdx], activeTab: tab };
+            openTabs[tIdx] = updatedTab;
+            newTabsById.set(state.activeTabId, updatedTab);
+          }
+          return { activeTab: tab, openTabs, _tabsById: newTabsById };
+        }),
 
       setResponse: (response) => set({ response }),
 

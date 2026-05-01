@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import { getStatusClass, formatSize, formatTime, formatBody, isJson } from '@/utils/helpers';
-import PostmanJsonViewer from './PostmanJsonViewer';
-import JsonFormatter from './JsonFormatter';
+import { getStatusClass, formatSize, formatTime, formatBody } from '@/utils/helpers';
+import JsonEditor from '../RequestBuilder/tabs/JsonEditor';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import './swagger-theme.css';
@@ -17,6 +16,7 @@ export default function ResponseViewer() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('Pretty');
   const [copied, setCopied] = useState(false);
+  const [responseLanguage, setResponseLanguage] = useState(null);
 
   const contentType = response?.headers?.['content-type'] || '';
 
@@ -100,10 +100,10 @@ export default function ResponseViewer() {
     return <ErrorState error={response.error} />;
   }
 
-
   const prettyBody = formatBody(response.body, contentType);
   const statusClass = getStatusClass(response.status);
-  const lang = contentType.includes('json') ? 'json' : contentType.includes('xml') ? 'xml' : contentType.includes('html') ? 'html' : 'plaintext';
+  const autoLang = contentType.includes('json') ? 'json' : contentType.includes('xml') ? 'xml' : contentType.includes('html') ? 'html' : 'plaintext';
+  const lang = responseLanguage || autoLang;
 
   const handleCopy = () => {
     let text = '';
@@ -160,70 +160,31 @@ export default function ResponseViewer() {
 
   const responseCookies = parseCookies(response.headers?.['set-cookie'] || response.headers?.['Set-Cookie'] || '');
 
-
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Status bar */}
-      <div className="flex flex-wrap items-center gap-y-2 gap-x-3 px-3 py-2 border-b border-[var(--border-1)] bg-[var(--surface-2)]">
-        <div className="flex items-center gap-2">
-          <span className={`${statusClass} text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tight`}>
-            {response.status} {response.statusText}
-          </span>
-          
-          <div className="flex items-center gap-2.5 ml-1">
-            <span className="text-surface-500 text-[10px] font-mono flex items-center gap-1">
-              <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              {formatTime(response.responseTimeMs)}
-            </span>
-            <span className="text-surface-500 text-[10px] font-mono flex items-center gap-1">
-              <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8 4" /></svg>
-              {formatSize(response.sizeBytes)}
-            </span>
-          </div>
-        </div>
-
-        {/* Copy button + Tabs */}
-        <div className="ml-auto flex items-center gap-1">
-          {/* Copy response */}
-          <button
-            onClick={handleCopy}
-            title="Copy response"
-            className="btn-ghost"
-            style={{
-              padding: '3px 8px',
-              fontSize: '9px',
-              height: '22px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              border: copied ? '1px solid var(--success)' : undefined,
-              color: copied ? 'var(--success)' : undefined,
-            }}
-          >
-            {copied ? (
-              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            )}
-            {copied ? 'COPIED' : 'COPY'}
-          </button>
-
-          <div className="w-px h-3 bg-border-1 mx-1" />
-
-          {/* Tabs */}
-          <div className="flex bg-surface-3 rounded-md p-0.5 border border-border-1">
-            {RESPONSE_TABS.map((tab) => (
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
+      {/* Postman-style Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-1)] bg-[var(--surface-2)] shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="flex bg-[var(--surface-3)] rounded-lg p-1 border border-[var(--border-1)]">
+            {RESPONSE_TABS.slice(0, 4).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all uppercase tracking-tight ${activeTab === tab
-                    ? 'bg-surface-1 text-tx-primary shadow-sm'
+                className={`px-3 py-1 rounded-md text-[10px] font-black transition-all uppercase tracking-tight ${activeTab === tab
+                    ? 'bg-[var(--bg-primary)] text-[var(--accent)] shadow-glass border border-[var(--border-2)]'
+                    : 'text-surface-500 hover:text-tx-secondary'
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+            <div className="w-px h-3 bg-[var(--border-2)] mx-1 self-center" />
+             {RESPONSE_TABS.slice(4).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1 rounded-md text-[10px] font-black transition-all uppercase tracking-tight ${activeTab === tab
+                    ? 'bg-[var(--bg-primary)] text-[var(--accent)] shadow-glass border border-[var(--border-2)]'
                     : 'text-surface-500 hover:text-tx-secondary'
                   }`}
               >
@@ -232,79 +193,146 @@ export default function ResponseViewer() {
             ))}
           </div>
         </div>
+
+        <div className="flex items-center gap-4">
+           <div className="flex items-center gap-3 py-1 px-3 rounded-full bg-[var(--surface-1)] border border-[var(--border-1)]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black text-surface-500 uppercase tracking-tighter">Status:</span>
+                <span className={`text-[11px] font-black ${response.status >= 200 && response.status < 300 ? 'text-green-500' : 'text-red-500'}`}>
+                  {response.status} {response.statusText}
+                </span>
+              </div>
+              <div className="w-px h-3 bg-[var(--border-2)]" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black text-surface-500 uppercase tracking-tighter">Time:</span>
+                <span className="text-[11px] font-black text-tx-secondary font-mono">
+                  {formatTime(response.responseTimeMs)}
+                </span>
+              </div>
+              <div className="w-px h-3 bg-[var(--border-2)]" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black text-surface-500 uppercase tracking-tighter">Size:</span>
+                <span className="text-[11px] font-black text-tx-secondary font-mono">
+                  {formatSize(response.sizeBytes)}
+                </span>
+              </div>
+           </div>
+           
+           <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-3)] hover:bg-[var(--surface-4)] border border-[var(--border-2)] text-[10px] font-black text-tx-secondary transition-all"
+           >
+             {copied ? <span className="text-green-500">COPIED</span> : <>
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                COPY
+             </>}
+           </button>
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-hidden">
+      {/* Sub-toolbar for Pretty view */}
+      {activeTab === 'Pretty' && (
+        <div className="flex items-center gap-4 px-4 py-2 border-b border-[var(--border-1)] bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-surface-500 uppercase tracking-tighter">Display:</span>
+            <select 
+              value={lang}
+              onChange={(e) => setResponseLanguage(e.target.value)}
+              className="bg-[var(--surface-1)] border border-[var(--border-2)] rounded px-2 py-0.5 text-[10px] font-bold text-tx-primary outline-none hover:border-[var(--accent)] transition-colors"
+            >
+              <option value="json">JSON</option>
+              <option value="xml">XML</option>
+              <option value="html">HTML</option>
+              <option value="text">Text</option>
+            </select>
+          </div>
+          
+          <div className="w-px h-3 bg-[var(--border-2)]" />
+          
+          <button 
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'f', keyCode: 70, ctrlKey: true, metaKey: true, bubbles: true });
+              document.dispatchEvent(event);
+            }}
+            className="flex items-center gap-1.5 text-surface-500 hover:text-[var(--accent)] text-[10px] font-black uppercase tracking-widest transition-colors"
+          >
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            Find
+          </button>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden relative">
         {activeTab === 'Pretty' && (
-          contentType.includes('application/json') || isJson(response.body) ? (
-            <PostmanJsonViewer
-              value={response.body}
-              className="h-full"
-            />
-          ) : (
-            <JsonFormatter
-              value={prettyBody || response.body}
-              className="h-full"
-            />
-          )
+          <JsonEditor
+            value={prettyBody}
+            language={lang}
+            readOnly={true}
+            hideHeader={true}
+            className="h-full border-none rounded-none"
+          />
         )}
 
         {activeTab === 'Raw' && (
-          <div className="h-full overflow-auto p-3">
-            <pre className="text-xs text-tx-secondary font-mono whitespace-pre-wrap break-all">
+          <div className="h-full overflow-auto p-4 bg-[var(--surface-1)]">
+            <pre className="text-xs text-tx-secondary font-mono whitespace-pre-wrap break-all leading-relaxed">
               {response.body}
             </pre>
           </div>
         )}
 
         {activeTab === 'Headers' && (
-          <div className="overflow-auto h-full p-3">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-surface-700">
-                  <th className="text-left text-surface-500 font-semibold pb-2 pr-4 w-1/3">Header</th>
-                  <th className="text-left text-surface-500 font-semibold pb-2">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(response.headers || {}).map(([k, v]) => (
-                  <tr key={k} className="border-b border-surface-800 hover:bg-surface-800/50 transition-colors">
-                    <td className="py-1.5 pr-4 font-mono text-brand-300 font-medium">{k}</td>
-                    <td className="py-1.5 font-mono text-tx-secondary break-all">{v}</td>
+          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)]">
+            <div className="max-w-3xl">
+              <table className="w-full text-[11px] border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--border-1)]">
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Header Key</th>
+                    <th className="text-left text-surface-500 font-black pb-3 uppercase tracking-widest">Value</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Object.entries(response.headers || {}).map(([k, v]) => (
+                    <tr key={k} className="border-b border-[var(--border-1)] hover:bg-[var(--surface-2)] transition-colors">
+                      <td className="py-2.5 pr-4 font-mono text-[var(--accent)] font-bold">{k}</td>
+                      <td className="py-2.5 font-mono text-tx-secondary break-all">{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'Cookies' && (
-          <div className="overflow-auto h-full p-3">
+          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)]">
             {responseCookies.length > 0 ? (
-              <table className="w-full text-xs">
+              <table className="w-full text-[11px]">
                 <thead>
-                  <tr className="border-b border-surface-700">
-                    <th className="text-left text-surface-500 font-semibold pb-2 pr-4">Name</th>
-                    <th className="text-left text-surface-500 font-semibold pb-2 pr-4">Value</th>
-                    <th className="text-left text-surface-500 font-semibold pb-2 pr-4">Domain</th>
-                    <th className="text-left text-surface-500 font-semibold pb-2 pr-4">Path</th>
-                    <th className="text-left text-surface-500 font-semibold pb-2 pr-4">Expires</th>
-                    <th className="text-left text-surface-500 font-semibold pb-2">Flags</th>
+                  <tr className="border-b border-[var(--border-1)]">
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Name</th>
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Value</th>
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Domain</th>
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Path</th>
+                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Expires</th>
+                    <th className="text-left text-surface-500 font-black pb-3 uppercase tracking-widest">Flags</th>
                   </tr>
                 </thead>
                 <tbody>
                   {responseCookies.map((c) => (
-                    <tr key={c.id} className="border-b border-surface-800 hover:bg-surface-800/50 transition-colors">
-                      <td className="py-1.5 pr-4 font-mono text-brand-300 font-medium">{c.name}</td>
-                      <td className="py-1.5 pr-4 font-mono text-tx-secondary break-all">{c.value}</td>
-                      <td className="py-1.5 pr-4 font-mono text-tx-muted">{c.domain || '—'}</td>
-                      <td className="py-1.5 pr-4 font-mono text-tx-muted">{c.path || '—'}</td>
-                      <td className="py-1.5 pr-4 font-mono text-tx-muted">{c.expires || '—'}</td>
-                      <td className="py-1.5 font-mono text-tx-muted">
+                    <tr key={c.id} className="border-b border-[var(--border-1)] hover:bg-[var(--surface-2)] transition-colors">
+                      <td className="py-2.5 pr-4 font-mono text-[var(--accent)] font-bold">{c.name}</td>
+                      <td className="py-2.5 pr-4 font-mono text-tx-secondary break-all">{c.value}</td>
+                      <td className="py-2.5 pr-4 font-mono text-tx-muted">{c.domain || '—'}</td>
+                      <td className="py-2.5 pr-4 font-mono text-tx-muted">{c.path || '—'}</td>
+                      <td className="py-2.5 pr-4 font-mono text-tx-muted">{c.expires || '—'}</td>
+                      <td className="py-2.5 font-mono text-tx-muted">
                         <div className="flex gap-1">
-                          {c.httpOnly && <span className="px-1 rounded bg-surface-700 text-[9px]">HttpOnly</span>}
-                          {c.secure && <span className="px-1 rounded bg-surface-700 text-[9px]">Secure</span>}
+                          {c.httpOnly && <span className="px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[9px] font-bold">HttpOnly</span>}
+                          {c.secure && <span className="px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[9px] font-bold">Secure</span>}
                         </div>
                       </td>
                     </tr>
@@ -312,7 +340,7 @@ export default function ResponseViewer() {
                 </tbody>
               </table>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-tx-muted text-xs">
+              <div className="flex flex-col items-center justify-center h-full text-tx-muted text-sm italic font-medium opacity-50">
                 No cookies found in response
               </div>
             )}
@@ -320,45 +348,45 @@ export default function ResponseViewer() {
         )}
 
         {activeTab === 'Docs' && (
-          <div className="h-full overflow-hidden flex flex-col swagger-container-v2">
-             <div className="flex-1 overflow-auto">
+          <div className="h-full overflow-hidden flex flex-col bg-[var(--surface-1)]">
+             <div className="flex-1 overflow-auto p-4">
                 <SwaggerUI spec={swaggerPreview} />
              </div>
           </div>
         )}
 
         {activeTab === 'User' && (
-          <div className="overflow-auto h-full p-6 flex flex-col items-center justify-center gap-4 text-center">
-             <div className="w-20 h-20 rounded-full border-2 border-[var(--border-1)] flex items-center justify-center shadow-2xl relative" style={{ background: 'var(--grad-primary)' }}>
-                <span className="text-[var(--accent-text)] text-2xl font-black tracking-tighter" style={{ fontFamily: 'Syne, sans-serif' }}>
+          <div className="overflow-auto h-full p-8 flex flex-col items-center justify-center gap-6 text-center bg-[var(--surface-1)]">
+             <div className="w-24 h-24 rounded-full border-4 border-[var(--border-1)] flex items-center justify-center shadow-2xl relative bg-gradient-to-br from-[var(--accent)] to-[var(--accent-text)]">
+                <span className="text-[var(--bg-primary)] text-3xl font-black tracking-tighter" style={{ fontFamily: 'Syne, sans-serif' }}>
                   {user?.name 
                     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) 
                     : 'US'
                   }
                 </span>
-                <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-success border-4 border-[var(--bg-primary)] rounded-full shadow-lg" />
+                <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-4 border-[var(--bg-primary)] rounded-full shadow-lg" />
              </div>
              <div className="space-y-1">
-                <p className="text-lg font-bold text-tx-primary tracking-tight" style={{ fontFamily: 'Syne, sans-serif' }}>{user?.name || 'SyncNest User'}</p>
-                <p className="text-xs text-tx-muted font-mono">{user?.email || 'Not logged in'}</p>
+                <p className="text-2xl font-black text-tx-primary tracking-tighter uppercase" style={{ fontFamily: 'Syne, sans-serif' }}>{user?.name || 'PayloadX User'}</p>
+                <p className="text-xs text-tx-muted font-mono tracking-widest">{user?.email || 'OFFLINE SESSION'}</p>
              </div>
              
-             <div className="w-full max-w-sm mt-4 space-y-3">
-                <div className="p-3 rounded-lg bg-surface-800/50 border border-surface-700 text-left">
-                   <p className="text-[10px] text-tx-muted uppercase font-bold">User Agent</p>
-                   <p className="text-xs text-tx-secondary mt-1 break-all font-mono">PayloadX-API-Studio/1.3.7</p>
+             <div className="w-full max-w-sm mt-4 space-y-4">
+                <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-1)] text-left shadow-sm">
+                   <p className="text-[10px] text-surface-500 uppercase font-black tracking-widest">Client Engine</p>
+                   <p className="text-xs text-tx-secondary mt-1 break-all font-mono font-bold">PayloadX-API-Studio/1.4.2 (Desktop)</p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-surface-800/50 border border-surface-700 text-left">
-                    <p className="text-[10px] text-tx-muted uppercase font-bold">Platform</p>
-                    <p className="text-xs text-tx-secondary mt-1">Native Desktop</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-1)] text-left shadow-sm">
+                    <p className="text-[10px] text-surface-500 uppercase font-black tracking-widest">Connection</p>
+                    <p className="text-xs text-tx-secondary mt-1 font-bold">Native Bridge</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-surface-800/50 border border-surface-700 text-left">
-                    <p className="text-[10px] text-tx-muted uppercase font-bold">Status</p>
-                    <p className="text-xs text-success mt-1 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      Active Session
+                  <div className="p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--border-1)] text-left shadow-sm">
+                    <p className="text-[10px] text-surface-500 uppercase font-black tracking-widest">Status</p>
+                    <p className="text-xs text-green-500 mt-1 flex items-center gap-2 font-bold">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      ACTIVE
                     </p>
                   </div>
                 </div>
@@ -372,15 +400,15 @@ export default function ResponseViewer() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-6">
-      <div className="w-12 h-12 rounded-2xl bg-surface-800 flex items-center justify-center">
-        <svg className="w-6 h-6 text-tx-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8 bg-[var(--bg-primary)]">
+      <div className="w-16 h-16 rounded-3xl bg-[var(--surface-2)] flex items-center justify-center border border-[var(--border-1)] shadow-sm">
+        <svg className="w-8 h-8 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       </div>
       <div>
-        <p className="text-surface-400 text-sm font-medium">No response yet</p>
-        <p className="text-tx-muted text-xs mt-1">Press Send or ⌘+Enter to execute the request</p>
+        <p className="text-tx-secondary text-base font-black tracking-tight" style={{ fontFamily: 'Syne, sans-serif' }}>READY FOR ACTION</p>
+        <p className="text-surface-500 text-xs mt-2 font-medium">Press Send or ⌘+Enter to fetch response data</p>
       </div>
     </div>
   );
@@ -388,27 +416,27 @@ function EmptyState() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
-      <div className="relative w-12 h-12">
-        <div className="absolute inset-0 rounded-full border-2 border-brand-500/20" />
-        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-brand-500 animate-spin" />
+    <div className="flex flex-col items-center justify-center h-full gap-5 bg-[var(--bg-primary)]">
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 rounded-full border-4 border-[var(--accent)]/10" />
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--accent)] animate-spin" />
       </div>
-      <p className="text-surface-400 text-sm">Sending request...</p>
+      <p className="text-[var(--accent)] text-xs font-black uppercase tracking-[0.2em] animate-pulse">Requesting Data...</p>
     </div>
   );
 }
 
 function ErrorState({ error }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-6">
-      <div className="w-12 h-12 rounded-2xl bg-danger/10 flex items-center justify-center border border-danger/20">
-        <svg className="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8 bg-[var(--bg-primary)]">
+      <div className="w-16 h-16 rounded-3xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-sm">
+        <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
       <div>
-        <p className="text-danger text-sm font-semibold">Request Error</p>
-        <p className="text-surface-400 text-xs mt-1 max-w-xs">{error}</p>
+        <p className="text-red-500 text-base font-black tracking-tight uppercase" style={{ fontFamily: 'Syne, sans-serif' }}>Request Failed</p>
+        <p className="text-surface-500 text-xs mt-2 max-w-xs font-medium leading-relaxed italic">{error}</p>
       </div>
     </div>
   );

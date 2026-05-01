@@ -21,7 +21,7 @@ export async function parsePostmanCollectionAuto(input) {
 
 export function parsePostmanCollection(json) {
   const info = json.info || {};
-  const items = json.item || [];
+  const items = json.item || json.items || []; // Support 'items' just in case
 
   const collectionMeta = {
     name: info.name || 'Imported Collection',
@@ -34,33 +34,34 @@ export function parsePostmanCollection(json) {
   return { collectionMeta, requests, folders };
 }
 
-function parseItems(items, parentFolderId = null) {
+function parseItems(items, parentId = null) {
   const requests = [];
   const folders = [];
 
-  for (const item of items) {
-    if (item.item) {
-      // It's a folder
-      const folderId = crypto.randomUUID();
-      const folderRequests = [];
-      const subResult = parseItems(item.item, folderId);
+  if (!Array.isArray(items)) return { requests, folders };
 
-      for (const req of subResult.requests) {
-        folderRequests.push(req);
-        requests.push({ ...req, folderId });
-      }
+  for (const item of items) {
+    if (!item) continue;
+
+    // Use Postman's native ID if available, otherwise generate one
+    const nativeId = item.id || item._postman_id || crypto.randomUUID();
+
+    if (item.item && Array.isArray(item.item)) {
+      // It's a folder
+      const subResult = parseItems(item.item, nativeId);
 
       folders.push({
-        id: folderId,
+        id: nativeId,
         name: item.name || 'Untitled Folder',
-        requestIds: folderRequests.map((_, i) => i), // Will be replaced with real IDs after DB save
         description: item.description || '',
+        parentId: parentId,
       });
 
-      // Recurse nested folders
+      requests.push(...subResult.requests);
       folders.push(...subResult.folders);
-    } else {
-      requests.push(parseRequest(item, parentFolderId));
+    } else if (item.request) {
+      // It's a request
+      requests.push(parseRequest(item, parentId));
     }
   }
 
@@ -69,18 +70,25 @@ function parseItems(items, parentFolderId = null) {
 
 function parseRequest(item, folderId = null) {
   const r = item.request || {};
-  const url = extractUrl(r.url);
-  const params = extractParams(r.url);
+  
+  // Handle case where 'request' is just a URL string
+  const isStringRequest = typeof r === 'string';
+  const method = isStringRequest ? 'GET' : (r.method || 'GET').toUpperCase();
+  const rawUrl = isStringRequest ? r : (r.url?.raw || (typeof r.url === 'string' ? r.url : ''));
+  
+  const url = extractUrl(isStringRequest ? { raw: r } : r.url);
+  const params = extractParams(isStringRequest ? null : r.url);
 
   return {
+    id: item.id || item._postman_id || crypto.randomUUID(),
     name: item.name || 'Untitled Request',
-    method: (r.method || 'GET').toUpperCase(),
+    method,
     url,
     params,
-    headers: parseHeaders(r.header),
-    body: parseBody(r.body),
-    auth: parseAuth(r.auth),
-    description: extractDescription(r.description),
+    headers: parseHeaders(isStringRequest ? [] : r.header),
+    body: parseBody(isStringRequest ? null : r.body),
+    auth: parseAuth(isStringRequest ? null : r.auth),
+    description: extractDescription(isStringRequest ? '' : r.description),
     folderId,
   };
 }

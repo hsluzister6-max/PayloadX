@@ -66,34 +66,12 @@ export default function BodyTab() {
           </div>
         )}
 
-        {body.mode === 'raw' && body.rawLanguage === 'json' && (
+        {body.mode === 'raw' && (
           <JsonEditor
             value={body.raw || ''}
             onChange={setRaw}
-            className="h-full"
-          />
-        )}
-
-        {body.mode === 'raw' && body.rawLanguage !== 'json' && (
-          <Editor
-            height="100%"
             language={body.rawLanguage}
-            value={body.raw || ''}
-            onChange={setRaw}
-            theme={theme === 'light' ? 'light' : 'vs-dark'}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              fontFamily: 'JetBrains Mono, Fira Code, monospace',
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              automaticLayout: true,
-              tabSize: 2,
-              formatOnPaste: true,
-              scrollbar: { useShadows: false, verticalScrollbarSize: 6 },
-              padding: { top: 8, bottom: 8 },
-            }}
+            className="h-full border-none"
           />
         )}
 

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const FolderSchema = new mongoose.Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
-  parentId: { type: String, default: null },
+  parentId: { type: String, default: null }, // Support for nested folders
   requestIds: [{ type: String }],
   description: { type: String, default: '' },
   order: { type: Number, default: 0 },

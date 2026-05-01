@@ -65,7 +65,7 @@ export default function ContextMenu() {
       }}
     >
       {items.map((item, index) => (
-        <div key={item.id || index}>
+        <div key={index}>
           {item.divider ? (
             <div className="v2-context-menu-divider" />
           ) : (
