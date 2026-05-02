@@ -32,6 +32,18 @@ export default function JsonEditor({
   const { theme } = useUIStore();
   const editorRef = useRef(null);
   const [copied, setCopied] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
+
+  // Fallback timer: If Monaco hasn't mounted in 4s, use standard textarea
+  useState(() => {
+    const timer = setTimeout(() => {
+      if (!editorRef.current) {
+        setIsFallback(true);
+        console.warn('Monaco failed to load in time, using fallback editor.');
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Map common names to Monaco language IDs
   const monacoLanguage = useMemo(() => {
@@ -46,6 +58,7 @@ export default function JsonEditor({
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+    setIsFallback(false); // Explicitly disable fallback if it mounted
 
     // Configure Monaco for JSON with comments support
     if (language === 'json') {
@@ -56,20 +69,21 @@ export default function JsonEditor({
         enableSchemaRequest: true,
       });
     }
-
-    // Custom theme configuration if needed
-    // Monaco handles 'vs-dark' and 'light' well out of the box
   };
 
   const handleBeautify = useCallback(() => {
     if (!value) return;
     try {
-      editorRef.current?.getAction('editor.action.formatDocument').run();
+      if (isFallback) {
+         if (language === 'json') onChange(JSON.stringify(JSON.parse(value), null, 2));
+      } else {
+        editorRef.current?.getAction('editor.action.formatDocument').run();
+      }
       toast.success(`${language.toUpperCase()} Formatted`);
     } catch (e) {
       toast.error(`Invalid ${language.toUpperCase()} structure`);
     }
-  }, [value, language]);
+  }, [value, language, isFallback, onChange]);
 
   const handleMinify = useCallback(() => {
     if (!value) return;
@@ -104,18 +118,22 @@ export default function JsonEditor({
   }, []);
 
   const handleSearch = useCallback(() => {
-    editorRef.current?.getAction('actions.find').run();
-  }, []);
+    if (isFallback) {
+       toast.info('Use Ctrl+F to search in fallback mode');
+    } else {
+      editorRef.current?.getAction('actions.find').run();
+    }
+  }, [isFallback]);
 
   const getLangLabel = () => {
-    if (readOnly) return 'Response';
+    if (readOnly) return isFallback ? 'Response (Standard)' : 'Response';
     const map = {
       'json': 'JSON Editor',
       'xml': 'XML Editor',
       'html': 'HTML Editor',
       'text': 'Plain Text',
     };
-    return map[language] || `${language} Editor`;
+    return (map[language] || `${language} Editor`) + (isFallback ? ' (Lite)' : '');
   };
 
   const getLangIcon = () => {
@@ -151,23 +169,27 @@ export default function JsonEditor({
               {readOnly && <span className="text-[10px] font-bold">Search</span>}
             </button>
 
-            <div className="w-px h-4 bg-[var(--border-2)] mx-1" />
+            {!isFallback && <div className="w-px h-4 bg-[var(--border-2)] mx-1" />}
 
-            <button
-              onClick={handleFoldAll}
-              className="p-1.5 rounded-lg hover:bg-surface-3 text-surface-500 hover:text-[var(--accent)] transition-all"
-              title="Fold All"
-            >
-              <FoldVertical size={14} />
-            </button>
+            {!isFallback && (
+              <>
+                <button
+                  onClick={handleFoldAll}
+                  className="p-1.5 rounded-lg hover:bg-surface-3 text-surface-500 hover:text-[var(--accent)] transition-all"
+                  title="Fold All"
+                >
+                  <FoldVertical size={14} />
+                </button>
 
-            <button
-              onClick={handleUnfoldAll}
-              className="p-1.5 rounded-lg hover:bg-surface-3 text-surface-500 hover:text-[var(--accent)] transition-all"
-              title="Unfold All"
-            >
-              <UnfoldVertical size={14} />
-            </button>
+                <button
+                  onClick={handleUnfoldAll}
+                  className="p-1.5 rounded-lg hover:bg-surface-3 text-surface-500 hover:text-[var(--accent)] transition-all"
+                  title="Unfold All"
+                >
+                  <UnfoldVertical size={14} />
+                </button>
+              </>
+            )}
 
             <div className="w-px h-4 bg-[var(--border-2)] mx-1" />
 
@@ -206,43 +228,59 @@ export default function JsonEditor({
         </div>
       )}
 
-      {/* Monaco Editor Container */}
+      {/* Editor Area */}
       <div className="flex-1 relative group">
-        <Editor
-          height="100%"
-          language={monacoLanguage}
-          value={value || ''}
-          onChange={(val) => onChange && onChange(val || '')}
-          theme={theme === 'dark' ? 'vs-dark' : 'light'}
-          onMount={handleEditorDidMount}
-          options={{
-            readOnly,
-            domReadOnly: readOnly,
-            minimap: { enabled: false },
-            fontSize: 12,
-            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            fontLigatures: true,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            padding: { top: 12, bottom: 12 },
-            lineNumbers: 'on',
-            renderLineHighlight: 'all',
-            cursorBlinking: 'smooth',
-            cursorSmoothCaretAnimation: 'on',
-            smoothScrolling: true,
-            folding: true,
-            formatOnPaste: true,
-            formatOnType: true,
-            wordWrap: 'on',
-            bracketPairColorization: { enabled: true },
-            autoClosingBrackets: 'always',
-            autoClosingQuotes: 'always',
-            suggestOnTriggerCharacters: true,
-            acceptSuggestionOnEnter: 'on',
-            tabSize: 2,
-            backgroundColor: 'transparent',
-          }}
-        />
+        {isFallback ? (
+          <textarea
+            className="w-full h-full p-4 bg-[#07090d] text-tx-secondary font-mono text-xs outline-none resize-none selection:bg-[var(--accent)]/30"
+            value={value || ''}
+            readOnly={readOnly}
+            onChange={(e) => onChange && onChange(e.target.value)}
+            spellCheck={false}
+          />
+        ) : (
+          <Editor
+            height="100%"
+            language={monacoLanguage}
+            value={value || ''}
+            onChange={(val) => onChange && onChange(val || '')}
+            theme={theme === 'dark' ? 'vs-dark' : 'light'}
+            onMount={handleEditorDidMount}
+            loading={
+              <div className="flex flex-col items-center justify-center h-full gap-3 bg-[#07090d]">
+                <div className="w-8 h-8 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full animate-spin" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-surface-500 animate-pulse">Initializing Editor...</p>
+              </div>
+            }
+            options={{
+              readOnly,
+              domReadOnly: readOnly,
+              minimap: { enabled: false },
+              fontSize: 12,
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              fontLigatures: true,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              padding: { top: 12, bottom: 12 },
+              lineNumbers: 'on',
+              renderLineHighlight: 'all',
+              cursorBlinking: 'smooth',
+              cursorSmoothCaretAnimation: 'on',
+              smoothScrolling: true,
+              folding: true,
+              formatOnPaste: true,
+              formatOnType: true,
+              wordWrap: 'on',
+              bracketPairColorization: { enabled: true },
+              autoClosingBrackets: 'always',
+              autoClosingQuotes: 'always',
+              suggestOnTriggerCharacters: true,
+              acceptSuggestionOnEnter: 'on',
+              tabSize: 2,
+              backgroundColor: 'transparent',
+            }}
+          />
+        )}
 
         {/* Validation Status Overlay */}
         {language === 'json' && <JsonValidationStatus value={value} />}
@@ -250,6 +288,7 @@ export default function JsonEditor({
     </div>
   );
 }
+
 
 /**
  * Dynamic Validation Status with Visual Feedback
