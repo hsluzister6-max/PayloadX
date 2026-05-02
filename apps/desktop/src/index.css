@@ -72,49 +72,49 @@
    LIGHT MODE TOKENS  (vice versa — white / light gray / near-black)
    ══════════════════════════════════════════════════════════════════ */
 .light {
-  /* PayloadX Light Theme — Warm Beige & Cream */
-  --bg-primary: #FDFBF7;
+  /* PayloadX Light Theme — High Contrast */
+  --bg-primary: #F9FAFB;
   /* Main Workspace Background */
-  --bg-secondary: #F7F3EB;
+  --bg-secondary: #F3F4F6;
   /* Sidebar / Rail Background */
-  --bg-tertiary: #EFEDE4;
+  --bg-tertiary: #E5E7EB;
   /* Input / Sub-panel Background */
 
   --surface-1: #FFFFFF;
-  --surface-2: #F7F3EB;
+  --surface-2: #F9FAFB;
   /* Elevated rows */
-  --surface-3: #ECE7DB;
+  --surface-3: #E5E7EB;
   /* Active/Hover states */
 
-  --border-1: #E4DEC9;
-  --border-2: #DCD4BA;
+  --border-1: #E5E7EB;
+  --border-2: #D1D5DB;
 
-  --text-primary: #2D2A24;
-  --text-secondary: #5C584F;
-  --text-muted: #8A8477;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
 
-  /* Accent – Warm Sand / Muted Gold */
-  --accent: #B5A68E;
-  --accent-hover: #A3927A;
+  /* Accent – Clear Indigo */
+  --accent: #4F46E5;
+  --accent-hover: #4338CA;
   --accent-text: #FFFFFF;
 
-  --success: #6B8E23; /* Olive Drab for success */
-  --error: #BC4B51;   /* Terra Cotta for error */
-  --warning: #D4A373; /* Sandy Brown for warning */
+  --success: #15803D; /* Deep green for success */
+  --error: #B91C1C;   /* Deep red for error */
+  --warning: #B45309; /* Deep amber for warning */
 
-  --scrollbar-track: #F7F3EB;
-  --scrollbar-thumb: #DCD4BA;
-  --scrollbar-thumb-hover: #B5A68E;
+  --scrollbar-track: #F3F4F6;
+  --scrollbar-thumb: #D1D5DB;
+  --scrollbar-thumb-hover: #9CA3AF;
 
   /* ── Layout tokens ────────────────────────────────── */
-  --rail-bg: #EFEDE4;
-  --panel-bg: #F7F3EB;
-  --topbar-bg: #FDFBF7;
-  --rail-icon-color: #8A8477;
-  --rail-icon-active: #2D2A24;
-  --rail-active-bar: #B5A68E;
-  --rail-hover-bg: #ECE7DB;
-  --rail-active-bg: #E4DEC9;
+  --rail-bg: #E5E7EB;
+  --panel-bg: #F3F4F6;
+  --topbar-bg: #FFFFFF;
+  --rail-icon-color: #6B7280;
+  --rail-icon-active: #111827;
+  --rail-active-bar: #4F46E5;
+  --rail-hover-bg: #D1D5DB;
+  --rail-active-bg: #E5E7EB;
 }
 
 /* ══════════════════════════════════════════════════════════════════

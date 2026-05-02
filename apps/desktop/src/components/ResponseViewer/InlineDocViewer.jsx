@@ -238,19 +238,7 @@ export default function InlineDocViewer() {
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    style={{
-                      padding: '4px 12px',
-                      fontSize: '11px',
-                      background: 'var(--accent)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      fontFamily: 'Poppins, sans-serif',
-                      opacity: isSaving ? 0.6 : 1,
-                      transition: 'opacity 0.15s',
-                    }}
+                    className="btn-primary flex items-center justify-center min-w-[80px]"
                   >
                     {isSaving ? 'Saving...' : 'Save Docs'}
                   </button>

@@ -207,17 +207,17 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: '#07090d', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: 'var(--bg-primary)', borderRadius: 12, border: '1px solid var(--border-1)' }}>
       <style>{`
-        .jk  { color: #C8CDD8 }
-        .js  { color: #86EFAC }
-        .jn  { color: #93C5FD }
-        .jb  { color: #FDE047 }
-        .jnu { color: #94A3B8 }
-        .jbk { color: rgba(255,255,255,0.35) }
+        .jk  { color: var(--text-primary) }
+        .js  { color: var(--success) }
+        .jn  { color: var(--info) }
+        .jb  { color: var(--warning) }
+        .jnu { color: var(--text-muted) }
+        .jbk { color: var(--text-secondary) }
         .editor-ta {
           position: absolute; inset: 0; width: 100%; height: 100%;
-          background: transparent; color: transparent; caret-color: #e2e8f0;
+          background: transparent; color: transparent; caret-color: var(--text-primary);
           border: none; outline: none; resize: none;
           font: 12px/1.7 'JetBrains Mono','Fira Code',monospace;
           padding: 12px 12px 12px 0; white-space: pre; overflow: auto;
@@ -233,21 +233,21 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         .ln-col {
           width: 44px; min-width: 44px; padding: 12px 8px 12px 0;
           text-align: right; font: 11px/1.7 'JetBrains Mono',monospace;
-          color: rgba(255,255,255,0.15); border-right: 0.5px solid rgba(255,255,255,0.06);
+          color: var(--text-muted); border-right: 0.5px solid var(--border-1);
           overflow: hidden; user-select: none; flex-shrink: 0;
         }
         .ac-drop {
           position: absolute; z-index: 100; min-width: 220px; max-width: 360px;
-          background: #141720; border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+          background: var(--surface-1); border: 1px solid var(--border-1);
+          border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
           overflow: hidden; max-height: 220px; overflow-y: auto;
         }
         .ac-item {
           display: flex; align-items: center; justify-content: space-between;
           padding: 5px 10px; font: 11.5px/1 'JetBrains Mono',monospace;
-          cursor: pointer; gap: 8px;
+          cursor: pointer; gap: 8px; color: var(--text-primary);
         }
-        .ac-item:hover, .ac-item.active { background: rgba(99,156,255,0.15); }
+        .ac-item:hover, .ac-item.active { background: var(--surface-3); }
         .ac-label { color: #C8CDD8; }
         .ac-doc   { color: rgba(255,255,255,0.2); font-size: 10px; white-space: nowrap; }
         .tb-btn {

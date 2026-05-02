@@ -170,7 +170,7 @@ export default function SIORequestBuilder() {
         )}
 
         <button
-          className={`${isConnected || isConnecting ? 'bg-surface-3 hover:bg-surface-4' : 'bg-[color:var(--accent)] hover:brightness-110'} text-white text-[11px] font-bold px-4 py-1.5 rounded-md transition-all flex items-center gap-1.5`}
+          className={`${isConnected || isConnecting ? 'bg-surface-3 hover:bg-surface-4' : 'btn-primary'} text-white text-[11px] font-bold px-4 py-1.5 rounded-md transition-all flex items-center gap-1.5`}
           onClick={isConnected || isConnecting ? handleDisconnect : handleConnect}
         >
           {isConnected || isConnecting ? (
@@ -253,8 +253,9 @@ export default function SIORequestBuilder() {
                 <button
                   disabled={!isConnected}
                   onClick={handleEmit}
-                  className="w-full bg-[color:var(--surface-3)] hover:bg-[color:var(--accent)] hover:text-white text-[color:var(--text-primary)] font-bold py-2 rounded transition-all disabled:opacity-50"
+                  className="btn-primary w-full py-2 flex items-center justify-center gap-1.5"
                 >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l-7 7m7-7l7 7" /></svg>
                   Send Event
                 </button>
               </div>

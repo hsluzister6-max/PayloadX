@@ -166,11 +166,11 @@ export default function ResponseViewer() {
       {/* ── Compact single-row header ─────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        padding: '5px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.02)', flexShrink: 0, flexWrap: 'wrap',
+        padding: '5px 10px', borderBottom: '1px solid var(--border-1)',
+        background: 'var(--surface-1)', flexShrink: 0, flexWrap: 'wrap',
       }}>
         {/* Left: tab pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: '3px 4px', border: '0.5px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--surface-2)', borderRadius: 7, padding: '3px 4px', border: '1px solid var(--border-1)' }}>
           {RESPONSE_TABS.map((tab, i) => (
             <button
               key={tab}
@@ -179,9 +179,9 @@ export default function ResponseViewer() {
                 padding: '3px 9px', borderRadius: 5, border: 'none', cursor: 'pointer',
                 fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
                 transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
-                background: activeTab === tab ? 'rgba(255,255,255,0.1)' : 'transparent',
-                color: activeTab === tab ? 'var(--accent, #6366f1)' : 'rgba(255,255,255,0.3)',
-                boxShadow: activeTab === tab ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                background: activeTab === tab ? 'var(--surface-3)' : 'transparent',
+                color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+                boxShadow: activeTab === tab ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
               }}
             >
               {tab}
@@ -196,17 +196,17 @@ export default function ResponseViewer() {
             fontSize: 10, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.02em',
             padding: '2px 7px', borderRadius: 5,
             background: response.status >= 200 && response.status < 300 ? 'rgba(74,222,128,0.1)' : response.status >= 400 ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
-            color: response.status >= 200 && response.status < 300 ? '#4ade80' : response.status >= 400 ? '#f87171' : '#fbbf24',
-            border: `0.5px solid ${response.status >= 200 && response.status < 300 ? 'rgba(74,222,128,0.25)' : response.status >= 400 ? 'rgba(248,113,113,0.25)' : 'rgba(251,191,36,0.25)'}`,
+            color: response.status >= 200 && response.status < 300 ? 'var(--success)' : response.status >= 400 ? 'var(--error)' : 'var(--warning)',
+            border: `1px solid ${response.status >= 200 && response.status < 300 ? 'rgba(74,222,128,0.25)' : response.status >= 400 ? 'rgba(248,113,113,0.25)' : 'rgba(251,191,36,0.25)'}`,
           }}>
             {response.status} {response.statusText}
           </span>
           {/* Time */}
-          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.3)', padding: '2px 6px', borderRadius: 5, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.07)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border-1)' }}>
             ⏱ {formatTime(response.responseTimeMs)}
           </span>
           {/* Size */}
-          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'rgba(255,255,255,0.3)', padding: '2px 6px', borderRadius: 5, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.07)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border-1)' }}>
             ⬇ {formatSize(response.sizeBytes)}
           </span>
         </div>
@@ -456,10 +456,10 @@ function iconBtn(active) {
   return {
     width: 26, height: 26,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: active ? 'rgba(74,222,128,0.08)' : 'rgba(255,255,255,0.04)',
-    border: `0.5px solid ${active ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.08)'}`,
+    background: active ? 'rgba(74,222,128,0.1)' : 'transparent',
+    border: `1px solid ${active ? 'var(--success)' : 'transparent'}`,
     borderRadius: 6, cursor: 'pointer',
-    color: active ? '#4ade80' : 'rgba(255,255,255,0.35)',
+    color: active ? 'var(--success)' : 'var(--text-muted)',
     transition: 'all 0.15s',
   };
 }

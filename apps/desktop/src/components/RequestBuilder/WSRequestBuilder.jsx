@@ -151,7 +151,7 @@ export default function WSRequestBuilder() {
             Disconnect
           </button>
         ) : (
-          <button className="ws-connect-btn flex items-center gap-1.5 !rounded-md px-4 py-1.5 text-[11px] font-bold transition-all bg-[color:var(--accent)] hover:brightness-110 text-white" onClick={handleConnect}>
+          <button className="btn-primary flex items-center gap-1.5" onClick={handleConnect}>
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             Connect
           </button>
@@ -178,7 +178,7 @@ export default function WSRequestBuilder() {
           </div>
           <div className="ws-composer-footer">
             <button
-              className="ws-send-btn"
+              className="btn-primary flex items-center gap-1.5"
               onClick={handleSend}
               disabled={!isConnected || !message.trim()}
             >

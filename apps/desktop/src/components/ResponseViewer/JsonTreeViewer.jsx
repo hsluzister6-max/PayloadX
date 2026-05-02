@@ -398,11 +398,11 @@ export default function JsonTreeViewer({ value, className = '' }) {
           <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
 
           {/* Expand / Collapse icons */}
-          <button onClick={handleExpandAll} style={{...iconBtnStyle(), background: 'transparent', border: 'none'}} title="Expand all">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          <button onClick={handleExpandAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,0.8)'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.4)'} title="Expand all">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
           </button>
-          <button onClick={handleCollapseAll} style={{...iconBtnStyle(), background: 'transparent', border: 'none'}} title="Collapse all">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+          <button onClick={handleCollapseAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,0.8)'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.4)'} title="Collapse all">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
           </button>
         </div>
       )}
