@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { useUIStore } from '@/store/uiStore';
 import {
@@ -6,17 +6,200 @@ import {
   AlignLeft,
   Copy,
   Check,
-  Sparkles,
   FileJson,
   FileCode,
   FileText,
   Code,
-  Maximize2,
   FoldVertical,
   UnfoldVertical,
   Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// ── Common REST API keys for autocomplete ────────────────────────────────────
+const COMMON_REST_KEYS = [
+  // Identity
+  { label: 'id',           detail: 'Resource identifier',    insert: '"id": ""' },
+  { label: '_id',          detail: 'MongoDB ObjectId',        insert: '"_id": ""' },
+  { label: 'uuid',         detail: 'UUID field',              insert: '"uuid": ""' },
+  // Person
+  { label: 'name',         detail: 'Full name',               insert: '"name": ""' },
+  { label: 'firstName',    detail: 'First name',              insert: '"firstName": ""' },
+  { label: 'lastName',     detail: 'Last name',               insert: '"lastName": ""' },
+  { label: 'username',     detail: 'Username / handle',       insert: '"username": ""' },
+  { label: 'email',        detail: 'Email address',           insert: '"email": ""' },
+  { label: 'phone',        detail: 'Phone number',            insert: '"phone": ""' },
+  { label: 'avatar',       detail: 'Avatar URL',              insert: '"avatar": ""' },
+  // Auth
+  { label: 'password',     detail: 'Password field',          insert: '"password": ""' },
+  { label: 'token',        detail: 'Auth token',              insert: '"token": ""' },
+  { label: 'accessToken',  detail: 'JWT access token',        insert: '"accessToken": ""' },
+  { label: 'refreshToken', detail: 'JWT refresh token',       insert: '"refreshToken": ""' },
+  { label: 'apiKey',       detail: 'API key',                 insert: '"apiKey": ""' },
+  { label: 'role',         detail: 'User role',               insert: '"role": ""' },
+  { label: 'permissions',  detail: 'Permissions array',       insert: '"permissions": []' },
+  // Status & control
+  { label: 'status',       detail: 'Resource status',         insert: '"status": "active"' },
+  { label: 'isActive',     detail: 'Active flag',             insert: '"isActive": true' },
+  { label: 'isDeleted',    detail: 'Soft delete flag',        insert: '"isDeleted": false' },
+  { label: 'enabled',      detail: 'Enable/disable flag',     insert: '"enabled": true' },
+  { label: 'type',         detail: 'Resource type',           insert: '"type": ""' },
+  { label: 'category',     detail: 'Category',                insert: '"category": ""' },
+  { label: 'tags',         detail: 'Array of tags',           insert: '"tags": []' },
+  // Timestamps
+  { label: 'createdAt',    detail: 'Creation timestamp',      insert: '"createdAt": ""' },
+  { label: 'updatedAt',    detail: 'Update timestamp',        insert: '"updatedAt": ""' },
+  { label: 'deletedAt',    detail: 'Deletion timestamp',      insert: '"deletedAt": null' },
+  { label: 'timestamp',    detail: 'Unix timestamp',          insert: '"timestamp": 0' },
+  // Pagination
+  { label: 'page',         detail: 'Page number',             insert: '"page": 1' },
+  { label: 'limit',        detail: 'Items per page',          insert: '"limit": 10' },
+  { label: 'offset',       detail: 'Pagination offset',       insert: '"offset": 0' },
+  { label: 'total',        detail: 'Total count',             insert: '"total": 0' },
+  // Data
+  { label: 'data',         detail: 'Payload data',            insert: '"data": {}' },
+  { label: 'meta',         detail: 'Metadata object',         insert: '"meta": {}' },
+  { label: 'message',      detail: 'Response message',        insert: '"message": ""' },
+  { label: 'error',        detail: 'Error info',              insert: '"error": null' },
+  { label: 'code',         detail: 'Status/error code',       insert: '"code": 0' },
+  { label: 'success',      detail: 'Success flag',            insert: '"success": true' },
+  { label: 'result',       detail: 'Result payload',          insert: '"result": {}' },
+  { label: 'results',      detail: 'Array of results',        insert: '"results": []' },
+  { label: 'items',        detail: 'Array of items',          insert: '"items": []' },
+  { label: 'count',        detail: 'Item count',              insert: '"count": 0' },
+  // Address
+  { label: 'address',      detail: 'Address object',          insert: '"address": {\n  "street": "",\n  "city": "",\n  "country": ""\n}' },
+  { label: 'city',         detail: 'City name',               insert: '"city": ""' },
+  { label: 'country',      detail: 'Country name',            insert: '"country": ""' },
+  { label: 'zipCode',      detail: 'Zip / postal code',       insert: '"zipCode": ""' },
+  // Numeric
+  { label: 'price',        detail: 'Price / amount',          insert: '"price": 0.0' },
+  { label: 'amount',       detail: 'Monetary amount',         insert: '"amount": 0.0' },
+  { label: 'quantity',     detail: 'Item quantity',           insert: '"quantity": 1' },
+  { label: 'weight',       detail: 'Weight value',            insert: '"weight": 0' },
+  { label: 'rating',       detail: 'Rating value',            insert: '"rating": 0' },
+  { label: 'score',        detail: 'Score value',             insert: '"score": 0' },
+  // Media
+  { label: 'url',          detail: 'URL string',              insert: '"url": "https://"' },
+  { label: 'imageUrl',     detail: 'Image URL',               insert: '"imageUrl": ""' },
+  { label: 'thumbnail',    detail: 'Thumbnail URL',           insert: '"thumbnail": ""' },
+  { label: 'description',  detail: 'Text description',        insert: '"description": ""' },
+  { label: 'title',        detail: 'Title field',             insert: '"title": ""' },
+  { label: 'slug',         detail: 'URL slug',                insert: '"slug": ""' },
+  { label: 'content',      detail: 'Content body',            insert: '"content": ""' },
+  // Relations
+  { label: 'userId',       detail: 'User reference ID',       insert: '"userId": ""' },
+  { label: 'projectId',    detail: 'Project reference ID',    insert: '"projectId": ""' },
+  { label: 'parentId',     detail: 'Parent reference ID',     insert: '"parentId": null' },
+];
+
+// ── Value snippet completions ─────────────────────────────────────────────────
+const VALUE_SNIPPETS = [
+  { label: 'true',         detail: 'Boolean true',            insert: 'true' },
+  { label: 'false',        detail: 'Boolean false',           insert: 'false' },
+  { label: 'null',         detail: 'Null value',              insert: 'null' },
+  { label: '[] (array)',   detail: 'Empty array',             insert: '[]' },
+  { label: '{} (object)',  detail: 'Empty object',            insert: '{}' },
+  { label: 'pagination',   detail: 'Pagination snippet',      insert: '{\n  "page": 1,\n  "limit": 10,\n  "total": 0\n}' },
+  { label: 'user snippet', detail: 'User object template',    insert: '{\n  "id": "",\n  "name": "",\n  "email": "",\n  "role": "user"\n}' },
+];
+
+/**
+ * Extract all keys from the current JSON for context-aware suggestions
+ */
+function extractJsonKeys(jsonStr) {
+  try {
+    const obj = JSON.parse(jsonStr);
+    const keys = new Set();
+    function walk(o, depth = 0) {
+      if (depth > 6 || o === null || typeof o !== 'object') return;
+      Object.keys(o).forEach(k => { keys.add(k); walk(o[k], depth + 1); });
+      if (Array.isArray(o)) o.forEach(item => walk(item, depth + 1));
+    }
+    walk(obj);
+    return [...keys];
+  } catch { return []; }
+}
+
+/**
+ * Register the PayloadX smart autocomplete provider for JSON
+ */
+let completionDisposable = null;
+function registerJsonAutocomplete(monaco, getValueFn) {
+  if (completionDisposable) completionDisposable.dispose();
+
+  completionDisposable = monaco.languages.registerCompletionItemProvider('json', {
+    triggerCharacters: ['"', '{', ',', '\n', ':'],
+    provideCompletionItems(model, position) {
+      const text = model.getValue();
+      const lineText = model.getLineContent(position.lineNumber);
+      const lineUpToCursor = lineText.substring(0, position.column - 1);
+
+      // Detect if we're typing a key (inside quotes at start of a property)
+      const isTypingKey = /^\s*"?[\w]*$/.test(lineUpToCursor) || /,\s*"?[\w]*$/.test(lineUpToCursor);
+      // Detect if we're typing a value (after the colon)
+      const isTypingValue = /:\s*$/.test(lineUpToCursor) || /:\s*"?[\w]*$/.test(lineUpToCursor);
+
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: position.column,
+        endColumn: position.column,
+      };
+
+      const CK = monaco.languages.CompletionItemKind;
+      const suggestions = [];
+
+      // Context-aware: keys already in this JSON
+      const existingKeys = extractJsonKeys(getValueFn() || '');
+
+      if (isTypingKey || (!isTypingValue && !isTypingKey)) {
+        // 1. Keys from the current document (highest relevance)
+        existingKeys.forEach(k => {
+          suggestions.push({
+            label: k,
+            kind: CK.Field,
+            detail: '↑ from this document',
+            documentation: `Key found in current JSON`,
+            insertText: `"${k}": `,
+            range,
+            sortText: '0' + k, // Sort first
+          });
+        });
+
+        // 2. Common REST keys
+        COMMON_REST_KEYS.forEach(item => {
+          if (existingKeys.includes(item.label)) return; // Skip duplicates
+          suggestions.push({
+            label: item.label,
+            kind: CK.Property,
+            detail: item.detail,
+            documentation: { value: `\`${item.insert}\`` },
+            insertText: item.insert,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.None,
+            range,
+            sortText: '1' + item.label,
+          });
+        });
+      }
+
+      if (isTypingValue) {
+        VALUE_SNIPPETS.forEach(item => {
+          suggestions.push({
+            label: item.label,
+            kind: CK.Value,
+            detail: item.detail,
+            insertText: item.insert,
+            range,
+            sortText: '0' + item.label,
+          });
+        });
+      }
+
+      return { suggestions };
+    },
+  });
+}
 
 /**
  * Production-level Monaco-based Editor
@@ -58,9 +241,9 @@ export default function JsonEditor({
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
-    setIsFallback(false); // Explicitly disable fallback if it mounted
+    setIsFallback(false);
 
-    // Configure Monaco for JSON with comments support
+    // Configure Monaco JSON validation
     if (language === 'json') {
       monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
         validate: true,
@@ -68,7 +251,28 @@ export default function JsonEditor({
         schemas: [],
         enableSchemaRequest: true,
       });
+
+      // Register PayloadX smart autocomplete
+      registerJsonAutocomplete(monaco, () => editor.getValue());
     }
+
+    // Register custom keyboard shortcut: Ctrl+Shift+F → Format
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyF,
+      () => editor.getAction('editor.action.formatDocument').run()
+    );
+
+    // Auto-format on paste if valid JSON
+    editor.onDidPaste(() => {
+      if (language !== 'json') return;
+      setTimeout(() => {
+        try {
+          const val = editor.getValue();
+          JSON.parse(val);
+          editor.getAction('editor.action.formatDocument').run();
+        } catch (_) {} // Not valid JSON yet, skip
+      }, 50);
+    });
   };
 
   const handleBeautify = useCallback(() => {
@@ -268,14 +472,32 @@ export default function JsonEditor({
               cursorSmoothCaretAnimation: 'on',
               smoothScrolling: true,
               folding: true,
-              formatOnPaste: true,
+              formatOnPaste: false, // We handle this manually with auto-format
               formatOnType: true,
               wordWrap: 'on',
               bracketPairColorization: { enabled: true },
               autoClosingBrackets: 'always',
               autoClosingQuotes: 'always',
+              // Autocomplete configuration
               suggestOnTriggerCharacters: true,
               acceptSuggestionOnEnter: 'on',
+              quickSuggestions: {
+                other: true,
+                comments: false,
+                strings: true,   // Show suggestions inside strings (keys)
+              },
+              quickSuggestionsDelay: 80,
+              suggest: {
+                insertMode: 'replace',
+                snippetsPreventQuickSuggestions: false,
+                showKeywords: true,
+                showSnippets: true,
+                showProperties: true,
+                showValues: true,
+                showWords: false,
+                filterGraceful: true,
+                localityBonus: true,
+              },
               tabSize: 2,
               backgroundColor: 'transparent',
             }}
