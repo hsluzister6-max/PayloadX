@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { getStatusClass, formatSize, formatTime, formatBody } from '@/utils/helpers';
 import JsonEditor from '../RequestBuilder/tabs/JsonEditor';
+import JsonTreeViewer from './JsonTreeViewer';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import './swagger-theme.css';
@@ -267,12 +268,9 @@ export default function ResponseViewer() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'Pretty' && (
-          <JsonEditor
-            value={prettyBody}
-            language={lang}
-            readOnly={true}
-            hideHeader={true}
-            className="h-full border-none rounded-none"
+          <JsonTreeViewer
+            value={typeof response.body === 'string' ? response.body : JSON.stringify(response.body)}
+            className="h-full"
           />
         )}
 

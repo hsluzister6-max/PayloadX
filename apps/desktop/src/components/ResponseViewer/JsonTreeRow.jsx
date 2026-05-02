@@ -17,18 +17,18 @@ export default function JsonTreeRow({
   const { theme } = useUIStore();
   const isDarkTheme = isDark !== undefined ? isDark : theme === 'dark';
 
-  // Postman-style color scheme
+  // High-fidelity Metallic Color Scheme
   const colors = {
-    key: isDarkTheme ? '#9cdcfe' : '#0451a5',           // Light blue
-    string: isDarkTheme ? '#ce9178' : '#a31515',        // Orange/salmon
-    number: isDarkTheme ? '#b5cea8' : '#098658',        // Green
-    boolean: isDarkTheme ? '#569cd6' : '#0000ff',       // Blue
-    null: isDarkTheme ? '#569cd6' : '#0000ff',          // Blue
-    punctuation: isDarkTheme ? '#d4d4d4' : '#000000',   // Gray/white
-    default: isDarkTheme ? '#d4d4d4' : '#000000',
-    bracket: isDarkTheme ? '#d4d4d4' : '#000000',       // Gray brackets
-    dim: isDarkTheme ? '#6e7681' : '#757575',
-    lineNumber: isDarkTheme ? '#6e7681' : '#999999'     // Muted line numbers
+    key: isDarkTheme ? '#C8CDD8' : '#334155',           // Chrome/Platinum
+    string: isDarkTheme ? '#86EFAC' : '#059669',        // Emerald Glow
+    number: isDarkTheme ? '#93C5FD' : '#2563EB',        // Azure Glow
+    boolean: isDarkTheme ? '#FDE047' : '#CA8A04',       // Gold Glow
+    null: isDarkTheme ? '#94A3B8' : '#64748B',          // Muted Slate
+    punctuation: isDarkTheme ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+    default: isDarkTheme ? '#D0D4DE' : '#1E293B',
+    bracket: isDarkTheme ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+    dim: isDarkTheme ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+    lineNumber: isDarkTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)'
   };
 
   const handleCopy = async (value) => {

@@ -9,11 +9,8 @@ mod workflow;
 
 use commands::http::{execute_request, get_cookies, set_cookie, delete_cookie, list_cookie_domains, clear_cookies};
 use commands::files::{save_local_file, read_local_file, list_local_files};
-use commands::json::parse_json;
+use commands::json::{parse_json, flatten_json_pro};
 use commands::workflow::{execute_workflow, execute_single_node, validate_workflow, cancel_workflow_execution};
-use commands::url_tools::{url_parse_params, url_build_from_params};
-use commands::env_tools::{resolve_env_variables, resolve_env_in_object};
-use commands::postman::parse_postman_collection;
 
 use std::sync::Mutex;
 use std::collections::HashMap;
@@ -366,6 +363,7 @@ fn main() {
             read_local_file,
             list_local_files,
             parse_json,
+            flatten_json_pro,
             start_oauth_flow,
             system_open,
             execute_workflow,
