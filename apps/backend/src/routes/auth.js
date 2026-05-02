@@ -1,6 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import User from '../../models/User.js';
+import OtpSession from '../../models/OtpSession.js';
 import { signToken, authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -190,31 +191,16 @@ router.post('/signup', async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // 1. Create user in MongoDB (Initially unverified)
-    const user = await User.create({
+    // 1. Generate OTP for email verification
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 2. Save to OtpSession (do NOT add to User/Firebase yet)
+    await OtpSession.create({
       name,
       email: email.toLowerCase(),
       password,
+      otp: otpCode,
     });
-
-    // 2. Create user in Firebase (for sync)
-    const admin = (await import('../lib/firebase.js')).default;
-    try {
-      await admin.auth().createUser({
-        uid: user._id.toString(),
-        email: email.toLowerCase(),
-        password,
-        displayName: name
-      });
-    } catch (fbError) {
-      console.error('Firebase user creation failed:', fbError.message);
-    }
-
-    // 3. Generate OTP for email verification
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otpCode;
-    user.otpExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours for signup
-    await user.save();
 
     // 4. Send Email
     const { sendEmail } = await import('../lib/mailer.js');
@@ -247,18 +233,38 @@ router.post('/signup', async (req, res) => {
 router.post('/verify-signup', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const user = await User.findOne({
+    
+    // 1. Find the pending session
+    const session = await OtpSession.findOne({
       email: email.toLowerCase(),
-      otp,
-      otpExpires: { $gt: Date.now() }
+      otp
     });
 
-    if (!user) return res.status(400).json({ error: 'Invalid or expired verification code' });
+    if (!session) return res.status(400).json({ error: 'Invalid or expired verification code' });
 
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
+    // 2. Create the actual User now
+    const user = await User.create({
+      name: session.name,
+      email: session.email,
+      password: session.password, // This is already hashed by OtpSession
+      isVerified: true
+    });
+
+    // 3. Create user in Firebase
+    const admin = (await import('../lib/firebase.js')).default;
+    try {
+      await admin.auth().createUser({
+        uid: user._id.toString(),
+        email: user.email,
+        password: session.password,
+        displayName: user.name
+      });
+    } catch (fbError) {
+      console.error('Firebase user creation failed:', fbError.message);
+    }
+
+    // 4. Delete the session
+    await OtpSession.deleteOne({ _id: session._id });
 
     const token = signToken({ id: user._id, email: user.email, name: user.name });
     res.json({ message: 'Email verified successfully', user: user.toSafeObject(), token });
