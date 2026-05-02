@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import Editor from '@monaco-editor/react';
 import { useUIStore } from '@/store/uiStore';
+
 import { useApiDocStore } from '@/store/apiDocStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useTeamStore } from '@/store/teamStore';
@@ -305,20 +305,16 @@ export default function EndpointEditor({ endpoint, docId }) {
                   {localEp.requestBody?.contentType || 'application/json'}
                 </div>
               </div>
-              <div className="flex-1 border border-[var(--border-1)] rounded-lg overflow-hidden bg-[#1e1e1e] pt-2">
-                <Editor
-                  height="100%"
-                  defaultLanguage="json"
-                  theme={theme === 'dark' ? 'vs-dark' : 'light'}
+              <div className="flex-1 border border-[var(--border-1)] rounded-lg overflow-hidden" style={{ minHeight: 200 }}>
+                <textarea
                   value={localEp.requestBody?.schema || '{}'}
-                  onChange={updateBody}
-                  options={{
-                    minimap: { enabled: false }, fontSize: 12, tabSize: 2,
-                    scrollBeyondLastLine: false, wordWrap: 'on',
-                    padding: { top: 8 }
-                  }}
+                  onChange={e => updateBody(e.target.value)}
+                  style={{ width: '100%', height: '100%', minHeight: 200, background: '#07090d', color: '#C8CDD8', border: 'none', outline: 'none', resize: 'none', padding: '12px', fontFamily: "'JetBrains Mono', monospace", fontSize: 12, lineHeight: 1.7, tabSize: 2 }}
+                  spellCheck={false}
+                  onKeyDown={e => { if (e.key === 'Tab') { e.preventDefault(); const s = e.target.selectionStart; const v = e.target.value; const nv = v.slice(0, s) + '  ' + v.slice(s); updateBody(nv); setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = s + 2; }, 0); } }}
                 />
               </div>
+
             </div>
           )}
 
@@ -361,17 +357,16 @@ export default function EndpointEditor({ endpoint, docId }) {
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
                         </button>
                       </div>
-                      <div className="flex-1 bg-[#1e1e1e] relative">
+                      <div className="flex-1 relative" style={{ minHeight: 120 }}>
                         <div className="absolute top-0 right-4 z-10 bg-surface-3 text-[9px] px-2 py-0.5 rounded-b text-tx-secondary font-mono border-x border-b border-[var(--border-1)] opacity-70">
                           body schema (JSON)
                         </div>
-                        <Editor
-                          height="100%"
-                          defaultLanguage="json"
-                          theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                        <textarea
                           value={res.schema || '{}'}
-                          onChange={(val) => updateResponse(res.id, 'schema', val)}
-                          options={{ minimap: { enabled: false }, fontSize: 11, tabSize: 2, scrollBeyondLastLine: false, padding: { top: 12 } }}
+                          onChange={e => updateResponse(res.id, 'schema', e.target.value)}
+                          style={{ width: '100%', height: '100%', minHeight: 120, background: '#07090d', color: '#C8CDD8', border: 'none', outline: 'none', resize: 'none', padding: '28px 12px 12px', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, lineHeight: 1.7 }}
+                          spellCheck={false}
+                          onKeyDown={e => { if (e.key === 'Tab') { e.preventDefault(); const s = e.target.selectionStart; const v = e.target.value; const nv = v.slice(0, s) + '  ' + v.slice(s); updateResponse(res.id, 'schema', nv); setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = s + 2; }, 0); } }}
                         />
                       </div>
                     </div>

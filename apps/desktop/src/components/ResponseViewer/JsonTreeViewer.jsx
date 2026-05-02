@@ -18,20 +18,20 @@ const INDENT_PX = 14;
 
 // ── Syntax colors (dark theme aligned with PayloadX metals) ──────────────────
 const T = {
-  key:  '#C8CDD8',   // platinum
-  str:  '#86EFAC',   // emerald
-  num:  '#93C5FD',   // azure
+  key: '#C8CDD8',   // platinum
+  str: '#86EFAC',   // emerald
+  num: '#93C5FD',   // azure
   bool: '#FDE047',   // gold
   null: '#94A3B8',   // slate
-  bkt:  'rgba(255,255,255,0.4)', // bracket
-  pun:  'rgba(255,255,255,0.2)', // punctuation / comma
-  dim:  'rgba(255,255,255,0.18)', // collapsed preview
+  bkt: 'rgba(255,255,255,0.4)', // bracket
+  pun: 'rgba(255,255,255,0.2)', // punctuation / comma
+  dim: 'rgba(255,255,255,0.18)', // collapsed preview
 };
 
 function esc(s) {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-          .replace(/\n/g, '\\n').replace(/\r/g, '\\r')
-          .replace(/\t/g, '\\t');
+    .replace(/\n/g, '\\n').replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
 }
 
 function formatSize(n) {
@@ -42,46 +42,46 @@ function formatSize(n) {
 
 // ── Build flattened line array (recursive) ────────────────────────────────────
 function buildLines(v, path, depth, trail, collapsed) {
-  if (v === null)    return [{ depth, path, col: false, col2: false, raw: 'null'+(trail?',':''),  parts: [{ t:'null', s:'null'  }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
-  if (v === true || v === false) return [{ depth, path, col: false, col2: false, raw: String(v)+(trail?',':''), parts: [{ t:'bool', s:String(v) }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
-  if (typeof v === 'number') return [{ depth, path, col: false, col2: false, raw: String(v)+(trail?',':''), parts: [{ t:'num', s:String(v) }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+  if (v === null) return [{ depth, path, col: false, col2: false, raw: 'null' + (trail ? ',' : ''), parts: [{ t: 'null', s: 'null' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
+  if (v === true || v === false) return [{ depth, path, col: false, col2: false, raw: String(v) + (trail ? ',' : ''), parts: [{ t: 'bool', s: String(v) }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
+  if (typeof v === 'number') return [{ depth, path, col: false, col2: false, raw: String(v) + (trail ? ',' : ''), parts: [{ t: 'num', s: String(v) }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
   if (typeof v === 'string') {
     const i = esc(v);
-    const d = `"${i}"`+(trail?',':'');
-    return [{ depth, path, col: false, col2: false, raw: d, parts: [{ t:'str', s:`"${i}"` }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+    const d = `"${i}"` + (trail ? ',' : '');
+    return [{ depth, path, col: false, col2: false, raw: d, parts: [{ t: 'str', s: `"${i}"` }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
   }
 
   if (Array.isArray(v)) {
     const isc = collapsed.has(path);
-    if (!v.length) return [{ depth, path, col: false, col2: false, raw: '[]'+(trail?',':''), parts: [{ t:'bkt', s:'[]' }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+    if (!v.length) return [{ depth, path, col: false, col2: false, raw: '[]' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '[]' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
     if (isc) {
-      const sum = `[…${v.length} item${v.length !== 1 ? 's' : ''}]`+(trail?',':'');
-      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t:'bkt', s:'[' }, { t:'dim', s:`…${v.length} item${v.length !== 1 ? 's' : ''}` }, { t:'bkt', s:']' }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+      const sum = `[…${v.length} item${v.length !== 1 ? 's' : ''}]` + (trail ? ',' : '');
+      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t: 'bkt', s: '[' }, { t: 'dim', s: `…${v.length} item${v.length !== 1 ? 's' : ''}` }, { t: 'bkt', s: ']' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
     }
-    const ls = [{ depth, path, col: true, col2: false, raw: '[', parts: [{ t:'bkt', s:'[' }] }];
+    const ls = [{ depth, path, col: true, col2: false, raw: '[', parts: [{ t: 'bkt', s: '[' }] }];
     v.forEach((item, i) => { ls.push(...buildLines(item, `${path}[${i}]`, depth + 1, i < v.length - 1, collapsed)); });
-    ls.push({ depth, path, col: true, col2: false, raw: ']'+(trail?',':''), parts: [{ t:'bkt', s:']' }, ...(trail?[{t:'pun',s:','}]:[]) ] });
+    ls.push({ depth, path, col: true, col2: false, raw: ']' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: ']' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] });
     return ls;
   }
 
   if (typeof v === 'object') {
     const isc = collapsed.has(path);
     const keys = Object.keys(v);
-    if (!keys.length) return [{ depth, path, col: false, col2: false, raw: '{}'+(trail?',':''), parts: [{ t:'bkt', s:'{}' }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+    if (!keys.length) return [{ depth, path, col: false, col2: false, raw: '{}' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '{}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
     if (isc) {
       const prev = keys.slice(0, 3).join(', ') + (keys.length > 3 ? ', …' : '');
-      const sum = `{${prev}}`+(trail?',':'');
-      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t:'bkt', s:'{' }, { t:'dim', s:prev }, { t:'bkt', s:'}' }, ...(trail?[{t:'pun',s:','}]:[]) ] }];
+      const sum = `{${prev}}` + (trail ? ',' : '');
+      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t: 'bkt', s: '{' }, { t: 'dim', s: prev }, { t: 'bkt', s: '}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
     }
-    const ls = [{ depth, path, col: true, col2: false, raw: '{', parts: [{ t:'bkt', s:'{' }] }];
+    const ls = [{ depth, path, col: true, col2: false, raw: '{', parts: [{ t: 'bkt', s: '{' }] }];
     keys.forEach((k, i) => {
       const kp = `${path}.${k}`, kl = `"${esc(k)}"`;
       const cl = buildLines(v[k], kp, depth + 1, i < keys.length - 1, collapsed);
       const f = cl[0];
-      ls.push({ ...f, depth: depth + 1, path: kp, raw: `${kl}: ${f.raw}`, parts: [{ t:'key', s:kl }, { t:'pun', s:': ' }, ...f.parts] });
+      ls.push({ ...f, depth: depth + 1, path: kp, raw: `${kl}: ${f.raw}`, parts: [{ t: 'key', s: kl }, { t: 'pun', s: ': ' }, ...f.parts] });
       for (let j = 1; j < cl.length; j++) ls.push(cl[j]);
     });
-    ls.push({ depth, path, col: true, col2: false, raw: '}'+(trail?',':''), parts: [{ t:'bkt', s:'}' }, ...(trail?[{t:'pun',s:','}]:[]) ] });
+    ls.push({ depth, path, col: true, col2: false, raw: '}' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] });
     return ls;
   }
   return [];
@@ -103,7 +103,7 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
     navigator.clipboard.writeText(ln.raw).catch(() => {
       const ta = document.createElement('textarea'); ta.value = ln.raw;
       ta.style.cssText = 'position:fixed;opacity:0;'; document.body.appendChild(ta);
-      ta.focus(); ta.select(); try { document.execCommand('copy'); } catch (_) {}
+      ta.focus(); ta.select(); try { document.execCommand('copy'); } catch (_) { }
       document.body.removeChild(ta);
     });
     setCopied(true);
@@ -124,8 +124,8 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
         background: isCurrent
           ? 'rgba(251,191,36,0.18)'
           : isHit
-          ? 'rgba(251,191,36,0.07)'
-          : 'transparent',
+            ? 'rgba(251,191,36,0.07)'
+            : 'transparent',
         paddingRight: 4,
       }}
       className="json-row"
@@ -335,7 +335,7 @@ export default function JsonTreeViewer({ value, className = '' }) {
   }, [parsed]);
 
   const handleCopyAll = useCallback(() => {
-    navigator.clipboard.writeText(rawStr).catch(() => {});
+    navigator.clipboard.writeText(rawStr).catch(() => { });
   }, [rawStr]);
 
   const handleSearchNav = useCallback((dir) => {
@@ -411,11 +411,9 @@ export default function JsonTreeViewer({ value, className = '' }) {
 
           {parsed && <div style={{ width: 0.5, height: 16, background: 'rgba(255,255,255,0.08)' }} />}
 
-          {parsed && <button onClick={handleExpandAll}  style={btnStyle()} title="Expand all">↕ expand</button>}
+          {parsed && <button onClick={handleExpandAll} style={btnStyle()} title="Expand all">↕ expand</button>}
           {parsed && <button onClick={handleCollapseAll} style={btnStyle()} title="Collapse all">↔ collapse</button>}
           {parsed && <div style={{ width: 0.5, height: 16, background: 'rgba(255,255,255,0.08)' }} />}
-          {parsed && <button onClick={() => setTab(t => t === 'raw' ? 'pretty' : 'raw')} style={btnStyle()}>{tab === 'raw' ? '⊟ pretty' : '⊞ raw'}</button>}
-          {rawStr && <button onClick={handleCopyAll} style={btnStyle()}>⎘ copy</button>}
         </div>
       </div>
 

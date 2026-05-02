@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import Editor from '@monaco-editor/react';
 import { useRequestStore } from '@/store/requestStore';
+
 import { useUIStore } from '@/store/uiStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -301,21 +301,24 @@ export default function InlineDocViewer() {
             <div className="flex flex-col gap-2">
               <h3 className="text-[11px] uppercase tracking-wider font-bold text-surface-400">Documentation Overview</h3>
               {isEditing ? (
-                <div className="border border-[var(--border-1)] rounded-lg overflow-hidden bg-[#1e1e1e] h-48 relative">
-                    <Editor
-                      height="100%"
-                      defaultLanguage="markdown"
-                      theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                      value={description}
-                      onChange={setDescription}
-                      options={{ minimap: { enabled: false }, fontSize: 13, wordWrap: 'on', padding: { top: 12 } }}
-                    />
-                </div>
+                <textarea
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  rows={8}
+                  style={{ width: '100%', background: '#07090d', color: '#C8CDD8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, outline: 'none', resize: 'vertical', padding: '12px', fontFamily: 'Inter, sans-serif', fontSize: 13, lineHeight: 1.7 }}
+                  placeholder="Write documentation in Markdown..."
+                  spellCheck={false}
+                  autoFocus
+                />
               ) : (
-                <div className="text-sm text-tx-secondary whitespace-pre-wrap rounded-lg bg-surface-2 border border-[var(--border-2)] p-4 cursor-text hover:border-surface-400 transition-colors" onClick={() => setIsEditing(true)}>
+                <div
+                  className="text-sm text-tx-secondary whitespace-pre-wrap rounded-lg bg-surface-2 border border-[var(--border-2)] p-4 cursor-text hover:border-surface-400 transition-colors"
+                  onClick={() => setIsEditing(true)}
+                >
                   {description || <span className="italic opacity-50">No documentation currently laid out. Click here to add description using Markdown.</span>}
                 </div>
               )}
+
             </div>
 
             {/* Explicit Payload Information */}
@@ -383,26 +386,15 @@ export default function InlineDocViewer() {
                   </button>
               </div>
               
-              <div 
-                className="border border-[var(--border-1)] rounded-lg overflow-auto bg-[#1e1e1e] opacity-90 relative flex flex-col"
-                style={{ height: '256px', minHeight: '150px', maxHeight: '800px', resize: 'vertical' }}
+              <div
+                className="border border-[var(--border-1)] rounded-lg overflow-auto bg-[#111318] opacity-90"
+                style={{ height: '256px', minHeight: '150px', maxHeight: '800px', resize: 'vertical', position: 'relative' }}
               >
-                  <Editor
-                    height="100%"
-                    defaultLanguage="json"
-                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                    value={JSON.stringify(swaggerPreview, null, 2)}
-                    options={{ 
-                      readOnly: true, 
-                      minimap: { enabled: false }, 
-                      fontSize: 11.5, 
-                      tabSize: 2, 
-                      padding: { top: 12, bottom: 12 },
-                      automaticLayout: true,
-                      scrollBeyondLastLine: false 
-                    }}
-                  />
+                <pre style={{ margin: 0, padding: '12px', fontSize: 11.5, fontFamily: "'JetBrains Mono', monospace", color: '#C8CDD8', whiteSpace: 'pre', overflowX: 'auto', height: '100%', boxSizing: 'border-box' }}>
+                  {JSON.stringify(swaggerPreview, null, 2)}
+                </pre>
               </div>
+
             </div>
           </>
         ) : (

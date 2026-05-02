@@ -33,10 +33,7 @@ import OfflineSyncManager from '@/components/OfflineSyncManager/OfflineSyncManag
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore, defaultWorkflow } from '@/store/workflowStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { loader } from '@monaco-editor/react';
 
-// Configure Monaco to load from CDN (fixes production "Loading..." issue)
-loader.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs' } });
 
 export default function App() {
   useKeyboardShortcuts();

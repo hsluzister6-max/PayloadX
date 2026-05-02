@@ -1,7 +1,7 @@
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
-import Editor from '@monaco-editor/react';
 import JsonEditor from './JsonEditor';
+
 
 const BODY_MODES = [
   { id: 'none',        label: 'None' },
