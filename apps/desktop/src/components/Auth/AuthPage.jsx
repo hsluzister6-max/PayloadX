@@ -227,140 +227,140 @@ export default function AuthPage() {
             </div>
           ) : (
             <div className="space-y-10">
-            {/* Heading */}
-            <div className="space-y-1.5 text-center lg:text-left">
-              <h1 className="text-2xl font-bold text-white tracking-tight pb-2 leading-normal">
-                {mode === 'login' ? 'Sign in' : 'Create account'}
-              </h1>
-              <p className="text-slate-500 text-[13px]">
-                {mode === 'login' ? 'Access your API workspace' : 'Start testing APIs with your team'}
-              </p>
-            </div>
+              {/* Heading */}
+              <div className="space-y-1.5 text-center lg:text-left">
+                <h1 className="text-2xl font-bold text-white tracking-tight pb-2 leading-normal">
+                  {mode === 'login' ? 'Sign in' : 'Create account'}
+                </h1>
+                <p className="text-slate-500 text-[13px]">
+                  {mode === 'login' ? 'Access your API workspace' : 'Start testing APIs with your team'}
+                </p>
+              </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {mode === 'signup' && (
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {mode === 'signup' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] ml-0.5">Full Name</label>
+                    <input
+                      className="w-full h-11 px-4 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm"
+                      type="text"
+                      placeholder="John Doe"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] ml-0.5">Full Name</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] ml-0.5">Email</label>
                   <input
                     className="w-full h-11 px-4 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm"
-                    type="text"
-                    placeholder="John Doe"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    type="email"
+                    placeholder="name@example.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
                     required
                   />
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em] ml-0.5">Email</label>
-                <input
-                  className="w-full h-11 px-4 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-end ml-0.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">Password</label>
-                </div>
-                <div className="relative">
-                  <input
-                    className="w-full h-11 px-4 pr-12 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    required
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors p-1.5"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
-                  </button>
-                </div>
-                {mode === 'login' && (
-                  <div className="flex justify-end pr-0.5">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-end ml-0.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">Password</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      className="w-full h-11 px-4 pr-12 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      required
+                      minLength={8}
+                    />
                     <button
                       type="button"
-                      onClick={() => setMode('forgot-password')}
-                      className="text-[10px] text-slate-500 hover:text-white transition-colors font-medium"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 transition-colors p-1.5"
+                      tabIndex={-1}
                     >
-                      Forgot your password?
+                      {showPassword ? <EyeOpenIcon /> : <EyeClosedIcon />}
                     </button>
                   </div>
-                )}
-              </div>
+                  {mode === 'login' && (
+                    <div className="flex justify-end pr-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setMode('forgot-password')}
+                        className="text-[10px] text-slate-500 hover:text-white transition-colors font-medium"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-              <button
-                type="submit"
-                className="w-full h-11 btn-primary"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-                ) : (
-                  mode === 'login' ? 'Sign in' : 'Create account'
-                )}
-              </button>
-            </form>
-
-            {/* Social Login Buttons */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-white/5"></div>
-                <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">social sign in</span>
-                <div className="flex-1 h-px bg-white/5"></div>
-              </div>
-
-              <button
-                onClick={() => handleGoogleLogin()}
-                className="w-full h-11 flex items-center justify-center gap-3 bg-transparent border border-white/5 rounded-lg text-slate-300 hover:bg-white/[0.02] hover:border-white/10 transition-all duration-200"
-                disabled={isLoading || isGoogleLoading}
-              >
-                {isGoogleLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span className="text-sm font-medium italic opacity-80">Check your browser...</span>
-                  </div>
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    <span className="text-sm font-medium">Continue with Google</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center pt-2">
-              <p className="text-xs text-slate-500">
-                {mode === 'login' ? "New here?" : 'Back to login'}
                 <button
-                  onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                  className="ml-1.5 text-white font-bold hover:underline transition-all"
+                  type="submit"
+                  className="w-full h-11 btn-primary"
+                  disabled={isLoading}
                 >
-                  {mode === 'login' ? 'Create an account' : 'Sign in'}
+                  {isLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                  ) : (
+                    mode === 'login' ? 'Sign in' : 'Create account'
+                  )}
                 </button>
-              </p>
-            </div>
+              </form>
 
-            {/* Creator Attribution */}
-            <div className="absolute bottom-10 left-0 right-0 text-center opacity-30">
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-medium">
-                Created by <span className="text-slate-300">Sundan Sharma</span>
-              </p>
+              {/* Social Login Buttons */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 h-px bg-white/5"></div>
+                  <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">social sign in</span>
+                  <div className="flex-1 h-px bg-white/5"></div>
+                </div>
+
+                <button
+                  onClick={() => handleGoogleLogin()}
+                  className="w-full h-11 flex items-center justify-center gap-3 bg-transparent border border-white/5 rounded-lg text-slate-300 hover:bg-white/[0.02] hover:border-white/10 transition-all duration-200"
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isGoogleLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span className="text-sm font-medium italic opacity-80">Check your browser...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <GoogleIcon />
+                      <span className="text-sm font-medium">Continue with Google</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center pt-2">
+                <p className="text-xs text-slate-500">
+                  {mode === 'login' ? "New here?" : 'Back to login'}
+                  <button
+                    onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                    className="ml-1.5 text-white font-bold hover:underline transition-all"
+                  >
+                    {mode === 'login' ? 'Create an account' : 'Sign in'}
+                  </button>
+                </p>
+              </div>
+
+              {/* Creator Attribution */}
+              <div className="absolute bottom-10 left-0 right-0 text-center opacity-30">
+                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-medium">
+                  Created by <span className="text-slate-300">Sundan Sharma</span>
+                </p>
+              </div>
             </div>
-          </div>
           )}
         </div>
       </div>

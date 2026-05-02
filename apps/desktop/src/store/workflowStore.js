@@ -713,9 +713,12 @@ export const useWorkflowStore = create(
     }),
     {
       name: 'payloadx-workflow',
+      // Only persist the current workflow canvas — NOT the list.
+      // The list is always fetched fresh from the server on load.
+      // Persisting it caused deleted/renamed workflows to "come back"
+      // because the stale localStorage copy would overwrite fresh state.
       partialize: (state) => ({
         currentWorkflow: state.currentWorkflow,
-        workflows: state.workflows,
       }),
     }
   )

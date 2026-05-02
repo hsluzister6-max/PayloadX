@@ -114,7 +114,7 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
             onChange={(e) => { setGlobalSearch(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
           />
-          <kbd className="v2-search-kbd">⌘K</kbd>
+          <kbd className="v2-search-kbd">{/mac/i.test(navigator.userAgent) && !/iphone|ipad/i.test(navigator.userAgent) ? '⌘K' : 'Ctrl+K'}</kbd>
         </div>
 
         {/* Global Search Dropdown */}

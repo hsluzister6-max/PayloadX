@@ -619,11 +619,40 @@ export const useRequestStore = create(
           }
 
           set((state) => {
+            // Remove tab from openTabs (tab.id === request._id by convention)
+            const newTabs = state.openTabs.filter(t => t.id !== id);
+            const newTabsById = new Map(state._tabsById);
+            newTabsById.delete(id);
+
+            const isActiveTab = state.activeTabId === id;
             const isCurrent = state.currentRequest?._id === id;
+
+            let nextActiveTabId = state.activeTabId;
+            let nextCurrentRequest = state.currentRequest;
+            let nextNoActiveRequest = state.noActiveRequest;
+
+            if (isActiveTab || isCurrent) {
+              if (newTabs.length === 0) {
+                nextActiveTabId = null;
+                nextCurrentRequest = defaultRequest();
+                nextNoActiveRequest = true;
+              } else {
+                // Switch to the tab that was before it, or the first one
+                const closedIndex = state.openTabs.findIndex(t => t.id === id);
+                const nextTab = newTabs[Math.max(0, closedIndex - 1)] || newTabs[0];
+                nextActiveTabId = nextTab.id;
+                nextCurrentRequest = nextTab.request;
+                nextNoActiveRequest = false;
+              }
+            }
+
             return {
               requests: state.requests ? state.requests.filter(r => r._id !== id) : [],
-              currentRequest: isCurrent ? null : state.currentRequest,
-              noActiveRequest: isCurrent ? true : state.noActiveRequest,
+              openTabs: newTabs,
+              _tabsById: newTabsById,
+              activeTabId: nextActiveTabId,
+              currentRequest: nextCurrentRequest,
+              noActiveRequest: nextNoActiveRequest,
               isDeleting: false,
             };
           });

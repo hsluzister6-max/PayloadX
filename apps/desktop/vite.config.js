@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'react-hot-toast': path.resolve(__dirname, './src/store/toastStore.jsx'),
     },
   },
   clearScreen: false,

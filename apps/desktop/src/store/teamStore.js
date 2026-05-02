@@ -34,7 +34,7 @@ export const useTeamStore = create((set, get) => ({
         set({ teams: syncedTeams, isLoading: false });
         localStorageService.saveTeams(syncedTeams);
         localStorageService.updateLastSync();
-        
+
         return { success: true, teams: syncedTeams, fromCache: false };
       }
       throw new Error('No teams returned from API');
@@ -42,11 +42,11 @@ export const useTeamStore = create((set, get) => ({
       // Fallback to localStorage on API failure
       const cachedTeams = localStorageService.get(localStorageService.KEYS.TEAMS) || [];
       set({ teams: cachedTeams, isLoading: false });
-      return { 
-        success: cachedTeams.length > 0, 
-        teams: cachedTeams, 
+      return {
+        success: cachedTeams.length > 0,
+        teams: cachedTeams,
         fromCache: true,
-        error: err.response?.data?.error || err.message || 'Failed to fetch teams. Using cached data.' 
+        error: err.response?.data?.error || err.message || 'Failed to fetch teams. Using cached data.'
       };
     }
   },
@@ -68,33 +68,33 @@ export const useTeamStore = create((set, get) => ({
     const currentTeams = get().teams;
     const serverTeamIds = new Set(serverTeams.map(t => t._id));
     const idMap = syncService.idMap;
-    
+
     // Find teams that exist locally but not on server (unless they have temp IDs)
     const teamsToRemove = currentTeams.filter(team => {
       // Keep if it has a temp ID (not yet synced)
       const isTempId = team._id?.includes('-');
       if (isTempId) return false;
-      
+
       // Remove if not in server list
       return !serverTeamIds.has(team._id) && !idMap[team._id];
     });
-    
+
     // Reconcile IDs for temp teams that got real IDs
     const reconciledServerTeams = get().reconcileIds(serverTeams, idMap);
-    
+
     // Merge: server data + local-only teams with temp IDs
     const tempIdTeams = currentTeams.filter(t => t._id?.includes('-') && !idMap[t._id]);
-    
+
     // Merge server teams with reconciled IDs
     const merged = [...reconciledServerTeams];
-    
+
     // Add temp teams that haven't been synced yet
     tempIdTeams.forEach(tempTeam => {
       if (!merged.find(t => t._id === tempTeam._id)) {
         merged.push(tempTeam);
       }
     });
-    
+
     return merged;
   },
 
@@ -103,30 +103,30 @@ export const useTeamStore = create((set, get) => ({
     try {
       const { data } = await api.get('/api/team');
       const serverTeams = data?.teams || [];
-      
+
       // Sync with server data - handles deletes from other users
       const syncedTeams = get().syncWithServerData(serverTeams);
-      
+
 
       set({ teams: syncedTeams, isRefreshing: false });
       localStorageService.saveTeams(syncedTeams);
       localStorageService.updateLastSync();
-      
+
       return { success: true, teams: syncedTeams, fromCache: false };
     } catch (err) {
       set({ isRefreshing: false });
-      const cachedTeams = get().teams.length > 0 
-        ? get().teams 
+      const cachedTeams = get().teams.length > 0
+        ? get().teams
         : (localStorageService.get(localStorageService.KEYS.TEAMS) || []);
-      
+
       if (get().teams.length === 0 && cachedTeams.length > 0) {
         set({ teams: cachedTeams });
       }
-      return { 
-        success: cachedTeams.length > 0, 
-        teams: cachedTeams, 
+      return {
+        success: cachedTeams.length > 0,
+        teams: cachedTeams,
         fromCache: true,
-        error: err.response?.data?.error || 'Failed to refresh. Using existing data.' 
+        error: err.response?.data?.error || 'Failed to refresh. Using existing data.'
       };
     }
   },
@@ -154,17 +154,17 @@ export const useTeamStore = create((set, get) => ({
 
     const tempId = uuidv4();
     const p = { name, description };
-    
+
     set({ isLoading: true });
     try {
       const { data } = await api.post('/api/team', p);
-      
+
       set((state) => {
         const updatedTeams = [...state.teams, data.team];
         localStorageService.saveTeams(updatedTeams);
         return { teams: updatedTeams, isLoading: false };
       });
-      
+
       return { success: true, team: data.team };
     } catch (err) {
       set({ isLoading: false });
@@ -185,7 +185,7 @@ export const useTeamStore = create((set, get) => ({
 
     try {
       const { data } = await api.put(`/api/team/${id}`, { name });
-      
+
       set((state) => {
         const updatedTeams = state.teams.map((t) => (t._id === id ? data.team : t));
         const updatedCurrent = state.currentTeam?._id === id ? data.team : state.currentTeam;
@@ -233,7 +233,7 @@ export const useTeamStore = create((set, get) => ({
     });
     return { success: true };
   },
-  
+
   // Register store for global refresh
   refresh: () => {
     get().refreshTeams();

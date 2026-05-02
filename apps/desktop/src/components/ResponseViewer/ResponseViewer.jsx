@@ -416,12 +416,48 @@ function EmptyState() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 bg-[var(--bg-primary)]">
-      <div className="relative w-16 h-16">
-        <div className="absolute inset-0 rounded-full border-4 border-[var(--accent)]/10" />
-        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--accent)] animate-spin" />
+    <div className="flex flex-col items-center justify-center h-full gap-8 bg-[var(--bg-primary)] relative overflow-hidden">
+      {/* Background radial glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[var(--accent)]/5 rounded-full blur-3xl animate-pulse" />
+      
+      {/* Stylish Radar/Ring Loader */}
+      <div className="relative w-24 h-24 flex items-center justify-center">
+        {/* Outer dashed orbit */}
+        <div className="absolute inset-0 rounded-full border border-[var(--accent)]/20 border-dashed animate-[spin_8s_linear_infinite]" />
+        
+        {/* Middle fast scanner ring */}
+        <div className="absolute inset-2 rounded-full border border-[var(--border-1)] border-t-[var(--accent)] animate-[spin_1.5s_cubic-bezier(0.4,0,0.2,1)_infinite]" />
+        <div className="absolute inset-2 rounded-full border border-transparent border-b-[var(--accent)]/50 animate-[spin_2s_linear_infinite_reverse]" />
+        
+        {/* Inner solid orbit */}
+        <div className="absolute inset-5 rounded-full border border-[var(--accent)]/10 bg-[var(--surface-2)]/50 backdrop-blur-md shadow-[inset_0_0_12px_rgba(255,255,255,0.02)]" />
+        
+        {/* Core 'X' Logo */}
+        <div className="relative z-10 flex items-center justify-center animate-pulse">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#metal-grad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 8px rgba(200,205,216,0.5))' }}>
+             <defs>
+               <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                 <stop offset="0%" stopColor="#f5f7fa" />
+                 <stop offset="35%" stopColor="#8e93a0" />
+                 <stop offset="65%" stopColor="#e4e7ec" />
+                 <stop offset="100%" stopColor="#6b7280" />
+               </linearGradient>
+             </defs>
+             <line x1="18" y1="6" x2="6" y2="18"></line>
+             <line x1="6" y1="6" x2="18" y2="18"></line>
+           </svg>
+        </div>
       </div>
-      <p className="text-[var(--accent)] text-xs font-black uppercase tracking-[0.2em] animate-pulse">Requesting Data...</p>
+
+      <div className="flex flex-col items-center gap-1.5 z-10">
+        <p className="text-sm font-black tracking-widest uppercase drop-shadow-md" style={{ fontFamily: 'Syne, sans-serif' }}>
+          <span style={{ backgroundImage: 'var(--grad-logo)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Payload</span>
+          <span style={{ backgroundImage: 'var(--grad-chrome)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 4px rgba(200,205,216,0.4))' }}>X</span>
+        </p>
+        <p className="text-tx-muted text-[10px] font-mono uppercase tracking-[0.3em] animate-pulse">
+          Establishing Connection...
+        </p>
+      </div>
     </div>
   );
 }

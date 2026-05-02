@@ -12,16 +12,16 @@ export default {
       colors: {
         // ── Design system tokens (CSS-variable backed) ────────────────
         bg: {
-          primary:   'var(--bg-primary)',
+          primary: 'var(--bg-primary)',
           secondary: 'var(--bg-secondary)',
-          tertiary:  'var(--bg-tertiary)',
+          tertiary: 'var(--bg-tertiary)',
         },
         surface: {
           1: 'var(--surface-1)',
           2: 'var(--surface-2)',
           3: 'var(--surface-3)',
           // Legacy numeric scale mapped to dynamic tokens for theme switching
-          50:  'var(--bg-primary)',
+          50: 'var(--bg-primary)',
           100: 'var(--bg-secondary)',
           200: 'var(--surface-1)',
           300: 'var(--border-1)',
@@ -40,18 +40,18 @@ export default {
           2: 'var(--border-2)',
         },
         tx: {
-          primary:   'var(--text-primary)',
+          primary: 'var(--text-primary)',
           secondary: 'var(--text-secondary)',
-          muted:     'var(--text-muted)',
+          muted: 'var(--text-muted)',
         },
         accent: {
           DEFAULT: 'var(--accent)',
-          hover:   'var(--accent-hover)',
+          hover: 'var(--accent-hover)',
         },
 
         // ── Brand scale → pure silver/chrome scale (NO purple/blue) ──
         brand: {
-          50:  '#F5F5F7',
+          50: '#F5F5F7',
           100: '#E5E5E7',
           200: '#D2D2D7',
           300: '#A1A1A6',
@@ -66,8 +66,8 @@ export default {
         // ── Semantic status colors ────────────────────────────────────
         success: { DEFAULT: 'var(--success)' },
         warning: { DEFAULT: 'var(--warning)' },
-        danger:  { DEFAULT: 'var(--error)' },
-        info:    { DEFAULT: '#39C5CF' },
+        danger: { DEFAULT: 'var(--error)' },
+        info: { DEFAULT: '#39C5CF' },
       },
       borderRadius: {
         'lg': '6px',
@@ -76,19 +76,19 @@ export default {
         '3xl': '14px',
       },
       animation: {
-        'fade-in':       'fadeIn 0.2s ease-in-out',
+        'fade-in': 'fadeIn 0.2s ease-in-out',
         'slide-in-left': 'slideInLeft 0.2s ease-out',
-        'slide-in-right':'slideInRight 0.2s ease-out',
-        'slide-up':      'slideUp 0.2s ease-out',
+        'slide-in-right': 'slideInRight 0.2s ease-out',
+        'slide-up': 'slideUp 0.2s ease-out',
       },
       keyframes: {
-        fadeIn:       { '0%': { opacity: '0' },                                 '100%': { opacity: '1' } },
-        slideInLeft:  { '0%': { transform: 'translateX(-10px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
-        slideInRight: { '0%': { transform: 'translateX(10px)', opacity: '0' },  '100%': { transform: 'translateX(0)', opacity: '1' } },
-        slideUp:      { '0%': { transform: 'translateY(6px)', opacity: '0' },   '100%': { transform: 'translateY(0)', opacity: '1' } },
+        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        slideInLeft: { '0%': { transform: 'translateX(-10px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
+        slideInRight: { '0%': { transform: 'translateX(10px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
+        slideUp: { '0%': { transform: 'translateY(6px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
       },
       boxShadow: {
-        'glass':    '0 12px 30px -5px rgba(0, 0, 0, 0.5)', /* Solid, high-contrast shadow */
+        'glass': '0 12px 30px -5px rgba(0, 0, 0, 0.5)', /* Solid, high-contrast shadow */
         'glass-sm': '0 4px 12px rgba(0, 0, 0, 0.3)',
       },
     },

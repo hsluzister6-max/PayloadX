@@ -6,7 +6,7 @@ import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
-import toast from 'react-hot-toast';
+import { toast } from '@/store/toastStore';
 import api from '@/lib/api';
 import { v4 as uuidv4 } from 'uuid';
 import { useWorkflowStore } from '@/store/workflowStore';
@@ -19,8 +19,8 @@ const NAV_ITEMS = [
     id: 'collections',
     label: 'Collections',
     icon: (
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
       </svg>
     ),
   },
@@ -28,17 +28,18 @@ const NAV_ITEMS = [
     id: 'workflow',
     label: 'Workflow',
     icon: (
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3zM14 16a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3z" />
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
       </svg>
     ),
   },
   {
     id: 'environments',
-    label: 'Env',
+    label: 'Environments',
     icon: (
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 9h.01M9 12h.01M9 15h.01M12 9h3M12 12h3M12 15h3" />
       </svg>
     ),
   },
@@ -46,8 +47,8 @@ const NAV_ITEMS = [
     id: 'docs',
     label: 'Docs',
     icon: (
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
       </svg>
     ),
   },
@@ -154,6 +155,7 @@ export default function SidebarV2({
     updateRequestName,
     deleteRequest,
     setNoActiveRequest,
+    closeTab,
     isCreating: isCreatingRequest,
     isDeleting: isDeletingRequest
   } = useRequestStore();
@@ -173,6 +175,7 @@ export default function SidebarV2({
   });
   const expandedCollectionsRef = useRef(expandedCollections);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
+  const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -201,28 +204,39 @@ export default function SidebarV2({
     const trimmed = renameValue.trim();
     setRenamingWorkflowId(null);
     if (!trimmed || trimmed === wf.name) return;
-    // If it's the currently open workflow, update via store field
+
+    // Optimistically update the name in the workflows list immediately (no canvas switch)
+    const { setWorkflows } = useWorkflowStore.getState();
+    const updatedList = useWorkflowStore.getState().workflows.map(w =>
+      w.id === wf.id ? { ...w, name: trimmed } : w
+    );
+    setWorkflows(updatedList);
+
+    // If it's the active workflow, also sync the canvas name
     if (currentWorkflow?.id === wf.id) {
       updateWorkflowField('name', trimmed);
-      await saveWorkflow();
-    } else {
-      // Update in workflows list optimistically then save via API
-      const updated = { ...wf, name: trimmed };
-      openWorkflow(updated);
-      await saveWorkflow();
-      // Re-fetch to sync list
-      if (currentTeam) fetchWorkflows(currentTeam._id, currentProject?._id);
     }
-    toast.success('Workflow renamed');
+
+    // Persist to server directly — no side-effects on canvas
+    try {
+      await api.put(`/api/workflow/${wf.id}`, { ...wf, name: trimmed });
+      toast.success('Workflow renamed');
+    } catch (err) {
+      // Roll back optimistic update on failure
+      setWorkflows(useWorkflowStore.getState().workflows.map(w =>
+        w.id === wf.id ? { ...w, name: wf.name } : w
+      ));
+      toast.error('Failed to rename workflow');
+    }
   };
 
   const handleDeleteWorkflow = async (wf, e) => {
     e.stopPropagation();
-    if (!window.confirm(`Delete "${wf.name || 'Untitled Workflow'}"? This cannot be undone.`)) return;
-    await deleteWorkflow(wf.id);
-    // If we deleted the active workflow, clear canvas
-    if (currentWorkflow?.id === wf.id) {
-      await newWorkflow(currentTeam?._id, currentProject?._id);
+    const result = await deleteWorkflow(wf.id);
+    // If we deleted the active workflow, just clear the canvas.
+    // Do NOT call newWorkflow() — that would immediately create and show a new one.
+    if (result?.success && currentWorkflow?.id === wf.id) {
+      useWorkflowStore.getState().setCurrentWorkflow(null);
     }
   };
 
@@ -500,7 +514,7 @@ export default function SidebarV2({
         {
           id: 'add-request',
           label: 'New HTTP Request',
-          icon: <span className="text-[10px]">🌐</span>,
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" strokeWidth={1.8}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v8M8 12h8" /></svg>,
           onClick: async () => {
             const newRequest = {
               name: 'New HTTP Request',
@@ -527,7 +541,7 @@ export default function SidebarV2({
         {
           id: 'add-ws-request',
           label: 'New WebSocket',
-          icon: <span className="text-[10px]">⚡</span>,
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
           onClick: async () => {
             const newRequest = {
               name: 'New WebSocket',
@@ -549,7 +563,7 @@ export default function SidebarV2({
         {
           id: 'add-sio-request',
           label: 'New Socket.IO',
-          icon: <span className="text-[10px]">⬢</span>,
+          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>,
           onClick: async () => {
             const newRequest = {
               name: 'New Socket.IO',
@@ -630,12 +644,6 @@ export default function SidebarV2({
           label: 'New Request',
           icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
           onClick: () => handleQuickCreateRequest(colId, folder.id)
-        },
-        {
-          id: 'add-subfolder',
-          label: 'New Subfolder',
-          icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
-          onClick: () => setShowFolderModal(true, { collectionId: colId, parentId: folder.id })
         },
         {
           id: 'rename',
@@ -744,10 +752,8 @@ export default function SidebarV2({
             itemName: wf.name || 'Untitled Workflow',
             onConfirm: async () => {
               const result = await deleteWorkflow(wf.id);
-              if (result.success) {
-                if (currentWorkflow?.id === wf.id) {
-                  await newWorkflow(currentTeam?._id, currentProject?._id);
-                }
+              if (result?.success && currentWorkflow?.id === wf.id) {
+                useWorkflowStore.getState().setCurrentWorkflow(null);
               }
             }
           })
@@ -800,18 +806,19 @@ export default function SidebarV2({
 
                 toast.success('Request deleted');
 
-                // 2. If this was the currently open request, navigate away
+                // 2. Close the tab for this request if it's open
+                const { openTabs } = useRequestStore.getState();
+                const tab = openTabs.find(t => t.request._id === request._id || t.id === request._id);
+                if (tab) closeTab(tab.id);
+
+                // 3. If this was the currently active request, navigate away
                 if (currentRequest?._id === request._id) {
-                  // Find all remaining requests in the same collection
                   const siblings = useCollectionStore.getState().requests.filter(
                     (r) => r.collectionId === request.collectionId && r._id !== request._id
                   );
-
                   if (siblings.length > 0) {
-                    // Open the last one (closest sibling in list order)
                     setCurrentRequest(siblings[siblings.length - 1]);
                   } else {
-                    // No requests left — show empty state
                     setNoActiveRequest(true);
                   }
                 }
@@ -959,10 +966,10 @@ export default function SidebarV2({
           <button
             className="sdbv2-activity-item"
             onClick={() => setShowInviteModal(true)}
-            title="Team"
+            title="Invite Team Members"
           >
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </button>
           <button
@@ -1149,8 +1156,12 @@ export default function SidebarV2({
                               parentId={null}
                               expandedFolders={expandedFolders}
                               toggleFolder={toggleFolder}
-                              onSelectRequest={() => { }} // No-op on click in workflow mode, just drag
+                              onSelectRequest={() => { }}
                               currentRequestId={null}
+                              currentFolderId={currentFolderId}
+                              onAddRequest={handleQuickCreateRequest}
+                              onAddFolder={(collectionId, parentId) => setShowFolderModal(true, { collectionId, parentId })}
+                              onFolderContextMenu={showFolderContextMenu}
                             />
                           </div>
                         );
@@ -1282,11 +1293,15 @@ export default function SidebarV2({
                                                 folders={col.folders || []}
                                                 requests={requests.filter(r => r.collectionId === col._id)}
                                                 parentId={null}
+                                                collectionId={col._id}
                                                 expandedFolders={expandedFolders}
                                                 toggleFolder={toggleFolder}
                                                 onSelectRequest={handleRequestSelect}
                                                 currentRequestId={currentRequest?._id}
+                                                currentFolderId={currentFolderId}
                                                 onContextMenu={showRequestContextMenu}
+                                                onAddRequest={handleQuickCreateRequest}
+                                                onFolderContextMenu={showFolderContextMenu}
                                               />
                                               {requests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length === 0 && (
                                                 <div className="sdbv2-empty-note py-1 pl-4 opacity-50">Empty collection</div>
@@ -1380,8 +1395,6 @@ function SidebarRequest({ request, onSelect, isActive, onContextMenu }) {
     >
       <span className="sdbv2-method-badge" style={{
         color,
-        background: `${color}18`,
-        fontSize: (isWs || isSio) ? '9px' : '10px',
         visibility: (isWs || isSio) || request.method ? 'visible' : 'hidden'
       }}>
         {isWs ? 'WS' : isSio ? 'SIO' : (request.method || 'GET')}
@@ -1420,11 +1433,15 @@ function RecursiveFolderListV2({
   folders,
   requests,
   parentId,
+  collectionId,
   expandedFolders,
   toggleFolder,
   onSelectRequest,
   currentRequestId,
-  onContextMenu
+  currentFolderId,
+  onContextMenu,
+  onAddRequest,
+  onFolderContextMenu
 }) {
   const normalizedParentId = parentId || null;
 
@@ -1443,21 +1460,34 @@ function RecursiveFolderListV2({
 
         return (
           <div key={folderId}>
-            <button
-              onClick={() => toggleFolder(folderId)}
-              className="sdbv2-tree-row"
-            >
-              <svg className={`sdbv2-chevron ${isExpanded ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
-              <span className="sdbv2-tree-text flex-1">{folder.name}</span>
-              {totalItems > 0 && (
-                <span className="text-[9px] opacity-30 font-mono ml-auto pr-1">{totalItems}</span>
-              )}
-            </button>
+            <div className="group relative pr-1">
+              <button
+                onClick={() => toggleFolder(folderId)}
+                onContextMenu={(e) => onFolderContextMenu ? onFolderContextMenu(e, collectionId, folder) : undefined}
+                className={`sdbv2-tree-row w-full ${currentFolderId === folderId ? 'sdbv2-tree-row--active' : ''}`}
+              >
+                <svg className={`sdbv2-chevron ${isExpanded ? 'sdbv2-chevron--open' : ''}`} width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <span className="sdbv2-tree-text flex-1">{folder.name}</span>
+                {totalItems > 0 && (
+                  <span className="text-[9px] opacity-30 font-mono ml-auto pr-1">{totalItems}</span>
+                )}
+              </button>
+
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onAddRequest && onAddRequest(collectionId, folderId); }}
+                  className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                  title="New Request in folder"
+                >
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </button>
+              </div>
+            </div>
 
             {isExpanded && (
               <div className="sdbv2-indent animate-in">
@@ -1465,11 +1495,15 @@ function RecursiveFolderListV2({
                   folders={folders}
                   requests={requests}
                   parentId={folderId}
+                  collectionId={collectionId}
                   expandedFolders={expandedFolders}
                   toggleFolder={toggleFolder}
                   onSelectRequest={onSelectRequest}
                   currentRequestId={currentRequestId}
+                  currentFolderId={currentFolderId}
                   onContextMenu={onContextMenu}
+                  onAddRequest={onAddRequest}
+                  onFolderContextMenu={onFolderContextMenu}
                 />
               </div>
             )}
