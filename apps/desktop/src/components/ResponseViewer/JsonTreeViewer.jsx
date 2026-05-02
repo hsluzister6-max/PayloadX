@@ -357,65 +357,55 @@ export default function JsonTreeViewer({ value, className = '' }) {
 
   return (
     <div className={`flex flex-col h-full ${className}`} style={{ background: 'transparent', overflow: 'hidden' }}>
-      {/* ── Toolbar ───────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '6px 10px', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.02)', flexShrink: 0, gap: 8, flexWrap: 'wrap',
-      }}>
-        {/* Left: badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {parseError ? (
-            <span style={badgeStyle('#FCEBEB', '#A32D2D')}>parse error</span>
-          ) : parsed ? (
-            <span style={badgeStyle('#EAF3DE', '#3B6D11')}>✓ valid{isNdjson ? ' · NDJSON' : ''}</span>
-          ) : null}
-          {sizeLabel && <span style={badgeStyle()}>{sizeLabel}</span>}
-          {!parseError && lines.length > 0 && (
-            <span style={badgeStyle()}>{lines.length.toLocaleString()} lines</span>
-          )}
-        </div>
-
-        {/* Right: controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      {/* ── Minimal Floating Controls ─────────────────────────────────────── */}
+      {parsed && (
+        <div style={{
+          position: 'absolute', top: 6, right: 14, zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: 'rgba(7, 9, 13, 0.85)', backdropFilter: 'blur(4px)',
+          padding: '4px', borderRadius: 8, border: '0.5px solid rgba(255,255,255,0.06)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+        }}>
           {/* Search */}
-          {parsed && (
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <span style={{ position: 'absolute', left: 7, color: 'rgba(255,255,255,0.2)', fontSize: 12, pointerEvents: 'none' }}>⌕</span>
-              <input
-                ref={searchRef}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleSearchNav(e.shiftKey ? -1 : 1);
-                  if (e.key === 'Escape') { setSearchQuery(''); }
-                }}
-                placeholder="search keys / values…"
-                style={{
-                  fontSize: 11, padding: '3px 52px 3px 22px',
-                  borderRadius: 6, border: '0.5px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)', color: '#D0D4DE',
-                  fontFamily: 'inherit', width: 170, outline: 'none',
-                }}
-              />
-              {searchHits.length > 0 && (
-                <>
-                  <span style={{ position: 'absolute', right: 26, fontSize: 10, color: 'rgba(255,255,255,0.25)', pointerEvents: 'none' }}>
-                    {searchIdx + 1}/{searchHits.length}
-                  </span>
-                  <button onClick={() => handleSearchNav(1)} style={iconBtnStyle()} title="Next (Enter)">↓</button>
-                </>
-              )}
-            </div>
-          )}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: 6, color: 'rgba(255,255,255,0.25)', fontSize: 11, pointerEvents: 'none' }}>⌕</span>
+            <input
+              ref={searchRef}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSearchNav(e.shiftKey ? -1 : 1);
+                if (e.key === 'Escape') { setSearchQuery(''); }
+              }}
+              placeholder="search..."
+              style={{
+                fontSize: 10, padding: '2px 36px 2px 20px',
+                borderRadius: 4, border: 'none',
+                background: 'rgba(255,255,255,0.05)', color: '#D0D4DE',
+                fontFamily: 'inherit', width: 100, outline: 'none',
+                transition: 'width 0.2s',
+              }}
+              onFocus={e => e.target.style.width = '140px'}
+              onBlur={e => e.target.style.width = '100px'}
+            />
+            {searchHits.length > 0 && (
+              <span style={{ position: 'absolute', right: 6, fontSize: 9, color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }}>
+                {searchIdx + 1}/{searchHits.length}
+              </span>
+            )}
+          </div>
 
-          {parsed && <div style={{ width: 0.5, height: 16, background: 'rgba(255,255,255,0.08)' }} />}
+          <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
 
-          {parsed && <button onClick={handleExpandAll} style={btnStyle()} title="Expand all">↕ expand</button>}
-          {parsed && <button onClick={handleCollapseAll} style={btnStyle()} title="Collapse all">↔ collapse</button>}
-          {parsed && <div style={{ width: 0.5, height: 16, background: 'rgba(255,255,255,0.08)' }} />}
+          {/* Expand / Collapse icons */}
+          <button onClick={handleExpandAll} style={{...iconBtnStyle(), background: 'transparent', border: 'none'}} title="Expand all">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          <button onClick={handleCollapseAll} style={{...iconBtnStyle(), background: 'transparent', border: 'none'}} title="Collapse all">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+          </button>
         </div>
-      </div>
+      )}
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>

@@ -13,6 +13,7 @@ import { useWorkflowStore } from '@/store/workflowStore';
 import RefreshButton from '@/components/RefreshButton/RefreshButton';
 import PayloadX from '@/components/core/logo';
 import { localStorageService } from '@/services/localStorageService';
+import { useConnectivityStore } from '@/store/connectivityStore';
 
 const NAV_ITEMS = [
   {
@@ -136,6 +137,8 @@ export default function SidebarV2({
 
   const { disconnect } = useSocketStore();
   const { isConnected } = useSocketStore();
+  const { hasInternet, isBackendReachable } = useConnectivityStore();
+  const isOffline = !hasInternet || !isBackendReachable;
   const {
     theme,
     toggleTheme,
@@ -241,6 +244,10 @@ export default function SidebarV2({
   };
 
   const handleCreateWorkflow = async () => {
+    if (isOffline) {
+      toast.error("Cannot create workflows while offline");
+      return;
+    }
     const wf = await newWorkflow(currentTeam?._id, currentProject?._id);
     if (wf) {
       toast.success('New workflow created — drag APIs onto the canvas');
@@ -675,6 +682,10 @@ export default function SidebarV2({
   };
 
   const handleQuickCreateRequest = async (collectionId, folderId = null) => {
+    if (isOffline) {
+      toast.error("Cannot create requests while offline");
+      return;
+    }
     if (!currentProject || !currentTeam) {
       toast.error('Select a project and team first');
       return;

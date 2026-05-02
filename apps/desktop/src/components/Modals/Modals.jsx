@@ -5,6 +5,7 @@ import { useCollectionStore } from '@/store/collectionStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
+import { useConnectivityStore } from '@/store/connectivityStore';
 import PayloadX from '@/components/core/logo';
 import toast from 'react-hot-toast';
 
@@ -14,10 +15,12 @@ export default function CreateTeamModal() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const { hasInternet, isBackendReachable } = useConnectivityStore();
+  const isOffline = !hasInternet || !isBackendReachable;
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isOffline) return;
     setLoading(true);
     const result = await createTeam(name.trim(), description.trim());
     setLoading(false);
@@ -43,11 +46,12 @@ export default function CreateTeamModal() {
         </div>
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={() => setShowTeamModal(false)} className="btn-ghost flex-1">Cancel</button>
-          <button type="submit" className="btn-primary flex-1" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Team'}
+          <button type="submit" className="btn-primary flex-1" disabled={loading || isOffline} title={isOffline ? 'You are offline' : ''}>
+            {loading ? 'Creating...' : isOffline ? 'Offline' : 'Create Team'}
           </button>
         </div>
       </form>
+
     </ModalWrapper>
   );
 }
@@ -60,12 +64,14 @@ export function CreateProjectModal() {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#6366f1');
   const [loading, setLoading] = useState(false);
+  const { hasInternet, isBackendReachable } = useConnectivityStore();
+  const isOffline = !hasInternet || !isBackendReachable;
 
   const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#f97316'];
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !currentTeam) return;
+    if (!name.trim() || !currentTeam || isOffline) return;
     setLoading(true);
     const result = await createProject(name.trim(), currentTeam._id, description.trim(), color);
     setLoading(false);
@@ -103,10 +109,11 @@ export function CreateProjectModal() {
         </div>
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={() => setShowProjectModal(false)} className="btn-ghost flex-1">Cancel</button>
-          <button type="submit" className="btn-primary flex-1" disabled={loading || !currentTeam}>
-            {loading ? 'Creating...' : 'Create Project'}
+          <button type="submit" className="btn-primary flex-1" disabled={loading || !currentTeam || isOffline} title={isOffline ? 'You are offline' : ''}>
+            {loading ? 'Creating...' : isOffline ? 'Offline' : 'Create Project'}
           </button>
         </div>
+
       </form>
     </ModalWrapper>
   );
@@ -120,10 +127,12 @@ export function CreateCollectionModal() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const { hasInternet, isBackendReachable } = useConnectivityStore();
+  const isOffline = !hasInternet || !isBackendReachable;
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !currentProject || !currentTeam) return;
+    if (!name.trim() || !currentProject || !currentTeam || isOffline) return;
     setLoading(true);
     const result = await createCollection(name.trim(), currentProject._id, currentTeam._id, description.trim());
     setLoading(false);
@@ -153,8 +162,8 @@ export function CreateCollectionModal() {
         )}
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={() => setShowCollectionModal(false)} className="btn-ghost flex-1">Cancel</button>
-          <button type="submit" className="btn-primary flex-1" disabled={loading || !currentProject}>
-            {loading ? 'Creating...' : 'Create Collection'}
+          <button type="submit" className="btn-primary flex-1" disabled={loading || !currentProject || isOffline} title={isOffline ? 'You are offline' : ''}>
+            {loading ? 'Creating...' : isOffline ? 'Offline' : 'Create Collection'}
           </button>
         </div>
       </form>
@@ -167,12 +176,14 @@ export function CreateFolderModal() {
   const { setShowFolderModal, folderModalData } = useUIStore();
   const [name, setName] = useState(folderModalData?.name || '');
   const [loading, setLoading] = useState(false);
+  const { hasInternet, isBackendReachable } = useConnectivityStore();
+  const isOffline = !hasInternet || !isBackendReachable;
 
   const isEdit = !!folderModalData?.folderId;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isOffline) return;
     setLoading(true);
     
     let result;
@@ -197,8 +208,8 @@ export function CreateFolderModal() {
         </div>
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={() => setShowFolderModal(false)} className="btn-ghost flex-1">Cancel</button>
-          <button type="submit" className="btn-primary flex-1" disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Rename' : 'Create Folder'}
+          <button type="submit" className="btn-primary flex-1" disabled={loading || isOffline} title={isOffline ? 'You are offline' : ''}>
+            {loading ? 'Saving...' : isOffline ? 'Offline' : isEdit ? 'Rename' : 'Create Folder'}
           </button>
         </div>
       </form>
