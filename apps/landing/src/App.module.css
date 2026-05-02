@@ -290,6 +290,21 @@
   transform: translateY(-2px);
 }
 
+.btnDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  pointer-events: none;
+  box-shadow: none !important;
+}
+
+.pillDisabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  pointer-events: none;
+}
+
 /* stats */
 .stats {
   display: flex;

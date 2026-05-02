@@ -1227,7 +1227,7 @@ export default function SidebarV2({
                               <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: project.color || 'var(--brand-500)', flexShrink: 0 }}>
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                               </svg>
-                              <span className="sdbv2-tree-text font-bold uppercase tracking-wider text-[9px] truncate">{project.name}</span>
+                              <span className="sdbv2-tree-text font-bold uppercase tracking-wider text-[9px] truncate min-w-0 flex-1 text-left pr-2">{project.name}</span>
                             </button>
 
                             {/* Collections in Project */}
@@ -1248,36 +1248,38 @@ export default function SidebarV2({
                                           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                           </svg>
-                                          <span className="sdbv2-tree-text flex-1 text-left">{col.name}</span>
+                                          <span className="sdbv2-tree-text flex-1 text-left truncate min-w-0">{col.name}</span>
                                         </button>
 
-                                        <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setShowFolderModal(true, { collectionId: col._id }); }}
-                                            className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
-                                            title="New Folder"
-                                          >
-                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id); }}
-                                            className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
-                                            title="New Request"
-                                          >
-                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                          </button>
-                                          <RefreshButton
-                                            onRefresh={async () => {
-                                              setRefreshingColId(col._id);
-                                              const result = await refreshCollectionRequests(col._id);
-                                              setRefreshingColId(null);
-                                              if (result.success) toast.success(`Synced ${col.name}`);
-                                              else toast.error('Sync failed');
-                                            }}
-                                            loading={refreshingColId === col._id}
-                                            tooltip="Refresh APIs"
-                                            size={12}
-                                          />
+                                        <div className="absolute right-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center bg-gradient-to-l from-[var(--bg-primary)] from-70% to-transparent pl-8 pointer-events-none">
+                                          <div className="pointer-events-auto flex items-center gap-0.5 pr-1">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setShowFolderModal(true, { collectionId: col._id }); }}
+                                              className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                                              title="New Folder"
+                                            >
+                                              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                                            </button>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleQuickCreateRequest(col._id); }}
+                                              className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                                              title="New Request"
+                                            >
+                                              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                            </button>
+                                            <RefreshButton
+                                              onRefresh={async () => {
+                                                setRefreshingColId(col._id);
+                                                const result = await refreshCollectionRequests(col._id);
+                                                setRefreshingColId(null);
+                                                if (result.success) toast.success(`Synced ${col.name}`);
+                                                else toast.error('Sync failed');
+                                              }}
+                                              loading={refreshingColId === col._id}
+                                              tooltip="Refresh APIs"
+                                              size={12}
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                       {isExp && (
@@ -1399,7 +1401,7 @@ function SidebarRequest({ request, onSelect, isActive, onContextMenu }) {
       }}>
         {isWs ? 'WS' : isSio ? 'SIO' : (request.method || 'GET')}
       </span>
-      <span className="sdbv2-tree-text flex-1 truncate">{request.name}</span>
+      <span className="sdbv2-tree-text flex-1 truncate min-w-0 text-left">{request.name}</span>
 
       {/* Real-time Viewers */}
       {uniqueViewers.length > 0 && (
@@ -1472,20 +1474,22 @@ function RecursiveFolderListV2({
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--warning)', flexShrink: 0 }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
-                <span className="sdbv2-tree-text flex-1">{folder.name}</span>
+                <span className="sdbv2-tree-text flex-1 truncate min-w-0">{folder.name}</span>
                 {totalItems > 0 && (
-                  <span className="text-[9px] opacity-30 font-mono ml-auto pr-1">{totalItems}</span>
+                  <span className="text-[9px] opacity-30 font-mono ml-auto pl-2 pr-1">{totalItems}</span>
                 )}
               </button>
 
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onAddRequest && onAddRequest(collectionId, folderId); }}
-                  className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
-                  title="New Request in folder"
-                >
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                </button>
+              <div className="absolute right-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center bg-gradient-to-l from-[var(--bg-primary)] from-70% to-transparent pl-8 pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-0.5 pr-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onAddRequest && onAddRequest(collectionId, folderId); }}
+                    className="p-1 hover:text-tx-primary hover:bg-surface-3 rounded transition-colors"
+                    title="New Request in folder"
+                  >
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  </button>
+                </div>
               </div>
             </div>
 

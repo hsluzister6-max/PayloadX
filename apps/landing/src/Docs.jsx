@@ -105,19 +105,68 @@ export default function Docs({ onBack }) {
       <div className={styles.section}>
         <h1 className={styles.metallicTitle}>Project Structure</h1>
         <p className={styles.text}>
-          PayloadX follows a clean, modular structure within a workspace-managed monorepo.
+          PayloadX follows a clean, modular architecture within an NPM workspace-managed monorepo. 
+          This ensures seamless dependency sharing and atomic deployments across all sub-applications.
         </p>
 
+        <div className={styles.sectionTitle}>High-Level Overview</div>
         <div className={styles.codeBlock}>
           <code>
-            .github/workflows/  # CI/CD pipelines<br/>
+            .github/workflows/  # CI/CD pipelines for automated testing & releases<br/>
             apps/<br/>
-            ├── desktop/       # React + Tauri UI<br/>
-            │   ├── src/       # Frontend components<br/>
-            │   └── src-tauri/ # Rust backend core<br/>
-            ├── backend/       # Node.js API<br/>
-            └── realtime/      # Socket.IO server<br/>
-            packages/          # Shared types & utilities
+            ├── backend/        # Primary Node.js/Express API<br/>
+            ├── desktop/        # Desktop Client (Tauri + React)<br/>
+            ├── landing/        # Marketing & Documentation website (Vite/React)<br/>
+            └── realtime/       # Dedicated Socket.IO presence & sync server<br/>
+            package.json        # Workspace configuration
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>Desktop Client (apps/desktop)</div>
+        <p className={styles.text}>
+          The desktop app is split between a robust React frontend and a hyper-fast Rust backend.
+        </p>
+        <div className={styles.codeBlock}>
+          <code>
+            apps/desktop/<br/>
+            ├── src/<br/>
+            │   ├── components/ # Atomic UI components (e.g., Modals, Workspace)<br/>
+            │   ├── hooks/      # Shared React hooks (useKeyboardShortcuts, etc.)<br/>
+            │   ├── lib/        # API clients, IPC bridges (rust.js)<br/>
+            │   └── store/      # Zustand state managers (toastStore, requestStore)<br/>
+            └── src-tauri/<br/>
+                ├── src/<br/>
+                │   ├── commands/ # Native Rust implementations for hot paths<br/>
+                │   ├── core/     # Networking and protocol execution engine<br/>
+                │   └── utils/    # High-performance parsers (postman.rs, env_tools.rs)<br/>
+                └── Cargo.toml    # Rust dependencies
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>Cloud Backend (apps/backend)</div>
+        <p className={styles.text}>
+          The backend handles persistence, team management, and workspace synchronization.
+        </p>
+        <div className={styles.codeBlock}>
+          <code>
+            apps/backend/<br/>
+            ├── config/      # Environment & DB connection setup<br/>
+            ├── controllers/ # Request handlers and business logic<br/>
+            ├── middlewares/ # Authentication (JWT) and validation<br/>
+            ├── models/      # Mongoose schemas (User, Team, Project, Request)<br/>
+            └── routes/      # Express API route definitions
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>Realtime Server (apps/realtime)</div>
+        <p className={styles.text}>
+          A lightweight, highly concurrent Socket.IO service dedicated to pushing live cursor updates and presence indicators to active team members.
+        </p>
+        <div className={styles.codeBlock}>
+          <code>
+            apps/realtime/<br/>
+            ├── server.js    # Socket connection and room broadcasting logic<br/>
+            └── package.json # Minimal dependencies for speed
           </code>
         </div>
       </div>
@@ -253,6 +302,179 @@ export default function Docs({ onBack }) {
           previous JS recursive walker.
         </p>
       </div>
+    ),
+    protocols: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Protocols</h1>
+        <p className={styles.text}>
+          PayloadX is designed to handle multiple network protocols seamlessly from a single unified interface.
+        </p>
+
+        <div className={styles.sectionTitle}>REST APIs</div>
+        <p className={styles.text}>
+          Full support for standard HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.). 
+          Includes advanced features like automatic header generation, multi-part form data, 
+          raw JSON/XML body editors, and Bearer/Basic/API Key authentication handlers.
+        </p>
+
+        <div className={styles.sectionTitle}>WebSockets (WS)</div>
+        <p className={styles.text}>
+          Establish long-lived, bi-directional WebSocket connections. You can send messages manually, 
+          listen for incoming streams, and view connection lifecycle events in real-time.
+        </p>
+        <div className={styles.featGrid}>
+          <div className={styles.badge}>Live Connection Status</div>
+          <div className={styles.badge}>Message History</div>
+          <div className={styles.badge}>Ping/Pong Keep-Alive</div>
+        </div>
+
+        <div className={styles.sectionTitle}>Socket.IO (SIO)</div>
+        <p className={styles.text}>
+          Native support for Socket.IO clients. You can specify event names to emit payloads, 
+          and subscribe to specific event listeners to filter incoming real-time traffic.
+        </p>
+      </div>
+    ),
+    environments: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Environment Variables</h1>
+        <p className={styles.text}>
+          Managing different environments (e.g., Development, Staging, Production) is crucial for API development. 
+          PayloadX allows you to define key-value pairs and inject them dynamically into your requests.
+        </p>
+
+        <div className={styles.sectionTitle}>Variable Syntax</div>
+        <p className={styles.text}>
+          Use the double-curly-brace syntax to inject variables anywhere in your request (URL, Headers, Body).
+        </p>
+        <div className={styles.codeBlock}>
+          <code>
+            // URL injection<br/>
+            {'{'}{'{'}BASE_URL{'}'}{'}'}/api/v1/users<br/><br/>
+            // Header injection<br/>
+            Authorization: Bearer {'{'}{'{'}API_TOKEN{'}'}{'}'}
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>Rust-Powered Resolution</div>
+        <p className={styles.text}>
+          Variable interpolation is handled by a heavily optimized Rust regex compiler. 
+          This ensures that even massive JSON payloads with hundreds of nested variables are resolved in less than a millisecond before the request is dispatched.
+        </p>
+      </div>
+    ),
+    workflows: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Visual Workflows</h1>
+        <p className={styles.text}>
+          The Visual Workflow Engine allows you to chain multiple APIs together to test complex multi-step scenarios, 
+          all within a drag-and-drop canvas.
+        </p>
+
+        <div className={styles.sectionTitle}>Node-Based Execution</div>
+        <p className={styles.text}>
+          Drag requests from your sidebar onto the canvas. Connect the output of one request to the input of another. 
+          PayloadX automatically calculates the execution order using Kahn's Topological Sort algorithm.
+        </p>
+
+        <div className={styles.sectionTitle}>Data Passing</div>
+        <p className={styles.text}>
+          You can extract data from a previous node's response using JSONPath syntax, and map it directly to a subsequent node's variable context.
+        </p>
+
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Example Data Pass</span></div>
+          <code>
+            Node A (Login) -&gt; extracts '$.data.token'<br/>
+            Node B (Get Profile) -&gt; uses '{'{'}NodeA.token{'}'}' in headers
+          </code>
+        </div>
+      </div>
+    ),
+    shortcuts: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Keyboard Shortcuts</h1>
+        <p className={styles.text}>
+          PayloadX is built for power users. Keep your hands on the keyboard with these cross-platform shortcuts.
+        </p>
+
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Mac</th>
+              <th>Windows / Linux</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Send Request</td>
+              <td><kbd>⌘</kbd> + <kbd>Enter</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
+            </tr>
+            <tr>
+              <td>Save Request</td>
+              <td><kbd>⌘</kbd> + <kbd>S</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>S</kbd></td>
+            </tr>
+            <tr>
+              <td>New Request</td>
+              <td><kbd>⌘</kbd> + <kbd>N</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>N</kbd></td>
+            </tr>
+            <tr>
+              <td>Close Tab</td>
+              <td><kbd>⌘</kbd> + <kbd>W</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>W</kbd></td>
+            </tr>
+            <tr>
+              <td>Next Tab</td>
+              <td><kbd>⌘</kbd> + <kbd>]</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>]</kbd></td>
+            </tr>
+            <tr>
+              <td>Previous Tab</td>
+              <td><kbd>⌘</kbd> + <kbd>[</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>[</kbd></td>
+            </tr>
+            <tr>
+              <td>Beautify Body</td>
+              <td><kbd>⌘</kbd> + <kbd>B</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>B</kbd></td>
+            </tr>
+            <tr>
+              <td>Global Search</td>
+              <td><kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd></td>
+            </tr>
+            <tr>
+              <td>Toggle History</td>
+              <td><kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>H</kbd></td>
+            </tr>
+            <tr>
+              <td>Toggle Console</td>
+              <td><kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>C</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd></td>
+            </tr>
+            <tr>
+              <td>Toggle Environments</td>
+              <td><kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>E</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>E</kbd></td>
+            </tr>
+            <tr>
+              <td>Clear Console</td>
+              <td><kbd>⌘</kbd> + <kbd>⌥</kbd> + <kbd>L</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>L</kbd></td>
+            </tr>
+            <tr>
+              <td>Toggle Sidebar</td>
+              <td><kbd>⌘</kbd> + <kbd>\</kbd></td>
+              <td><kbd>Ctrl</kbd> + <kbd>\</kbd></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     )
   };
 
@@ -275,13 +497,41 @@ export default function Docs({ onBack }) {
       <main className={styles.container}>
         <aside className={styles.sidebar}>
           <div className={styles.sidebarSection}>
-            <span className={styles.sidebarTitle}>Developer Guide</span>
+            <span className={styles.sidebarTitle}>Features & Guides</span>
             <div 
               className={`${styles.sidebarLink} ${activeSection === 'setup' ? styles.sidebarLinkActive : ''}`}
               onClick={() => setActiveSection('setup')}
             >
               Quick Start
             </div>
+            <div 
+              className={`${styles.sidebarLink} ${activeSection === 'protocols' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('protocols')}
+            >
+              Protocols
+            </div>
+            <div 
+              className={`${styles.sidebarLink} ${activeSection === 'environments' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('environments')}
+            >
+              Environments
+            </div>
+            <div 
+              className={`${styles.sidebarLink} ${activeSection === 'workflows' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('workflows')}
+            >
+              Visual Workflows
+            </div>
+            <div 
+              className={`${styles.sidebarLink} ${activeSection === 'shortcuts' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('shortcuts')}
+            >
+              Keyboard Shortcuts
+            </div>
+          </div>
+
+          <div className={styles.sidebarSection}>
+            <span className={styles.sidebarTitle}>Developer Guide</span>
             <div 
               className={`${styles.sidebarLink} ${activeSection === 'architecture' ? styles.sidebarLinkActive : ''}`}
               onClick={() => setActiveSection('architecture')}

@@ -297,13 +297,12 @@ export function InviteModal() {
               <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
                 {/* Owner row */}
                 {currentTeam.ownerId && (
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0F1219] border border-[#1E2530] relative overflow-hidden group transition-all hover:border-[#2A3040] hover:bg-[#12161F]">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-1)] relative overflow-hidden group transition-all hover:border-[var(--border-2)] hover:bg-[var(--surface-3)]">
                     {/* Subtle inner glow for owner */}
                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[#2A3040] shadow-inner"
-                      style={{ background: `linear-gradient(135deg, #1A1D25 0%, #0B0D13 100%)` }}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[var(--border-2)] shadow-inner bg-gradient-to-br from-[var(--surface-3)] to-[var(--surface-1)]"
                     >
                       {(currentTeam.ownerId?.name || currentTeam.ownerId)?.[0]?.toUpperCase() || '?'}
                     </div>
@@ -338,10 +337,9 @@ export function InviteModal() {
                   const memberEmail = m.userId?.email || '';
 
                   return (
-                    <div key={memberId} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#0B0D13] border border-[#1E2530] group transition-all hover:border-[#2A3040] hover:bg-[#0E111A]">
+                    <div key={memberId} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-1)] border border-[var(--border-1)] group transition-all hover:border-[var(--border-2)] hover:bg-[var(--surface-2)]">
                       <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[#1E2530]"
-                        style={{ background: `linear-gradient(135deg, #12161F 0%, #07090D 100%)` }}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[var(--border-1)] bg-gradient-to-br from-[var(--surface-2)] to-[var(--bg-primary)]"
                       >
                         {memberName[0]?.toUpperCase()}
                       </div>
@@ -422,7 +420,7 @@ export function InviteModal() {
                     <button
                       type="button"
                       onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                      className="input !h-10 text-[12px] bg-[#0B0D13] flex items-center justify-between group px-4 border-[#2A3040] hover:border-[#3D4455] transition-all"
+                      className="input !h-10 text-[12px] bg-[var(--surface-1)] flex items-center justify-between group px-4 border-[var(--border-2)] hover:border-[var(--accent)] transition-all"
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-surface-500 group-hover:text-tx-primary transition-colors">
@@ -438,7 +436,7 @@ export function InviteModal() {
                     </button>
 
                     {showRoleDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#0F1219] border border-[#2A3040] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.7)] z-[60] overflow-hidden animate-in ring-1 ring-white/5">
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.7)] z-[60] overflow-hidden animate-in">
                         {ROLES.map((r) => {
                           const isActive = role === r.id;
                           return (
@@ -449,12 +447,12 @@ export function InviteModal() {
                                 setRole(r.id);
                                 setShowRoleDropdown(false);
                               }}
-                              className={`w-full px-4 py-2.5 text-left transition-all flex items-center gap-3 border-b border-white/[0.02] last:border-0 ${isActive ? 'bg-surface-800/60' : 'hover:bg-surface-800/40'}`}
+                              className={`w-full px-4 py-2.5 text-left transition-all flex items-center gap-3 border-b border-[var(--border-1)] last:border-0 ${isActive ? 'bg-[var(--surface-3)]' : 'hover:bg-[var(--surface-3)]'}`}
                             >
                               <div className={`${isActive ? 'text-[color:var(--accent)]' : 'text-surface-500'}`}>
                                 {r.icon}
                               </div>
-                              <span className={`text-[12px] font-bold ${isActive ? 'text-white' : 'text-tx-primary'}`}>{r.label}</span>
+                              <span className={`text-[12px] font-bold ${isActive ? 'text-[var(--accent)]' : 'text-tx-primary'}`}>{r.label}</span>
                               {isActive && (
                                 <div className="ml-auto">
                                   <svg className="w-3.5 h-3.5 text-[color:var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -514,29 +512,32 @@ export function InviteModal() {
 
 function ModalWrapper({ children, onClose, title, wide = false, showLogo = false }) {
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[8px] z-50 flex items-center justify-center p-4 animate-in" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bg-[#0B0D13] border border-[#1E2530] rounded-[24px] shadow-[0_20px_70px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.02)] w-full ${wide ? 'max-w-4xl' : 'max-w-md'} relative flex flex-col`}>
-        {/* Subtle top highlights */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" 
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className={`bg-[#0b0d13]/95 backdrop-blur-2xl border border-white/5 rounded-[28px] shadow-[0_0_80px_rgba(0,0,0,0.9)] w-full ${wide ? 'max-w-4xl' : 'max-w-md'} relative flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden`}>
+        {/* Shimmering Top Highlight */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent opacity-30 pointer-events-none" />
 
-        <div className="flex items-center justify-between px-8 py-5 border-b border-[#1E2530] bg-[#0D1017]/80 backdrop-blur-md rounded-t-[23px]">
+        <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 bg-white/5 backdrop-blur-md relative z-10">
           <div className="flex items-center gap-4">
             {showLogo && (
               <div className="flex items-center gap-3">
                 <PayloadX className="w-8 h-8" fontSize="10px" />
-                <div className="w-px h-6 bg-[#1E2530]" />
+                <div className="w-px h-6 bg-surface-700/50" />
               </div>
             )}
             <div className="flex flex-col">
-              <h2 className="text-[15px] font-bold metallic-app-name !animate-none tracking-tight leading-none mb-0.5">{title}</h2>
-              <p className="text-[10px] text-surface-500 font-bold uppercase tracking-[0.2em] opacity-60">PayloadX Studio</p>
+              <h2 className="text-[14px] font-bold bg-gradient-to-r from-gray-200 via-gray-400 to-gray-500 bg-clip-text text-transparent uppercase tracking-wider leading-none mb-1">{title}</h2>
+              <p className="text-[9px] text-surface-500 font-bold uppercase tracking-[0.2em] opacity-50">PayloadX Studio Context</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-xl text-surface-500 hover:text-tx-primary hover:bg-surface-800 transition-all border border-transparent hover:border-[#1E2530]">
+          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-xl text-surface-500 hover:text-gray-200 hover:bg-surface-800 transition-all border border-transparent hover:border-surface-700/50">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <div className="p-8">{children}</div>
+        <div className="p-8 relative z-10">{children}</div>
       </div>
     </div>
   );

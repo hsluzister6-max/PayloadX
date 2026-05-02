@@ -24,10 +24,10 @@
   --surface-3: #0E111A;
   /* slate */
 
-  --border-1: #1E2530;
-  /* charcoal */
-  --border-2: #2A3040;
-  /* onyx */
+  --border-1: rgba(255, 255, 255, 0.05);
+  /* glass_edge_subtle */
+  --border-2: rgba(255, 255, 255, 0.12);
+  /* glass_edge_clear */
 
   --text-primary: #D0D4DE;
   /* platinum */

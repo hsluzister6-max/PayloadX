@@ -84,13 +84,23 @@ jobs:
             const { owner, repo } = context.repo;
             const release = await github.rest.repos.getRelease({ owner, repo, release_id });
             
-            // First, find and delete any assets that already have the 'static' names we want to use
-            const targetNames = new Set(release.data.assets.map(a => a.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '')));
-            
             for (const asset of release.data.assets) {
-              const newName = asset.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '');
+              // 1. Remove version patterns like _1.0.0 or -1.0.0
+              let newName = asset.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '');
+              
+              // 2. Remove locale strings like _en-US (common in Windows MSI/NSIS)
+              newName = newName.replace(/[_-][a-z]{2}-[A-Z]{2}/, '');
+              
+              // 3. Ensure Linux names match landing page 'payload-x'
+              if (newName.includes('payloadx-api-studio')) {
+                newName = newName.replace('payloadx-api-studio', 'payload-x');
+              }
+              if (newName.includes('PayloadX') && (newName.endsWith('.deb') || newName.endsWith('.AppImage'))) {
+                newName = newName.replace('PayloadX', 'payload-x');
+              }
+
               if (newName !== asset.name) {
-                // Check if an asset with newName already exists in the release
+                // Check if an asset with newName already exists
                 const existing = release.data.assets.find(a => a.name === newName);
                 if (existing) {
                   console.log(`Deleting existing asset: ${newName}`);
@@ -100,10 +110,7 @@ jobs:
                 console.log(`Renaming ${asset.name} to ${newName}`);
                 try {
                   await github.rest.repos.updateReleaseAsset({
-                    owner,
-                    repo,
-                    asset_id: asset.id,
-                    name: newName
+                    owner, repo, asset_id: asset.id, name: newName
                   });
                 } catch (e) {
                   console.error(`Failed to rename ${asset.name}: ${e.message}`);

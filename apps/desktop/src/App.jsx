@@ -115,8 +115,15 @@ export default function App() {
     // Re-check auth immediately when network comes back online
     window.addEventListener('online', attemptAuthCheck);
 
+    // Global drag/drop prevention to stop Webview navigation
+    const preventDefault = (e) => e.preventDefault();
+    window.addEventListener('dragover', preventDefault);
+    window.addEventListener('drop', preventDefault);
+
     return () => {
       window.removeEventListener('online', attemptAuthCheck);
+      window.removeEventListener('dragover', preventDefault);
+      window.removeEventListener('drop', preventDefault);
     };
   }, []);
 

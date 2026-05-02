@@ -23,9 +23,9 @@ const VERSION = "1.0.0";
 const STATIC_DL = `${REPO_URL}/releases/download/main`;
 
 const PLATFORMS = [
-  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: `${STATIC_DL}/PayloadX_aarch64.dmg` },
+  { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, primary: true, link: "#", comingSoon: true },
   { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${STATIC_DL}/PayloadX_x64-setup.exe` },
-  { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#" },
+  { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#", comingSoon: true },
   { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.AppImage` },
   { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.deb` },
 ];
@@ -50,7 +50,7 @@ export default function App() {
     } else if (ua.indexOf("Win") !== -1) {
       setUserOS({ name: "Windows", link: `${STATIC_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
     } else if (ua.indexOf("Mac") !== -1) {
-      setUserOS({ name: "macOS", link: `${STATIC_DL}/PayloadX_aarch64.dmg`, icon: <FaApple /> });
+      setUserOS({ name: "macOS", link: "#", icon: <FaApple /> });
     } else if (ua.indexOf("Linux") !== -1) {
       setUserOS({ name: "Linux", link: `${STATIC_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> });
     }
@@ -105,15 +105,15 @@ export default function App() {
           </p>
 
           <div className={styles.ctaRow}>
-            <a href={userOS.link} className={styles.btnPrimary}>
+            <a 
+              href={userOS.link === "#" ? undefined : userOS.link} 
+              className={`${styles.btnPrimary} ${userOS.link === "#" ? styles.btnDisabled : ""}`}
+            >
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {userOS.icon}
-                Download for {userOS.name}
+                {userOS.link === "#" ? `Coming Soon for ${userOS.name}` : `Download for ${userOS.name}`}
               </span>
             </a>
-            {/* <a href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer" className={styles.btnGhost}>
-              All Platforms →
-            </a> */}
           </div>
 
           {/* TERMINAL PREVIEW */}
@@ -202,7 +202,7 @@ export default function App() {
                     <span className={styles.mockTime}>12ms</span>
                   </div>
                   <div className={styles.mockCode}>
-{`{
+                    {`{
   "status": "success",
   "data": {
     "user": "sundan",
@@ -220,21 +220,24 @@ export default function App() {
           <div className={styles.dlStrip}>
             <span className={styles.dlLabel}>DOWNLOAD FOR</span>
             <div className={styles.dlPills}>
-              {PLATFORMS.map((p, i) => (
-                <a
-                  key={i}
-                  href={p.link}
-                  className={`${styles.dlPill} ${active === i ? styles.dlPillActive : ""} ${p.primary ? styles.dlPillPrimary : ""}`}
-                  onMouseEnter={() => setActive(i)}
-                  onMouseLeave={() => setActive(null)}
-                >
-                  <span className={styles.pillOs}>
-                    <span className={styles.pillIcon}>{p.icon}</span>
-                    {p.os}
-                  </span>
-                  <span className={styles.pillArch}>{p.arch}</span>
-                </a>
-              ))}
+              {PLATFORMS.map((p, i) => {
+                const isComingSoon = p.link === "#" || p.comingSoon;
+                return (
+                  <a
+                    key={i}
+                    href={isComingSoon ? undefined : p.link}
+                    className={`${styles.dlPill} ${active === i ? styles.dlPillActive : ""} ${p.primary ? styles.dlPillPrimary : ""} ${isComingSoon ? styles.pillDisabled : ""}`}
+                    onMouseEnter={() => !isComingSoon && setActive(i)}
+                    onMouseLeave={() => setActive(null)}
+                  >
+                    <span className={styles.pillOs}>
+                      <span className={styles.pillIcon}>{p.icon}</span>
+                      {p.os}
+                    </span>
+                    <span className={styles.pillArch}>{isComingSoon ? "Coming Soon" : p.arch}</span>
+                  </a>
+                );
+              })}
             </div>
           </div>
 
@@ -272,7 +275,7 @@ export default function App() {
       {/* FOOTER */}
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
-          <span className={styles.footerCopy}>© 2024 PayloadX <span className={styles.betaBadge} style={{ marginLeft: '4px' }}>Beta</span></span>
+          <span className={styles.footerCopy}>© PayloadX <span className={styles.betaBadge} style={{ marginLeft: '4px' }}>Beta</span></span>
           <span className={styles.footerDivider}>·</span>
           <span className={styles.footerCreator}>
             Crafted by <span className={styles.metallicText}>Sundan Sharma</span>
