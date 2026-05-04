@@ -73,8 +73,15 @@ export const useRequestStore = create(
           const tabId = newReq._id;
           // O(1) lookup via Map
           if (tabId && state._tabsById.has(tabId)) {
+            const existingTab = state._tabsById.get(tabId);
             localStorageService.saveCurrentRequest(newReq);
-            return { currentRequest: newReq, noActiveRequest: false, activeTabId: tabId };
+            return {
+              currentRequest: newReq,
+              noActiveRequest: false,
+              activeTabId: tabId,
+              activeTab: existingTab.activeTab || 'params',
+              response: existingTab.response ?? null, // Restore this tab's response
+            };
           }
 
           const newTabId = tabId || uuidv4();
@@ -84,6 +91,7 @@ export const useRequestStore = create(
             originalRequest: deepClone(newReq),
             isDirty: false,
             activeTab: 'params', // Per-tab sub-tab state
+            response: null,      // Per-tab response session
           };
           const newTabsById = new Map(state._tabsById);
           newTabsById.set(newTabId, newTab);
@@ -94,6 +102,7 @@ export const useRequestStore = create(
             openTabs: [...state.openTabs, newTab],
             activeTabId: newTabId,
             activeTab: 'params',
+            response: null, // New tab always starts with a blank response
             _tabsById: newTabsById,
           };
         });
@@ -110,6 +119,7 @@ export const useRequestStore = create(
             activeTabId: id,
             currentRequest: tab.request,
             activeTab: tab.activeTab || 'params',
+            response: tab.response ?? null, // Restore per-tab response session
             noActiveRequest: false
           };
         });
@@ -130,7 +140,15 @@ export const useRequestStore = create(
             const closingIndex = state.openTabs.findIndex(t => t.id === id);
             const nextTab = newTabs[closingIndex - 1] || newTabs[0];
             localStorageService.saveCurrentRequest(nextTab.request);
-            return { openTabs: newTabs, activeTabId: nextTab.id, currentRequest: nextTab.request, noActiveRequest: false, _tabsById: newTabsById };
+            return { 
+              openTabs: newTabs, 
+              activeTabId: nextTab.id, 
+              currentRequest: nextTab.request, 
+              activeTab: nextTab.activeTab || 'params',
+              response: nextTab.response ?? null,
+              noActiveRequest: false, 
+              _tabsById: newTabsById 
+            };
           }
 
           return { openTabs: newTabs, _tabsById: newTabsById };
@@ -143,6 +161,7 @@ export const useRequestStore = create(
           activeTabId: null,
           currentRequest: defaultRequest(),
           noActiveRequest: true,
+          response: null,
           _tabsById: new Map()
         });
       },
@@ -161,6 +180,7 @@ export const useRequestStore = create(
             activeTabId: tabToKeep.id,
             currentRequest: tabToKeep.request,
             activeTab: tabToKeep.activeTab || 'params',
+            response: tabToKeep.response ?? null,
             noActiveRequest: false,
             _tabsById: newTabsById
           };
@@ -186,6 +206,7 @@ export const useRequestStore = create(
               activeTabId: nextTab.id,
               currentRequest: nextTab.request,
               activeTab: nextTab.activeTab || 'params',
+              response: nextTab.response ?? null,
               _tabsById: newTabsById
             };
           }
@@ -213,6 +234,7 @@ export const useRequestStore = create(
               activeTabId: nextTab.id,
               currentRequest: nextTab.request,
               activeTab: nextTab.activeTab || 'params',
+              response: nextTab.response ?? null,
               _tabsById: newTabsById
             };
           }
@@ -334,7 +356,18 @@ export const useRequestStore = create(
           return { activeTab: tab, openTabs, _tabsById: newTabsById };
         }),
 
-      setResponse: (response) => set({ response }),
+      setResponse: (response) => set((state) => {
+        // Persist response into the active tab so switching back restores it
+        const openTabs = [...state.openTabs];
+        const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
+        const newTabsById = new Map(state._tabsById);
+        if (tIdx >= 0) {
+          const updatedTab = { ...openTabs[tIdx], response };
+          openTabs[tIdx] = updatedTab;
+          newTabsById.set(state.activeTabId, updatedTab);
+        }
+        return { response, openTabs, _tabsById: newTabsById };
+      }),
 
       setIsExecuting: (isExecuting) => set({ isExecuting }),
 
@@ -356,10 +389,11 @@ export const useRequestStore = create(
         const teamStore = useTeamStore.getState();
 
         let targetColId = colStore.currentCollection?._id;
+        let targetFolderId = targetColId ? colStore.currentFolderId : null;
         let targetProjId = projStore.currentProject?._id;
         let targetTeamId = teamStore.currentTeam?._id;
 
-        console.log('New Request Logic:', { targetColId, targetProjId, targetTeamId });
+        console.log('New Request Logic:', { targetColId, targetFolderId, targetProjId, targetTeamId });
 
         // 1. If no collection selected, use the first available one in the current project
         if (!targetColId && targetProjId) {
@@ -367,6 +401,7 @@ export const useRequestStore = create(
           if (projectCols.length > 0) {
             const firstCol = projectCols[0];
             targetColId = firstCol._id;
+            targetFolderId = null;
             colStore.setCurrentCollection(firstCol);
           }
         }
@@ -382,6 +417,7 @@ export const useRequestStore = create(
             });
             if (res.success) {
               targetColId = res.collection._id;
+              targetFolderId = null;
               toast.success('Collection created', { id: tid });
             } else {
               toast.error(res.error || 'Failed to create collection', { id: tid });
@@ -397,7 +433,7 @@ export const useRequestStore = create(
           collectionId: targetColId || null,
           projectId: targetProjId || null,
           teamId: targetTeamId || null,
-          folderId: colStore.currentFolderId || null
+          folderId: targetFolderId || null
         };
 
         get().setCurrentRequest(newReq);

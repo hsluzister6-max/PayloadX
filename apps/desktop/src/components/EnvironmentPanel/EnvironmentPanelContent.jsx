@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
+import { useUIStore } from '@/store/uiStore';
 import toast from 'react-hot-toast';
 import {
   Layers, Plus, Trash2, Copy, Eye, EyeOff,
-  CheckCircle2, Save, AlertCircle, ChevronLeft, MoreVertical, X
+  CheckCircle2, Save, AlertCircle, ChevronLeft, MoreVertical, X, RefreshCw
 } from 'lucide-react';
 
 const ENV_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#f97316'];
@@ -16,8 +17,9 @@ export default function EnvironmentPanelContent() {
     setActiveEnvironment, fetchEnvironments,
     createEnvironment, updateEnvironment,
     saveVariables, deleteEnvironment,
-    duplicateEnvironment,
+    duplicateEnvironment, isLoading
   } = useEnvironmentStore();
+  const { setShowConfirmDialog } = useUIStore();
   const { projects, currentProject, setCurrentProject } = useProjectStore();
   const { currentTeam } = useTeamStore();
 
@@ -50,7 +52,18 @@ export default function EnvironmentPanelContent() {
 
   const handleSelectEnv = (env) => {
     if (isDirty && selectedEnvId && selectedEnvId !== env._id) {
-      if (!window.confirm('You have unsaved changes. Discard?')) return;
+      setShowConfirmDialog(true, {
+        title: 'Discard Changes?',
+        message: 'You have unsaved variable changes in this environment.',
+        confirmText: 'Discard',
+        danger: true,
+        onConfirm: () => {
+          setSelectedEnvId(env._id);
+          setView('detail');
+          setIsDirty(false);
+        },
+      });
+      return;
     }
     setSelectedEnvId(env._id);
     setView('detail');
@@ -59,7 +72,17 @@ export default function EnvironmentPanelContent() {
 
   const handleBackToList = () => {
     if (isDirty) {
-      if (!window.confirm('You have unsaved changes. Discard?')) return;
+      setShowConfirmDialog(true, {
+        title: 'Discard Changes?',
+        message: 'You have unsaved variable changes. Going back will lose them.',
+        confirmText: 'Discard',
+        danger: true,
+        onConfirm: () => {
+          setView('list');
+          setIsDirty(false);
+        },
+      });
+      return;
     }
     setView('list');
     setIsDirty(false);
@@ -107,11 +130,27 @@ export default function EnvironmentPanelContent() {
     else toast.error(result.error);
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`Delete "${selectedEnv.name}"? This cannot be undone.`)) return;
-    const result = await deleteEnvironment(selectedEnvId);
-    if (result.success) { setSelectedEnvId(null); toast.success('Deleted'); }
-    else toast.error(result.error);
+  const handleDelete = (env) => {
+    const target = env || selectedEnv;
+    if (!target) return;
+    setShowConfirmDialog(true, {
+      title: 'Delete Environment?',
+      message: 'This will permanently delete the environment and all its variables.',
+      itemName: target.name,
+      danger: true,
+      onConfirm: async () => {
+        const result = await deleteEnvironment(target._id);
+        if (result.success) {
+          if (selectedEnvId === target._id) {
+            setSelectedEnvId(null);
+            setView('list');
+          }
+          toast.success(`"${target.name}" deleted`);
+        } else {
+          toast.error(result.error);
+        }
+      },
+    });
   };
 
   const handleDuplicate = async () => {
@@ -125,7 +164,17 @@ export default function EnvironmentPanelContent() {
   const setVars = (vars) => { setEditedVars(vars); setIsDirty(true); };
   const addVar = () => setVars([...editedVars, { key: '', value: '', description: '', isSecret: false, enabled: true }]);
   const updateVar = (i, upd) => setVars(editedVars.map((v, idx) => (idx === i ? upd : v)));
-  const deleteVar = (i) => setVars(editedVars.filter((_, idx) => idx !== i));
+  const deleteVar = (i) => {
+    const v = editedVars[i];
+    const label = v.key?.trim() || `Variable #${i + 1}`;
+    setShowConfirmDialog(true, {
+      title: 'Delete Variable?',
+      message: 'This variable will be removed. Save changes to persist the deletion.',
+      itemName: label,
+      danger: true,
+      onConfirm: () => setVars(editedVars.filter((_, idx) => idx !== i)),
+    });
+  };
 
   // VIEW: Environment List
   if (view === 'list' || !selectedEnv) {
@@ -141,13 +190,23 @@ export default function EnvironmentPanelContent() {
             </span>
           </div>
           {currentProject && (
-            <button
-              onClick={() => setShowCreate(true)}
-              className="p-1.5 rounded-md hover:bg-[color:var(--surface-2)] text-[color:var(--text-muted)] hover:text-[color:var(--accent)] transition-colors"
-              title="New Environment"
-            >
-              <Plus size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => fetchEnvironments(currentProject._id, currentTeam?._id, true, true)}
+                disabled={isLoading}
+                className="p-1.5 rounded-md hover:bg-[color:var(--surface-2)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors disabled:opacity-50"
+                title="Refresh Environments"
+              >
+                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="p-1.5 rounded-md hover:bg-[color:var(--surface-2)] text-[color:var(--text-muted)] hover:text-[color:var(--accent)] transition-colors"
+                title="New Environment"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           )}
         </div>
 
@@ -242,7 +301,7 @@ export default function EnvironmentPanelContent() {
                         <Copy size={12} /> Duplicate
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(); setShowEnvMenu(null); }}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(env); setShowEnvMenu(null); }}
                         className="w-full px-3 py-1.5 text-left text-xs text-red-500 hover:bg-[color:var(--surface-2)] flex items-center gap-2"
                       >
                         <Trash2 size={12} /> Delete

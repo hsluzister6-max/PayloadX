@@ -16,16 +16,30 @@ const OVERSCAN = 10;
 const VTHRESH = 600; // lines before switching to virtual scroll
 const INDENT_PX = 14;
 
-// ── Syntax colors (dark theme aligned with PayloadX metals) ──────────────────
-const T = {
-  key: '#C8CDD8',   // platinum
-  str: '#86EFAC',   // emerald
-  num: '#93C5FD',   // azure
-  bool: '#FDE047',   // gold
-  null: '#94A3B8',   // slate
-  bkt: 'rgba(255,255,255,0.4)', // bracket
-  pun: 'rgba(255,255,255,0.2)', // punctuation / comma
-  dim: 'rgba(255,255,255,0.18)', // collapsed preview
+import { useUIStore } from '@/store/uiStore';
+
+// ── Syntax colors ────────────────────────────────────────────────────────────
+const PALETTES = {
+  dark: {
+    key: '#C8CDD8',   // platinum
+    str: '#86EFAC',   // emerald
+    num: '#93C5FD',   // azure
+    bool: '#FDE047',   // gold
+    null: '#94A3B8',   // slate
+    bkt: 'rgba(255,255,255,0.4)', // bracket
+    pun: 'rgba(255,255,255,0.2)', // punctuation / comma
+    dim: 'rgba(255,255,255,0.18)', // collapsed preview
+  },
+  light: {
+    key: '#0366d6',   // dark blue
+    str: '#22863a',   // darker green
+    num: '#005cc5',   // deep blue
+    bool: '#d73a49',   // red/pink
+    null: '#6a737d',   // grey
+    bkt: 'rgba(0,0,0,0.5)', 
+    pun: 'rgba(0,0,0,0.3)',
+    dim: 'rgba(0,0,0,0.25)',
+  }
 };
 
 function esc(s) {
@@ -95,7 +109,7 @@ function collectPaths(v, path, out = new Set()) {
 }
 
 // ── Single Row Component ──────────────────────────────────────────────────────
-function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
+function Row({ ln, lineNum, isHit, isCurrent, onToggle, style, colors, theme }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback((e) => {
@@ -110,6 +124,8 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
     setTimeout(() => setCopied(false), 1200);
   }, [ln.raw]);
 
+  const isDark = theme === 'dark';
+
   return (
     <div
       style={{
@@ -122,9 +138,9 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
         cursor: 'default',
         userSelect: 'text',
         background: isCurrent
-          ? 'rgba(251,191,36,0.18)'
+          ? (isDark ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.25)')
           : isHit
-            ? 'rgba(251,191,36,0.07)'
+            ? (isDark ? 'rgba(251,191,36,0.07)' : 'rgba(251,191,36,0.12)')
             : 'transparent',
         paddingRight: 4,
       }}
@@ -135,14 +151,14 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
         onClick={() => ln.col && onToggle(ln.path)}
         style={{
           width: 48, minWidth: 48, textAlign: 'right', paddingRight: 10,
-          color: T.dim, borderRight: '0.5px solid rgba(255,255,255,0.06)',
+          color: colors.dim, borderRight: `0.5px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
           fontSize: 10.5, cursor: ln.col ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
           gap: 2, height: '100%', flexShrink: 0, userSelect: 'none',
         }}
       >
         {ln.col && (
-          <span style={{ width: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.25)' }}>
+          <span style={{ width: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)' }}>
             {ln.col2 ? '›' : '⌄'}
           </span>
         )}
@@ -152,7 +168,7 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
       {/* Content */}
       <div style={{ paddingLeft: 6 + ln.depth * INDENT_PX, flex: 1, whiteSpace: 'pre', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: ROW_H + 'px' }}>
         {ln.parts.map((p, i) => (
-          <span key={i} style={{ color: T[p.t] || T.dim }}>{p.s}</span>
+          <span key={i} style={{ color: colors[p.t] || colors.dim }}>{p.s}</span>
         ))}
       </div>
 
@@ -163,7 +179,7 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
         className="json-copy-btn"
         style={{
           width: 26, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#4ade80' : 'rgba(255,255,255,0.2)',
+          background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#4ade80' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
           flexShrink: 0, fontSize: 12, transition: 'color 0.15s',
         }}
       >
@@ -174,7 +190,7 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style }) {
 }
 
 // ── Virtual Scroller ──────────────────────────────────────────────────────────
-function VirtualScroller({ lines, searchHits, searchIdx, onToggle }) {
+function VirtualScroller({ lines, searchHits, searchIdx, onToggle, colors, theme }) {
   const outerRef = useRef(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [height, setHeight] = useState(400);
@@ -223,6 +239,8 @@ function VirtualScroller({ lines, searchHits, searchIdx, onToggle }) {
               isHit={hitSet.has(i)}
               isCurrent={i === curHit}
               onToggle={onToggle}
+              colors={colors}
+              theme={theme}
               style={{ position: 'absolute', top: i * ROW_H, left: 0, right: 0 }}
             />
           );
@@ -233,7 +251,7 @@ function VirtualScroller({ lines, searchHits, searchIdx, onToggle }) {
 }
 
 // ── Flat Scroller (small payloads) ────────────────────────────────────────────
-function FlatScroller({ lines, searchHits, searchIdx, onToggle }) {
+function FlatScroller({ lines, searchHits, searchIdx, onToggle, colors, theme }) {
   const hitSet = useMemo(() => new Set(searchHits), [searchHits]);
   const curHit = searchHits[searchIdx];
   const ref = useRef(null);
@@ -255,6 +273,8 @@ function FlatScroller({ lines, searchHits, searchIdx, onToggle }) {
             isHit={hitSet.has(i)}
             isCurrent={i === curHit}
             onToggle={onToggle}
+            colors={colors}
+            theme={theme}
           />
         </div>
       ))}
@@ -343,8 +363,13 @@ export default function JsonTreeViewer({ value, className = '' }) {
     setSearchIdx(i => (i + dir + searchHits.length) % searchHits.length);
   }, [searchHits]);
 
+  const { theme } = useUIStore();
+  const colors = PALETTES[theme] || PALETTES.dark;
+
   const sizeLabel = useMemo(() => rawStr ? formatSize(new TextEncoder().encode(rawStr).length) : '', [rawStr]);
   const isNdjson = useMemo(() => Array.isArray(parsed) && rawStr?.includes('\n') && rawStr.trim().split('\n').length > 1, [parsed, rawStr]);
+
+  const isDark = theme === 'dark';
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (!value) {
@@ -362,13 +387,15 @@ export default function JsonTreeViewer({ value, className = '' }) {
         <div style={{
           position: 'absolute', top: 6, right: 14, zIndex: 10,
           display: 'flex', alignItems: 'center', gap: 4,
-          background: 'rgba(7, 9, 13, 0.85)', backdropFilter: 'blur(4px)',
-          padding: '4px', borderRadius: 8, border: '0.5px solid rgba(255,255,255,0.06)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          background: isDark ? 'rgba(7, 9, 13, 0.85)' : 'rgba(255, 255, 255, 0.9)', 
+          backdropFilter: 'blur(4px)',
+          padding: '4px', borderRadius: 8, 
+          border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'}`,
+          boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <span style={{ position: 'absolute', left: 6, color: 'rgba(255,255,255,0.25)', fontSize: 11, pointerEvents: 'none' }}>⌕</span>
+            <span style={{ position: 'absolute', left: 6, color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)', fontSize: 11, pointerEvents: 'none' }}>⌕</span>
             <input
               ref={searchRef}
               value={searchQuery}
@@ -381,7 +408,8 @@ export default function JsonTreeViewer({ value, className = '' }) {
               style={{
                 fontSize: 10, padding: '2px 36px 2px 20px',
                 borderRadius: 4, border: 'none',
-                background: 'rgba(255,255,255,0.05)', color: '#D0D4DE',
+                background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', 
+                color: isDark ? '#D0D4DE' : '#111827',
                 fontFamily: 'inherit', width: 100, outline: 'none',
                 transition: 'width 0.2s',
               }}
@@ -398,10 +426,10 @@ export default function JsonTreeViewer({ value, className = '' }) {
           <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
 
           {/* Expand / Collapse icons */}
-          <button onClick={handleExpandAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,0.8)'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.4)'} title="Expand all">
+          <button onClick={handleExpandAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Expand all">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
           </button>
-          <button onClick={handleCollapseAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,0.8)'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.4)'} title="Collapse all">
+          <button onClick={handleCollapseAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Collapse all">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
           </button>
         </div>
@@ -426,11 +454,11 @@ export default function JsonTreeViewer({ value, className = '' }) {
         {!parseError && tab === 'pretty' && parsed && (
           <div style={{ height: '100%', overflow: 'hidden' }}>
             {/* Row hover style via <style> injection to avoid inline-on-each-row overhead */}
-            <style>{`.json-row:hover{background:rgba(255,255,255,0.035)!important}.json-copy-btn:hover{color:rgba(255,255,255,0.6)!important}`}</style>
+            <style>{`.json-row:hover{background:${isDark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.035)'}!important}.json-copy-btn:hover{color:${isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}!important}`}</style>
             {lines.length > VTHRESH ? (
-              <VirtualScroller lines={lines} searchHits={searchHits} searchIdx={searchIdx} onToggle={handleToggle} />
+              <VirtualScroller lines={lines} searchHits={searchHits} searchIdx={searchIdx} onToggle={handleToggle} colors={colors} theme={theme} />
             ) : (
-              <FlatScroller lines={lines} searchHits={searchHits} searchIdx={searchIdx} onToggle={handleToggle} />
+              <FlatScroller lines={lines} searchHits={searchHits} searchIdx={searchIdx} onToggle={handleToggle} colors={colors} theme={theme} />
             )}
           </div>
         )}

@@ -41,6 +41,11 @@ export default function ContextSelector() {
     if (currentTeam?._id !== team._id) {
       setCurrentTeam(team);
       setCurrentProject(null);
+    } else {
+      // Deselect if already active
+      setCurrentTeam(null);
+      setCurrentProject(null);
+      setCurrentCollection(null);
     }
     setTeamOpen(false);
   };
@@ -48,6 +53,10 @@ export default function ContextSelector() {
   const handleProjectChange = (proj) => {
     if (currentProject?._id !== proj._id) {
       setCurrentProject(proj);
+    } else {
+      // Deselect if already active
+      setCurrentProject(null);
+      setCurrentCollection(null);
     }
     setProjectOpen(false);
   };

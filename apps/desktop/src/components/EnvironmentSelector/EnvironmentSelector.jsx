@@ -3,10 +3,10 @@ import { useEnvironmentStore } from '@/store/environmentStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useUIStore } from '@/store/uiStore';
-import { Layers, ChevronDown, X, CheckCircle2, Settings, Plus, Eye, EyeOff, Cookie } from 'lucide-react';
+import { Layers, ChevronDown, X, CheckCircle2, Settings, Plus, Eye, EyeOff, Cookie, RefreshCw } from 'lucide-react';
 
 export default function EnvironmentSelector() {
-  const { environments, activeEnvironment, setActiveEnvironment, fetchEnvironments } = useEnvironmentStore();
+  const { environments, activeEnvironment, setActiveEnvironment, fetchEnvironments, isLoading } = useEnvironmentStore();
   const { currentProject } = useProjectStore();
   const { currentTeam } = useTeamStore();
   const [open, setOpen] = useState(false);
@@ -109,7 +109,7 @@ export default function EnvironmentSelector() {
             position: 'absolute',
             right: 0,
             top: 'calc(100% + 6px)',
-            width: '280px',
+            width: '320px',
             background: 'var(--bg-secondary)',
             border: '1px solid var(--border-1)',
             borderRadius: '10px',
@@ -134,6 +134,26 @@ export default function EnvironmentSelector() {
               </span>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (currentProject?._id) fetchEnvironments(currentProject._id, currentTeam?._id, true, true);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  fontSize: '10px', fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  padding: '3px 8px', borderRadius: '5px',
+                  background: 'var(--surface-2)', border: '1px solid var(--border-1)',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-3)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'var(--surface-2)'; }}
+                disabled={isLoading}
+                title="Refresh Environments"
+              >
+                <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+              </button>
               <button
                 onClick={() => { setOpen(false); useUIStore.getState().openRightSidebarTab('cookies'); }}
                 style={{

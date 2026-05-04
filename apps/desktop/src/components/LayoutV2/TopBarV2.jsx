@@ -29,7 +29,7 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
   const searchContainerRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Keyboard shortcut Cmd+K
+  // Keyboard shortcut Cmd+K / Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -114,7 +114,7 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
             onChange={(e) => { setGlobalSearch(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
           />
-          <kbd className="v2-search-kbd">{/mac/i.test(navigator.userAgent) && !/iphone|ipad/i.test(navigator.userAgent) ? '⌘K' : 'Ctrl+K'}</kbd>
+          <kbd className="v2-search-kbd">{(navigator.userAgentData?.platform?.toLowerCase().includes('mac') || (/mac/i.test(navigator.userAgent) && !/iphone|ipad/i.test(navigator.userAgent))) ? '⌘K' : 'Ctrl+K'}</kbd>
         </div>
 
         {/* Global Search Dropdown */}

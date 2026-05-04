@@ -1,3 +1,4 @@
+// Triggering nodemon restart
 /**
  * Team Routes
  * GET /api/team
@@ -131,6 +132,44 @@ router.put('/:id', authenticate, async (req, res) => {
     const updated = await Team.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ team: updated });
   } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/team/:id/members/:userId
+router.delete('/:id/members/:userId', authenticate, async (req, res) => {
+  try {
+    const requestingUserId = req.user.id;
+    const { id: teamId, userId: memberToRemoveId } = req.params;
+
+    const team = await Team.findById(teamId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+
+    // Permission check: only admin or owner can remove others, or user can remove themselves
+    const isAdmin = team.members.some(
+      (m) => m.userId.toString() === requestingUserId && m.role === 'admin'
+    ) || team.ownerId.toString() === requestingUserId;
+
+    if (!isAdmin && requestingUserId !== memberToRemoveId) {
+      return res.status(403).json({ error: 'Only admins can remove members' });
+    }
+
+    if (team.ownerId.toString() === memberToRemoveId) {
+      return res.status(400).json({ error: 'Cannot remove the team owner' });
+    }
+
+    // Remove member
+    team.members = team.members.filter(m => m.userId.toString() !== memberToRemoveId);
+    await team.save();
+
+    // Populate for response
+    const updatedTeam = await Team.findById(team._id)
+      .populate('ownerId', 'name email avatar')
+      .populate('members.userId', 'name email avatar');
+
+    res.json({ message: 'Member removed successfully', team: updatedTeam });
+  } catch (err) {
+    console.error('[DELETE /api/team/:id/members/:userId] Error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

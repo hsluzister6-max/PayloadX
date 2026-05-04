@@ -869,7 +869,9 @@ textarea,
 :root {
   --v2-header-bg: #0f0f0f;
   --v2-header-border: rgba(255, 255, 255, 0.08);
+  --bg-primary: #0f0f0f;
   --bg-secondary: #0f0f0f;
+  --surface-1: #0f0f0f;
   --v2-sidebar-border: rgba(255, 255, 255, 0.06);
   --v2-workspace-bg: #0f0f0f;
   --v2-card-bg: #0f0f0f;
@@ -884,9 +886,11 @@ textarea,
 .light {
   --v2-header-bg: #FFFFFF;
   --v2-header-border: rgba(0, 0, 0, 0.05);
+  --bg-primary: #F8F8F8;
   --bg-secondary: #F8F8F8;
+  --surface-1: #F8F8F8;
   --v2-sidebar-border: rgba(0, 0, 0, 0.05);
-  --v2-workspace-bg: #EDEEF0;
+  --v2-workspace-bg: #F8F8F8;
   --v2-card-bg: #FFFFFF;
   --v2-card-border: rgba(0, 0, 0, 0.06);
   --v2-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);

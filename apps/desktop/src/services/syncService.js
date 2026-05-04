@@ -137,6 +137,16 @@ class SyncService {
         return this.syncDeleteCollection(resolvedData, syncApi);
       case 'delete_request':
         return this.syncDeleteRequest(resolvedData, syncApi);
+      case 'create_environment':
+        return this.syncCreateEnvironment(resolvedData, syncApi);
+      case 'update_environment':
+        return this.syncUpdateEnvironment(resolvedData, syncApi);
+      case 'delete_environment':
+        return this.syncDeleteEnvironment(resolvedData, syncApi);
+      case 'update_environment_variables':
+        return this.syncUpdateEnvironmentVariables(resolvedData, syncApi);
+      case 'add_environment_variable':
+        return this.syncAddEnvironmentVariable(resolvedData, syncApi);
       default:
         throw new Error(`Unknown change type: ${type}`);
     }
@@ -236,6 +246,43 @@ class SyncService {
       params: { collectionId: realCollectionId }
     });
     return { success: true };
+  }
+
+  async syncCreateEnvironment(data, syncApi) {
+    const { tempId, ...environmentData } = data;
+    const response = await syncApi.post('/api/environment', environmentData);
+    if (tempId && response.data?.environment?._id) {
+      this.registerIdMapping(tempId, response.data.environment._id);
+    }
+    return response.data;
+  }
+
+  async syncUpdateEnvironment(data, syncApi) {
+    const { id, ...updateData } = data;
+    const realId = this.idMap[id] || id;
+    const response = await syncApi.put(`/api/environment/${realId}`, updateData);
+    return response.data;
+  }
+
+  async syncDeleteEnvironment(data, syncApi) {
+    const { id } = data;
+    const realId = this.idMap[id] || id;
+    await syncApi.delete(`/api/environment/${realId}`);
+    return { success: true };
+  }
+
+  async syncUpdateEnvironmentVariables(data, syncApi) {
+    const { id, variables } = data;
+    const realId = this.idMap[id] || id;
+    const response = await syncApi.put(`/api/environment/${realId}/variables`, { variables });
+    return response.data;
+  }
+
+  async syncAddEnvironmentVariable(data, syncApi) {
+    const { envId, variable } = data;
+    const realEnvId = this.idMap[envId] || envId;
+    const response = await syncApi.post(`/api/environment/${realEnvId}/variables`, variable);
+    return response.data;
   }
 
   // Queue a change for sync

@@ -11,6 +11,8 @@ import toast from 'react-hot-toast';
 
 export default function CreateTeamModal() {
   const { createTeam, setCurrentTeam } = useTeamStore();
+  const { setCurrentProject } = useProjectStore();
+  const { setCurrentCollection } = useCollectionStore();
   const { setShowTeamModal } = useUIStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -26,6 +28,8 @@ export default function CreateTeamModal() {
     setLoading(false);
     if (result.success) {
       setCurrentTeam(result.team);
+      setCurrentProject(null);
+      setCurrentCollection(null);
       toast.success(`Team "${result.team.name}" created!`);
       setShowTeamModal(false);
     } else {

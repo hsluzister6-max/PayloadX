@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { executeHttpRequest } from '@/services/requestService';
 import { useRequestStore } from '@/store/requestStore';
 import { useEnvironmentStore } from '@/store/environmentStore';
@@ -117,6 +117,13 @@ export default function RESTRequestBuilder() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRequest, activeEnvironment, resolveVariables, addToHistory, currentTeam, user, emitRequestUpdate]);
+
+  // ── Listen for global send shortcut (Cmd/Ctrl+Enter via useKeyboardShortcuts) ──
+  useEffect(() => {
+    const handleSendShortcut = () => executeRequest();
+    window.addEventListener('request-send-shortcut', handleSendShortcut);
+    return () => window.removeEventListener('request-send-shortcut', handleSendShortcut);
+  }, [executeRequest]);
 
   const tabs = [
     { id: 'params', label: 'Params', count: currentRequest.params?.filter((p) => p.enabled && p.key).length },

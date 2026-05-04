@@ -53,7 +53,12 @@ export function useKeyboardShortcuts() {
       // ── 1. Send Request (Cmd/Ctrl + Enter) — works everywhere ──
       if (mod && e.key === 'Enter') {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent('request-send-shortcut'));
+        const { currentRequest } = useRequestStore.getState();
+        // WS & SIO handle Ctrl+Enter via their own onKeyDown on the container div.
+        // For HTTP (REST), fire the global custom event picked up by RESTRequestBuilder.
+        if (!currentRequest?.protocol || currentRequest.protocol === 'http') {
+          window.dispatchEvent(new CustomEvent('request-send-shortcut'));
+        }
         return;
       }
 

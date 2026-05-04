@@ -118,6 +118,8 @@ export default function SidebarV2({
     loadCollectionRequestsFromStorage,
     getFilteredCollections,
     setCurrentCollection,
+    currentFolderId,
+    setCurrentFolderId,
     isCreating: isCreatingCollection,
     isDeleting: isDeletingCollection
   } = useCollectionStore();
@@ -178,7 +180,6 @@ export default function SidebarV2({
   });
   const expandedCollectionsRef = useRef(expandedCollections);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
-  const [currentFolderId, setCurrentFolderId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -918,7 +919,7 @@ export default function SidebarV2({
     localStorage.setItem('sidebar_expanded_projects', JSON.stringify([...next]));
   };
 
-  const toggleFolder = (fid) => {
+  const toggleFolder = (fid, collectionId) => {
     const next = new Set(expandedFolders);
     if (next.has(fid)) {
       next.delete(fid);
@@ -926,6 +927,10 @@ export default function SidebarV2({
     } else {
       next.add(fid);
       setCurrentFolderId(fid);
+      if (collectionId) {
+        const col = collections.find(c => c._id === collectionId);
+        if (col && currentCollection?._id !== collectionId) setCurrentCollection(col);
+      }
     }
     setExpandedFolders(next);
   };
@@ -1475,7 +1480,7 @@ function RecursiveFolderListV2({
           <div key={folderId}>
             <div className="group relative pr-1">
               <button
-                onClick={() => toggleFolder(folderId)}
+                onClick={() => toggleFolder(folderId, collectionId)}
                 onContextMenu={(e) => onFolderContextMenu ? onFolderContextMenu(e, collectionId, folder) : undefined}
                 className={`sdbv2-tree-row w-full ${currentFolderId === folderId ? 'sdbv2-tree-row--active' : ''}`}
               >
