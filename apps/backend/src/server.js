@@ -126,6 +126,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Vercel Cron Job Route (Keep-Alive)
+app.get('/api/cron', (req, res) => {
+  console.log(`[cron] ✅ Server keep-alive ping received at ${new Date().toISOString()}`);
+  res.status(200).json({
+    status: 'ok',
+    message: 'Cron job executed successfully',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
@@ -348,8 +358,12 @@ if (process.env.ENABLE_KEEP_ALIVE === 'true' || SELF_URL.includes('onrender.com'
 }
 
 // ── Start Server ────────────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log(`🚀 PayloadX Express API + Socket.IO running on http://localhost:${PORT}`);
-  console.log(`   CORS origin: ${CORS_ORIGIN}`);
-  console.log(`   Health check: http://localhost:${PORT}/health`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`🚀 PayloadX Express API + Socket.IO running on http://localhost:${PORT}`);
+    console.log(`   CORS origin: ${CORS_ORIGIN}`);
+    console.log(`   Health check: http://localhost:${PORT}/health`);
+  });
+}
+
+export default app;
