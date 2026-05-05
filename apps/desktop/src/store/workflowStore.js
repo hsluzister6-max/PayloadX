@@ -8,6 +8,28 @@ import { calculateLayers, deepClone } from '@/utils/perf';
 
 // calculateLayers is imported from @/utils/perf (memoized BFS)
 
+const getWorkflowSnapshot = (wf) => {
+  if (!wf) return null;
+  return JSON.stringify({
+    name: wf.name || '',
+    nodes: (wf.nodes || []).map(n => ({
+      id: n.id,
+      type: n.type,
+      position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
+      data: n.data,
+      skipped: n.data?.skipped,
+      save_session: n.data?.save_session
+    })),
+    edges: (wf.edges || []).map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    }))
+  });
+};
+
 export const defaultWorkflow = () => ({
   id: null,
   name: 'Untitled Workflow',
@@ -37,18 +59,116 @@ export const useWorkflowStore = create(
       
       // Workflows list
       workflows: [],
-      
+
+      // ─── Workflow Tabs (mirrors requestStore tab pattern) ──────
+      openWorkflowTabs: [],
+      activeWorkflowTabId: null,
+      _workflowTabsById: new Map(),
+
       // UI state
       selectedNode: null,
       isSaving: false,
       isCreating: false,
       isDeleting: false,
       isLoadingWorkflows: false,
+      hasUnsavedChanges: false,
+      baseWorkflowSnapshot: null,
+
+      // ─── Workflow Tab Management ──────────────────────────────
+
+      openWorkflowTab: (workflow) => {
+        set((state) => {
+          const tabId = workflow.id;
+          // Already open — just activate it
+          if (tabId && state._workflowTabsById.has(tabId)) {
+            return {
+              activeWorkflowTabId: tabId,
+              currentWorkflow: workflow,
+              selectedNode: null,
+              showConfigPanel: false,
+              executionResult: null,
+            };
+          }
+          const newTabId = tabId || uuidv4();
+          const newTab = { id: newTabId, workflow };
+          const newTabsById = new Map(state._workflowTabsById);
+          newTabsById.set(newTabId, newTab);
+          return {
+            openWorkflowTabs: [...state.openWorkflowTabs, newTab],
+            activeWorkflowTabId: newTabId,
+            _workflowTabsById: newTabsById,
+            currentWorkflow: workflow,
+            selectedNode: null,
+            showConfigPanel: false,
+            executionResult: null,
+          };
+        });
+      },
+
+      closeWorkflowTab: (tabId) => {
+        set((state) => {
+          const newTabs = state.openWorkflowTabs.filter(t => t.id !== tabId);
+          const newTabsById = new Map(state._workflowTabsById);
+          newTabsById.delete(tabId);
+          const isClosingActive = state.activeWorkflowTabId === tabId;
+
+          if (newTabs.length === 0) {
+            return {
+              openWorkflowTabs: [],
+              activeWorkflowTabId: null,
+              currentWorkflow: defaultWorkflow(),
+              _workflowTabsById: newTabsById,
+            };
+          }
+
+          if (isClosingActive) {
+            const closingIdx = state.openWorkflowTabs.findIndex(t => t.id === tabId);
+            const nextTab = newTabs[closingIdx - 1] || newTabs[0];
+            return {
+              openWorkflowTabs: newTabs,
+              activeWorkflowTabId: nextTab.id,
+              currentWorkflow: nextTab.workflow,
+              _workflowTabsById: newTabsById,
+            };
+          }
+
+          return { openWorkflowTabs: newTabs, _workflowTabsById: newTabsById };
+        });
+      },
+
+      setActiveWorkflowTabId: (tabId) => {
+        set((state) => {
+          const tab = state._workflowTabsById.get(tabId);
+          if (!tab) return state;
+          return {
+            activeWorkflowTabId: tabId,
+            currentWorkflow: tab.workflow,
+            selectedNode: null,
+          };
+        });
+      },
+
+      // Sync open tab data when workflow is saved/updated remotely
+      syncWorkflowTab: (workflow) => {
+        set((state) => {
+          if (!state._workflowTabsById.has(workflow.id)) return state;
+          const newTabs = state.openWorkflowTabs.map(t =>
+            t.id === workflow.id ? { ...t, workflow } : t
+          );
+          const newTabsById = new Map(state._workflowTabsById);
+          newTabsById.set(workflow.id, { id: workflow.id, workflow });
+          return {
+            openWorkflowTabs: newTabs,
+            _workflowTabsById: newTabsById,
+            currentWorkflow: state.activeWorkflowTabId === workflow.id ? workflow : state.currentWorkflow,
+          };
+        });
+      },
 
       // ─── Workflow Management ───────────────────────────────────
-      
+
       setCurrentWorkflow: (workflow) => {
-        set({ 
+        set({
           currentWorkflow: workflow || defaultWorkflow(),
           selectedNode: null,
         });
@@ -73,6 +193,7 @@ export const useWorkflowStore = create(
           return {
             currentWorkflow: updatedWorkflow,
             workflows: newWorkflows,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
@@ -98,6 +219,8 @@ export const useWorkflowStore = create(
             selectedNode: null,
             executionResult: null,
             isCreating: false,
+            hasUnsavedChanges: false,
+            baseWorkflowSnapshot: getWorkflowSnapshot(createdWorkflow),
           }));
 
           // Emit real-time update
@@ -145,21 +268,23 @@ export const useWorkflowStore = create(
 
         set((state) => {
           const newNodes = [...state.currentWorkflow.nodes, newNode];
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            nodes: calculateLayers(newNodes, state.currentWorkflow.edges),
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              nodes: calculateLayers(newNodes, state.currentWorkflow.edges),
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
             selectedNode: newNode.id,
             showConfigPanel: true,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
 
       toggleNodeSkip: (nodeId) => {
-        set((state) => ({
-          currentWorkflow: {
+        set((state) => {
+          const updatedWorkflow = {
             ...state.currentWorkflow,
             nodes: state.currentWorkflow.nodes.map((n) =>
               n.id === nodeId
@@ -167,13 +292,17 @@ export const useWorkflowStore = create(
                 : n
             ),
             updatedAt: new Date().toISOString(),
-          },
-        }));
+          };
+          return {
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
+          };
+        });
       },
 
       toggleNodeSession: (nodeId) => {
-        set((state) => ({
-          currentWorkflow: {
+        set((state) => {
+          const updatedWorkflow = {
             ...state.currentWorkflow,
             nodes: state.currentWorkflow.nodes.map((n) =>
               n.id === nodeId
@@ -181,8 +310,12 @@ export const useWorkflowStore = create(
                 : n
             ),
             updatedAt: new Date().toISOString(),
-          },
-        }));
+          };
+          return {
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
+          };
+        });
       },
 
       updateNode: (nodeId, updates) => {
@@ -192,12 +325,14 @@ export const useWorkflowStore = create(
               ? { ...node, data: { ...node.data, ...updates } }
               : node
           );
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            nodes: newNodes, // Layer doesn't change on data update
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              nodes: newNodes, // Layer doesn't change on data update
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
@@ -210,14 +345,16 @@ export const useWorkflowStore = create(
           const newEdges = state.currentWorkflow.edges.filter(
             (e) => e.source !== nodeId && e.target !== nodeId
           );
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            nodes: calculateLayers(newNodes, newEdges),
+            edges: newEdges,
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              nodes: calculateLayers(newNodes, newEdges),
-              edges: newEdges,
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
             selectedNode: state.selectedNode === nodeId ? null : state.selectedNode,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
@@ -231,13 +368,15 @@ export const useWorkflowStore = create(
       addEdge: (edge) => {
         set((state) => {
           const newEdges = [...state.currentWorkflow.edges, { ...edge, id: uuidv4() }];
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            nodes: calculateLayers(state.currentWorkflow.nodes, newEdges),
+            edges: newEdges,
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              nodes: calculateLayers(state.currentWorkflow.nodes, newEdges),
-              edges: newEdges,
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
@@ -245,13 +384,15 @@ export const useWorkflowStore = create(
       deleteEdge: (edgeId) => {
         set((state) => {
           const newEdges = state.currentWorkflow.edges.filter((e) => e.id !== edgeId);
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            nodes: calculateLayers(state.currentWorkflow.nodes, newEdges),
+            edges: newEdges,
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              nodes: calculateLayers(state.currentWorkflow.nodes, newEdges),
-              edges: newEdges,
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
@@ -261,35 +402,45 @@ export const useWorkflowStore = create(
           const newEdges = state.currentWorkflow.edges.map((edge) =>
             edge.id === edgeId ? { ...edge, ...updates } : edge
           );
+          const updatedWorkflow = {
+            ...state.currentWorkflow,
+            edges: newEdges,
+            updatedAt: new Date().toISOString(),
+          };
           return {
-            currentWorkflow: {
-              ...state.currentWorkflow,
-              edges: newEdges,
-              updatedAt: new Date().toISOString(),
-            },
+            currentWorkflow: updatedWorkflow,
+            hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot,
           };
         });
       },
 
-      setNodes: (nodes) => {
-        set((state) => ({
-          currentWorkflow: {
+      setNodes: (nodes, markDirty = true) => {
+        set((state) => {
+          const updatedWorkflow = {
             ...state.currentWorkflow,
             nodes: calculateLayers(nodes, state.currentWorkflow.edges),
             updatedAt: new Date().toISOString(),
-          },
-        }));
+          };
+          return {
+            currentWorkflow: updatedWorkflow,
+            ...(markDirty ? { hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot } : {}),
+          };
+        });
       },
 
-      setEdges: (edges) => {
-        set((state) => ({
-          currentWorkflow: {
+      setEdges: (edges, markDirty = true) => {
+        set((state) => {
+          const updatedWorkflow = {
             ...state.currentWorkflow,
             nodes: calculateLayers(state.currentWorkflow.nodes, edges),
             edges,
             updatedAt: new Date().toISOString(),
-          },
-        }));
+          };
+          return {
+            currentWorkflow: updatedWorkflow,
+            ...(markDirty ? { hasUnsavedChanges: getWorkflowSnapshot(updatedWorkflow) !== state.baseWorkflowSnapshot } : {}),
+          };
+        });
       },
 
       // ─── Execution ─────────────────────────────────────────────
@@ -555,6 +706,8 @@ export const useWorkflowStore = create(
                 currentWorkflow: data.workflow,
                 workflows: state.workflows.map((w) => (w.id === workflow.id ? data.workflow : w)),
                 isSaving: false,
+                hasUnsavedChanges: false,
+                baseWorkflowSnapshot: getWorkflowSnapshot(data.workflow),
               }));
 
               // Emit real-time update
@@ -578,6 +731,8 @@ export const useWorkflowStore = create(
                   currentWorkflow: data.workflow,
                   workflows: state.workflows.map((w) => (w.id === workflow.id ? data.workflow : w)),
                   isSaving: false,
+                  hasUnsavedChanges: false,
+                  baseWorkflowSnapshot: getWorkflowSnapshot(data.workflow),
                 }));
                 toast.success('Workflow saved (as new)');
                 return { success: true, workflow: data.workflow };
@@ -591,6 +746,8 @@ export const useWorkflowStore = create(
               currentWorkflow: data.workflow,
               workflows: state.workflows.map((w) => (w.id === workflow.id ? data.workflow : w)),
               isSaving: false,
+              hasUnsavedChanges: false,
+              baseWorkflowSnapshot: getWorkflowSnapshot(data.workflow),
             }));
             
             // Emit real-time update
@@ -690,12 +847,16 @@ export const useWorkflowStore = create(
       },
 
       openWorkflow: (workflow) => {
+        // openWorkflow still sets currentWorkflow (used by WorkflowCanvas)
+        // The tab is opened separately via openWorkflowTab from the sidebar
         set({
           currentWorkflow: workflow,
           selectedNode: null,
           showConfigPanel: false,
           isExecuting: false,
           executionResult: null,
+          hasUnsavedChanges: false,
+          baseWorkflowSnapshot: getWorkflowSnapshot(workflow),
         });
       },
 
@@ -717,6 +878,7 @@ export const useWorkflowStore = create(
       // The list is always fetched fresh from the server on load.
       // Persisting it caused deleted/renamed workflows to "come back"
       // because the stale localStorage copy would overwrite fresh state.
+      // _workflowTabsById is a Map — cannot be serialized by Zustand persist.
       partialize: (state) => ({
         currentWorkflow: state.currentWorkflow,
       }),

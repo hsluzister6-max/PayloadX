@@ -1,15 +1,14 @@
 node_modules
-dist
+npm-debug.log
+.env
+.env.local
 .git
 .gitignore
 README.md
-# Exclude TypeScript-only source files (not used by src/server.js)
-tsconfig.json
-src/index.ts
-src/controllers
-src/models
-src/routes/*.ts
-src/middleware
-src/utils/passport.ts
-src/types
-src/services
+Dockerfile
+docker-compose.yml
+.dockerignore
+app
+next.config.mjs
+public
+server.js

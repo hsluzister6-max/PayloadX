@@ -1,15 +1,17 @@
 {
   "name": "payloadx-backend",
   "version": "1.0.0",
-  "description": "PayloadX API Server (Express.js)",
+  "description": "PayloadX API Server (Express.js + TypeScript)",
   "type": "module",
   "private": true,
   "main": "src/server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "tsx watch src/server.js",
     "start": "node src/server.js",
-    "build": "echo 'No build step needed for plain JS backend'",
-    "lint": "eslint src/**/*.js"
+    "build": "tsc",
+    "build:clean": "rimraf dist && tsc",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "axios": "^1.15.1",
@@ -29,8 +31,20 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20",
-    "eslint": "^8"
+    "@types/nodemailer": "^6.4.15",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.6",
+    "@types/uuid": "^9.0.8",
+    "eslint": "^8",
+    "rimraf": "^5.0.7",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4"
   },
   "engines": {
     "node": ">=18.0.0"

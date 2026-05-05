@@ -3,14 +3,16 @@ import { useAuthStore } from '@/store/authStore';
 import { useServerConfigStore } from '@/store/serverConfigStore';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/api/shell';
 import toast from 'react-hot-toast';
 import PayloadX from '../core/logo';
 import ForgotPassword from './ForgotPassword';
 
 export default function AuthPage() {
   const { serverMode, customUrl, setServerMode, setCustomUrl } = useServerConfigStore();
-  // If no server has been chosen yet, show the server-select screen first
-  const [mode, setMode] = useState(serverMode ? 'login' : 'server-select'); // 'server-select' | 'login' | 'signup' | 'forgot-password' | 'verify-signup'
+  // Default to 'login' to avoid showing the server selection screen to existing users
+  const [mode, setMode] = useState('login');
+  const [isInitialized, setIsInitialized] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', otp: '' });
   const [localUrl, setLocalUrl] = useState(customUrl || 'http://localhost:3001');
   const [isTestingUrl, setIsTestingUrl] = useState(false);
@@ -48,6 +50,25 @@ export default function AuthPage() {
       setIsTestingUrl(false);
     }
   };
+
+  // Sync mode once server configuration is hydrated from storage
+  useEffect(() => {
+    if (!isInitialized) {
+      const syncInitialMode = (state) => {
+        setMode(state.serverMode ? 'login' : 'server-select');
+        setIsInitialized(true);
+      };
+
+      if (useServerConfigStore.persist.hasHydrated()) {
+        syncInitialMode(useServerConfigStore.getState());
+      } else {
+        const unsub = useServerConfigStore.persist.onFinishHydration((state) => {
+          syncInitialMode(state);
+        });
+        return unsub;
+      }
+    }
+  }, [isInitialized]);
 
   const processingOAuth = useRef(false);
 
@@ -278,9 +299,12 @@ export default function AuthPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                       </svg>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div onClick={(e) => {
+                      e.stopPropagation();
+                      open("https://payload-x-landing.vercel.app/docs");
+                    }} className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white mb-0.5">Self-Hosted / Local</p>
-                      <p className="text-[12px] text-slate-500">Connect to your own backend running via Docker or Node.js.</p>
+                      <p className="text-[12px] text-slate-500">Full data ownership. Connect to your private Docker instance.</p>
                     </div>
                     <svg className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -312,9 +336,18 @@ export default function AuthPage() {
                       ) : 'Connect'}
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-600">Make sure your server is running before connecting.</p>
                 </div>
               </div>
+
+              {/* Back to login if already configured */}
+              {serverMode && (
+                <button
+                  onClick={() => setMode('login')}
+                  className="w-full text-[11px] text-slate-500 hover:text-white font-bold uppercase tracking-[0.1em] transition-colors pt-2"
+                >
+                  ← Back to login
+                </button>
+              )}
             </div>
           ) : mode === 'forgot-password' ? (
             <ForgotPassword onBack={() => setMode('login')} />
@@ -478,9 +511,9 @@ export default function AuthPage() {
               <div className="text-center pt-2">
                 <button
                   onClick={() => setMode('server-select')}
-                  className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+                  className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors font-medium"
                 >
-                  Connected to: <span className="text-slate-400">{serverMode === 'local' ? localUrl : 'PayloadX Cloud'}</span> · Change
+                  Running on <span className="text-slate-400 font-bold">{serverMode === 'local' ? localUrl : 'PayloadX Cloud'}</span> · <span className="underline decoration-slate-800 underline-offset-2 hover:decoration-slate-400 transition-all">Change Server</span>
                 </button>
               </div>
 

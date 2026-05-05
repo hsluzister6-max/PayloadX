@@ -1,45 +1,126 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Docs.module.css";
 import PayloadX from "./components/core/Logo";
-import { ChevronRight, Terminal, Cpu, Layers, Github } from "lucide-react";
+import { ChevronRight, Terminal, Cpu, Layers, Github, Zap } from "lucide-react";
 
-export default function Docs({ onBack }) {
-  const [activeSection, setActiveSection] = useState("setup");
+export default function Docs() {
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState("dockerLocal");
 
   const sections = {
-    setup: (
+    dockerLocal: (
       <div className={styles.section}>
-        <h1 className={styles.metallicTitle}>Getting Started</h1>
+        <h1 className={styles.metallicTitle}>Private Local Setup</h1>
         <p className={styles.text}>
-          PayloadX is a high-performance, open-source API Studio built with Rust and React. 
-          Follow these detailed steps to set up the full development suite on your local machine.
+          PayloadX is designed for <strong>data ownership</strong>. Instead of trusting a cloud provider,
+          you run the backend engine on your own infrastructure using Docker.
+          Your API requests, keys, and environment variables stay in <strong>your</strong> database.
         </p>
+
+        <div className={styles.sectionTitle}>1. Environment Variables (.env.example)</div>
+        <p className={styles.text}>
+          PayloadX requires a few key configuration values. Create a local <code>.env</code> file
+          or prepare these variables for your Docker run command:
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>.env.example</span></div>
+          <code>
+            MONGODB_URI=mongodb://your-db-host:27017/payloadx<br />
+            JWT_SECRET=your-32-char-secret-key<br />
+            PORT=3001<br />
+            CORS_ORIGIN=*<br />
+            <br />
+            # Firebase Admin SDK (Required for Workflows)<br />
+            FIREBASE_PROJECT_ID=your-project-id<br />
+            FIREBASE_CLIENT_EMAIL=your-service-account-email<br />
+            FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."<br />
+            <br />
+            # Optional: Email (SMTP)<br />
+            SMTP_HOST=smtp.gmail.com<br />
+            SMTP_USER=your-email@gmail.com<br />
+            SMTP_PASS=your-app-password
+          </code>
+        </div>
         
-        <div className={styles.sectionTitle}>1. Environment Prerequisites</div>
-        <p className={styles.text}>You'll need the following toolchains installed:</p>
-        <div className={styles.featGrid}>
-          <div className={styles.badge}>Node.js v20.x (LTS)</div>
-          <div className={styles.badge}>Rustc 1.75+ & Cargo</div>
-          <div className={styles.badge}>Tauri CLI (npm install -g @tauri-apps/cli)</div>
+        <div className={styles.badge} style={{ marginTop: '1rem', marginBottom: '1rem', width: '100%', background: 'rgba(245, 158, 11, 0.05)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.1)' }}>
+          🔥 <strong>Why Firebase?</strong> While PayloadX uses MongoDB for primary storage, it requires a Firebase Service Account key to securely authenticate users and coordinate background execution tasks—which is essential for running <strong>Workflows</strong> locally.
         </div>
 
-        <div className={styles.sectionTitle}>2. Repository Initialization</div>
+        <div className={styles.sectionTitle}>2. Pull the Registry Image</div>
+        <div className={styles.codeBlock}>
+          <code>docker pull sundanpatyadsharma/payloadx-backend:latest</code>
+        </div>
+
+        <div className={styles.sectionTitle}>3. Execute the Container</div>
+        <p className={styles.text}>
+          Start the backend by mapping port 3001 and passing your environment configuration.
+        </p>
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>Shell</span></div>
-          <code>git clone https://github.com/Sundanpatyad/api-test.git<br/>cd api-test<br/>npm install</code>
+          <code>
+            docker run -d \<br />
+            &nbsp;&nbsp;--name payloadx-api \<br />
+            &nbsp;&nbsp;-p 3001:3001 \<br />
+            &nbsp;&nbsp;-e MONGODB_URI="mongodb://host.docker.internal:27017/payloadx" \<br />
+            &nbsp;&nbsp;-e JWT_SECRET="your_secret_key" \<br />
+            &nbsp;&nbsp;sundanpatyadsharma/payloadx-backend:latest
+          </code>
         </div>
 
-        <div className={styles.sectionTitle}>3. Environment Configuration</div>
+        <div className={styles.sectionTitle}>4. Connect the Desktop App</div>
         <p className={styles.text}>
-          Create a <code>.env</code> file in <code>apps/backend</code> with these keys:
+          Open the PayloadX Desktop Client. On the first launch, select <strong>"Self-Hosted / Local"</strong>
+          and enter <code>http://localhost:3001</code>. All your data will now be synced to your private local instance.
+        </p>
+
+        <div className={styles.badge} style={{ marginTop: '2rem', width: '100%' }}>
+          🛡️ Privacy First: PayloadX Cloud has no access to your local data.
+        </div>
+      </div>
+    ),
+    manualSetup: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Manual Local Setup</h1>
+        <p className={styles.text}>
+          If you cannot use Docker, you can run the PayloadX backend directly on your machine
+          using Node.js and MongoDB.
+        </p>
+
+        <div className={styles.sectionTitle}>1. Install Prerequisites</div>
+        <p className={styles.text}>
+          Ensure you have <strong>Node.js (v18+)</strong> and <strong>MongoDB</strong> installed
+          locally or have access to a remote MongoDB Atlas cluster.
+        </p>
+
+        <div className={styles.sectionTitle}>2. Clone and Install</div>
+        <div className={styles.codeBlock}>
+          <code>
+            git clone https://github.com/hsluzister6-max/PayloadX.git<br />
+            cd PayloadX/apps/backend<br />
+            npm install
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>3. Configuration</div>
+        <p className={styles.text}>
+          Create a <code>.env</code> file in <code>apps/backend</code> with your MongoDB connection string:
         </p>
         <div className={styles.codeBlock}>
           <code>
-            PORT=3001<br/>
-            MONGODB_URI=your_mongodb_connection_string<br/>
-            JWT_SECRET=your_secure_random_secret<br/>
-            OPENAI_API_KEY=optional_for_ai_features
+            MONGODB_URI=mongodb://localhost:27017/payloadx<br />
+            JWT_SECRET=your_secret_key<br />
+            PORT=3001
           </code>
+        </div>
+
+        <div className={styles.sectionTitle}>4. Start the Engine</div>
+        <div className={styles.codeBlock}>
+          <code>npm start</code>
+        </div>
+
+        <div className={styles.badge} style={{ marginTop: '2rem', width: '100%', background: 'rgba(49, 120, 198, 0.05)', color: '#3178c6', borderColor: 'rgba(49, 120, 198, 0.1)' }}>
+          💡 Tip: Use MongoDB Atlas for a free, managed cloud database if you don't want to install MongoDB locally.
         </div>
       </div>
     ),
@@ -52,52 +133,20 @@ export default function Docs({ onBack }) {
 
         <div className={styles.sectionTitle}>Desktop Client (apps/desktop)</div>
         <p className={styles.text}>
-          A Tauri-powered application. The frontend is built with React and TailwindCSS. 
+          A Tauri-powered application. The frontend is built with React and TailwindCSS.
           The backend logic (Request execution engine) is written in <strong>Rust</strong> for maximum throughput.
         </p>
 
         <div className={styles.sectionTitle}>Cloud Service (apps/backend)</div>
         <p className={styles.text}>
-          A Node.js/Express service that handles user authentication, workspace synchronization, 
+          A Node.js/Express service that handles user authentication, workspace synchronization,
           and team management via MongoDB.
         </p>
 
         <div className={styles.sectionTitle}>Realtime Engine (apps/realtime)</div>
         <p className={styles.text}>
-          A specialized Socket.IO server that synchronizes cursor positions, live request edits, 
+          A specialized Socket.IO server that synchronizes cursor positions, live request edits,
           and team presence in real-time.
-        </p>
-      </div>
-    ),
-    running: (
-      <div className={styles.section}>
-        <h1 className={styles.metallicTitle}>Development Workflow</h1>
-        
-        <div className={styles.sectionTitle}>Development Mode</div>
-        <p className={styles.text}>To start all services in development mode:</p>
-        <div className={styles.codeBlock}>
-          <div className={styles.codeHeader}><span>Root Directory</span></div>
-          <code>npm run dev</code>
-        </div>
-
-        <div className={styles.sectionTitle}>Tauri Desktop Client</div>
-        <p className={styles.text}>Run the desktop UI separately if needed:</p>
-        <div className={styles.codeBlock}>
-          <code>npm run desktop</code>
-        </div>
-
-        <div className={styles.sectionTitle}>Building for Production</div>
-        <p className={styles.text}>Generate a production bundle for your current OS:</p>
-        <div className={styles.codeBlock}>
-          <div className={styles.codeHeader}><span>apps/desktop</span></div>
-          <code>npm run tauri build</code>
-        </div>
-
-        <div className={styles.sectionTitle}>Contribution Guidelines</div>
-        <p className={styles.text}>
-          1. Fork the repo and create a feature branch.<br/>
-          2. Ensure all code follows the established ESLint patterns.<br/>
-          3. Submit a PR with a clear description of your changes.
         </p>
       </div>
     ),
@@ -105,19 +154,19 @@ export default function Docs({ onBack }) {
       <div className={styles.section}>
         <h1 className={styles.metallicTitle}>Project Structure</h1>
         <p className={styles.text}>
-          PayloadX follows a clean, modular architecture within an NPM workspace-managed monorepo. 
+          PayloadX follows a clean, modular architecture within an NPM workspace-managed monorepo.
           This ensures seamless dependency sharing and atomic deployments across all sub-applications.
         </p>
 
         <div className={styles.sectionTitle}>High-Level Overview</div>
         <div className={styles.codeBlock}>
           <code>
-            .github/workflows/  # CI/CD pipelines for automated testing & releases<br/>
-            apps/<br/>
-            ├── backend/        # Primary Node.js/Express API<br/>
-            ├── desktop/        # Desktop Client (Tauri + React)<br/>
-            ├── landing/        # Marketing & Documentation website (Vite/React)<br/>
-            └── realtime/       # Dedicated Socket.IO presence & sync server<br/>
+            .github/workflows/  # CI/CD pipelines for automated testing & releases<br />
+            apps/<br />
+            ├── backend/        # Primary Node.js/Express API<br />
+            ├── desktop/        # Desktop Client (Tauri + React)<br />
+            ├── landing/        # Marketing & Documentation website (Vite/React)<br />
+            └── realtime/       # Dedicated Socket.IO presence & sync server<br />
             package.json        # Workspace configuration
           </code>
         </div>
@@ -128,18 +177,18 @@ export default function Docs({ onBack }) {
         </p>
         <div className={styles.codeBlock}>
           <code>
-            apps/desktop/<br/>
-            ├── src/<br/>
-            │   ├── components/ # Atomic UI components (e.g., Modals, Workspace)<br/>
-            │   ├── hooks/      # Shared React hooks (useKeyboardShortcuts, etc.)<br/>
-            │   ├── lib/        # API clients, IPC bridges (rust.js)<br/>
-            │   └── store/      # Zustand state managers (toastStore, requestStore)<br/>
-            └── src-tauri/<br/>
-                ├── src/<br/>
-                │   ├── commands/ # Native Rust implementations for hot paths<br/>
-                │   ├── core/     # Networking and protocol execution engine<br/>
-                │   └── utils/    # High-performance parsers (postman.rs, env_tools.rs)<br/>
-                └── Cargo.toml    # Rust dependencies
+            apps/desktop/<br />
+            ├── src/<br />
+            │   ├── components/ # Atomic UI components (e.g., Modals, Workspace)<br />
+            │   ├── hooks/      # Shared React hooks (useKeyboardShortcuts, etc.)<br />
+            │   ├── lib/        # API clients, IPC bridges (rust.js)<br />
+            │   └── store/      # Zustand state managers (toastStore, requestStore)<br />
+            └── src-tauri/<br />
+            ├── src/<br />
+            │   ├── commands/ # Native Rust implementations for hot paths<br />
+            │   ├── core/     # Networking and protocol execution engine<br />
+            │   └── utils/    # High-performance parsers (postman.rs, env_tools.rs)<br />
+            └── Cargo.toml    # Rust dependencies
           </code>
         </div>
 
@@ -149,11 +198,11 @@ export default function Docs({ onBack }) {
         </p>
         <div className={styles.codeBlock}>
           <code>
-            apps/backend/<br/>
-            ├── config/      # Environment & DB connection setup<br/>
-            ├── controllers/ # Request handlers and business logic<br/>
-            ├── middlewares/ # Authentication (JWT) and validation<br/>
-            ├── models/      # Mongoose schemas (User, Team, Project, Request)<br/>
+            apps/backend/<br />
+            ├── config/      # Environment & DB connection setup<br />
+            ├── controllers/ # Request handlers and business logic<br />
+            ├── middlewares/ # Authentication (JWT) and validation<br />
+            ├── models/      # Mongoose schemas (User, Team, Project, Request)<br />
             └── routes/      # Express API route definitions
           </code>
         </div>
@@ -164,8 +213,8 @@ export default function Docs({ onBack }) {
         </p>
         <div className={styles.codeBlock}>
           <code>
-            apps/realtime/<br/>
-            ├── server.js    # Socket connection and room broadcasting logic<br/>
+            apps/realtime/<br />
+            ├── server.js    # Socket connection and room broadcasting logic<br />
             └── package.json # Minimal dependencies for speed
           </code>
         </div>
@@ -312,14 +361,14 @@ export default function Docs({ onBack }) {
 
         <div className={styles.sectionTitle}>REST APIs</div>
         <p className={styles.text}>
-          Full support for standard HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.). 
-          Includes advanced features like automatic header generation, multi-part form data, 
+          Full support for standard HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.).
+          Includes advanced features like automatic header generation, multi-part form data,
           raw JSON/XML body editors, and Bearer/Basic/API Key authentication handlers.
         </p>
 
         <div className={styles.sectionTitle}>WebSockets (WS)</div>
         <p className={styles.text}>
-          Establish long-lived, bi-directional WebSocket connections. You can send messages manually, 
+          Establish long-lived, bi-directional WebSocket connections. You can send messages manually,
           listen for incoming streams, and view connection lifecycle events in real-time.
         </p>
         <div className={styles.featGrid}>
@@ -330,7 +379,7 @@ export default function Docs({ onBack }) {
 
         <div className={styles.sectionTitle}>Socket.IO (SIO)</div>
         <p className={styles.text}>
-          Native support for Socket.IO clients. You can specify event names to emit payloads, 
+          Native support for Socket.IO clients. You can specify event names to emit payloads,
           and subscribe to specific event listeners to filter incoming real-time traffic.
         </p>
       </div>
@@ -339,7 +388,7 @@ export default function Docs({ onBack }) {
       <div className={styles.section}>
         <h1 className={styles.metallicTitle}>Environment Variables</h1>
         <p className={styles.text}>
-          Managing different environments (e.g., Development, Staging, Production) is crucial for API development. 
+          Managing different environments (e.g., Development, Staging, Production) is crucial for API development.
           PayloadX allows you to define key-value pairs and inject them dynamically into your requests.
         </p>
 
@@ -349,16 +398,16 @@ export default function Docs({ onBack }) {
         </p>
         <div className={styles.codeBlock}>
           <code>
-            // URL injection<br/>
-            {'{'}{'{'}BASE_URL{'}'}{'}'}/api/v1/users<br/><br/>
-            // Header injection<br/>
+            // URL injection<br />
+            {'{'}{'{'}BASE_URL{'}'}{'}'}/api/v1/users<br /><br />
+            // Header injection<br />
             Authorization: Bearer {'{'}{'{'}API_TOKEN{'}'}{'}'}
           </code>
         </div>
 
         <div className={styles.sectionTitle}>Rust-Powered Resolution</div>
         <p className={styles.text}>
-          Variable interpolation is handled by a heavily optimized Rust regex compiler. 
+          Variable interpolation is handled by a heavily optimized Rust regex compiler.
           This ensures that even massive JSON payloads with hundreds of nested variables are resolved in less than a millisecond before the request is dispatched.
         </p>
       </div>
@@ -367,13 +416,13 @@ export default function Docs({ onBack }) {
       <div className={styles.section}>
         <h1 className={styles.metallicTitle}>Visual Workflows</h1>
         <p className={styles.text}>
-          The Visual Workflow Engine allows you to chain multiple APIs together to test complex multi-step scenarios, 
+          The Visual Workflow Engine allows you to chain multiple APIs together to test complex multi-step scenarios,
           all within a drag-and-drop canvas.
         </p>
 
         <div className={styles.sectionTitle}>Node-Based Execution</div>
         <p className={styles.text}>
-          Drag requests from your sidebar onto the canvas. Connect the output of one request to the input of another. 
+          Drag requests from your sidebar onto the canvas. Connect the output of one request to the input of another.
           PayloadX automatically calculates the execution order using Kahn's Topological Sort algorithm.
         </p>
 
@@ -385,7 +434,7 @@ export default function Docs({ onBack }) {
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>Example Data Pass</span></div>
           <code>
-            Node A (Login) -&gt; extracts '$.data.token'<br/>
+            Node A (Login) -&gt; extracts '$.data.token'<br />
             Node B (Get Profile) -&gt; uses '{'{'}NodeA.token{'}'}' in headers
           </code>
         </div>
@@ -483,10 +532,10 @@ export default function Docs({ onBack }) {
       <div className={styles.scanlines} aria-hidden />
 
       <nav className={styles.nav}>
-        <div onClick={onBack} className={styles.logoName} style={{ display: 'flex', alignItems: 'center' }}>
-           <PayloadX size="28px" fontSize="10px" />
-           <span style={{ marginLeft: '10px' }} className="metallic-app-name py-2 px-1 text-2xl">PayloadX</span>
-           <span style={{ marginLeft: '8px', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#5a6070', border: '1px solid rgba(255,255,255,0.05)' }}>BETA</span>
+        <div onClick={() => navigate("/")} className={styles.logoName} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+          <PayloadX size="28px" fontSize="10px" />
+          <span style={{ marginLeft: '10px' }} className="metallic-app-name py-2 px-1 text-2xl">PayloadX</span>
+          <span style={{ marginLeft: '8px', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#5a6070', border: '1px solid rgba(255,255,255,0.05)' }}>BETA</span>
         </div>
         <div className={styles.navSpacer} />
         <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer" className={styles.navLink}>
@@ -497,80 +546,82 @@ export default function Docs({ onBack }) {
       <main className={styles.container}>
         <aside className={styles.sidebar}>
           <div className={styles.sidebarSection}>
-            <span className={styles.sidebarTitle}>Features & Guides</span>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'setup' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('setup')}
+            <span className={styles.sidebarTitle}>System Architecture</span>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'dockerLocal' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('dockerLocal')}
             >
-              Quick Start
+              <Cpu size={14} />
+              Docker Setup
             </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'protocols' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('protocols')}
-            >
-              Protocols
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'environments' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('environments')}
-            >
-              Environments
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'workflows' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('workflows')}
-            >
-              Visual Workflows
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'shortcuts' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('shortcuts')}
-            >
-              Keyboard Shortcuts
-            </div>
-          </div>
 
-          <div className={styles.sidebarSection}>
-            <span className={styles.sidebarTitle}>Developer Guide</span>
-            <div 
+            <div
               className={`${styles.sidebarLink} ${activeSection === 'architecture' ? styles.sidebarLinkActive : ''}`}
               onClick={() => setActiveSection('architecture')}
             >
-              Architecture
+              <Layers size={14} />
+              Deep Dive
             </div>
-            <div 
+            <div
               className={`${styles.sidebarLink} ${activeSection === 'structure' ? styles.sidebarLinkActive : ''}`}
               onClick={() => setActiveSection('structure')}
             >
-              Project Structure
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'running' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('running')}
-            >
-              Local Execution
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'performance' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('performance')}
-            >
-              Performance
-            </div>
-            <div 
-              className={`${styles.sidebarLink} ${activeSection === 'rust' ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setActiveSection('rust')}
-            >
-              Rust Core
+              <Terminal size={14} />
+              File System
             </div>
           </div>
 
           <div className={styles.sidebarSection}>
-            <span className={styles.sidebarTitle}>Resources</span>
+            <span className={styles.sidebarTitle}>Engine Core</span>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'performance' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('performance')}
+            >
+              <Zap size={14} />
+              Performance
+            </div>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'rust' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('rust')}
+            >
+              <Cpu size={14} />
+              Rust Core
+            </div>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'protocols' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('protocols')}
+            >
+              <Zap size={14} />
+              Protocols
+            </div>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'environments' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('environments')}
+            >
+              <Layers size={14} />
+              Environments
+            </div>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'workflows' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('workflows')}
+            >
+              <ChevronRight size={14} />
+              Workflows
+            </div>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'shortcuts' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('shortcuts')}
+            >
+              <Terminal size={14} />
+              Shortcuts
+            </div>
+          </div>
+
+          <div className={styles.sidebarSection}>
+            <span className={styles.sidebarTitle}>Terminal</span>
             <a href="https://github.com/Sundanpatyad/api-test/issues" target="_blank" className={styles.sidebarLink}>
+              <Github size={14} />
               Report Issue
-            </a>
-            <a href="https://github.com/Sundanpatyad/api-test/discussions" target="_blank" className={styles.sidebarLink}>
-              Community
             </a>
           </div>
         </aside>
@@ -579,6 +630,22 @@ export default function Docs({ onBack }) {
           {sections[activeSection]}
         </div>
       </main>
+
+      <div className={styles.statusBar}>
+        <div className={styles.statusItem}>
+          <div className={styles.statusDot} />
+          System Online
+        </div>
+        <div className={styles.statusItem}>
+          Protocol: HTTPS/WSS
+        </div>
+        <div className={styles.statusItem}>
+          Engine: Rust v1.75
+        </div>
+        <div className={styles.statusItem} style={{ marginLeft: 'auto' }}>
+          PayloadX Terminal v1.0.0
+        </div>
+      </div>
     </div>
   );
 }

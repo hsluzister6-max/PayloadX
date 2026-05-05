@@ -58,6 +58,7 @@ function WorkflowCanvasInner() {
     isPaused,
     pauseExecution,
     resumeExecution,
+    hasUnsavedChanges,
   } = useWorkflowStore();
 
   const [nodes, setNodes] = useNodesState(currentWorkflow.nodes);
@@ -68,9 +69,13 @@ function WorkflowCanvasInner() {
   const { currentProject } = useProjectStore();
   const { currentTeam } = useTeamStore();
   const isInternalUpdate = useRef(false);
+  const isDirtyNodeUpdate = useRef(false);
+  const isDirtyEdgeUpdate = useRef(false);
 
   const onNodesChange = useCallback(
     (changes) => {
+      const isDirty = changes.some((c) => c.type !== 'dimensions' && c.type !== 'select');
+      if (isDirty) isDirtyNodeUpdate.current = true;
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
@@ -78,6 +83,8 @@ function WorkflowCanvasInner() {
 
   const onEdgesChange = useCallback(
     (changes) => {
+      const isDirty = changes.some((c) => c.type !== 'select');
+      if (isDirty) isDirtyEdgeUpdate.current = true;
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
     [setEdges]
@@ -86,12 +93,16 @@ function WorkflowCanvasInner() {
   // Sync Local -> Store (Debounced or triggered on change)
   useEffect(() => {
     if (isInternalUpdate.current) return;
-    updateStoreNodes(nodes);
+    const isDirty = isDirtyNodeUpdate.current;
+    updateStoreNodes(nodes, isDirty);
+    isDirtyNodeUpdate.current = false;
   }, [nodes, updateStoreNodes]);
 
   useEffect(() => {
     if (isInternalUpdate.current) return;
-    updateStoreEdges(edges);
+    const isDirty = isDirtyEdgeUpdate.current;
+    updateStoreEdges(edges, isDirty);
+    isDirtyEdgeUpdate.current = false;
   }, [edges, updateStoreEdges]);
 
   // Sync Store -> Local (Only when store actually changes externally)
@@ -489,6 +500,15 @@ function WorkflowCanvasInner() {
             className="bg-transparent text-[var(--text-primary)] font-bold text-[13px] focus:outline-none min-w-[240px] placeholder:text-surface-600"
             placeholder="Name your workflow..."
           />
+          {hasUnsavedChanges && (
+            <div
+              className="flex items-center gap-1 ml-1"
+              title="Unsaved changes"
+            >
+              <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_6px_rgba(251,146,60,0.7)] animate-pulse" />
+              <span className="text-[9px] font-bold text-orange-400 uppercase tracking-wider">Unsaved</span>
+            </div>
+          )}
         </div>
 
         {/* Action Controls */}
@@ -510,10 +530,14 @@ function WorkflowCanvasInner() {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-surface-2 text-[var(--text-primary)] hover:bg-surface-3 rounded-lg transition-all font-bold text-[11px] uppercase tracking-wide border border-transparent hover:border-[var(--border-2)] disabled:opacity-50"
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all font-bold text-[11px] uppercase tracking-wide disabled:opacity-50 ${
+              hasUnsavedChanges
+                ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40 hover:bg-orange-500/30 shadow-[0_0_10px_rgba(251,146,60,0.2)]'
+                : 'bg-surface-2 text-[var(--text-primary)] hover:bg-surface-3 border border-transparent hover:border-[var(--border-2)]'
+            }`}
           >
             {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save*' : 'Save'}
           </button>
           
           <button

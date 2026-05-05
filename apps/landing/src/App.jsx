@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { Routes, Route, Link } from "react-router-dom";
 import styles from "./App.module.css";
-import { Zap, Lock, Users, Code, Download } from 'lucide-react';
+import { Zap, Lock, Users, Code, Download, Server } from 'lucide-react';
 import { FaApple, FaWindows, FaLinux } from 'react-icons/fa6';
 import PayloadX from "./components/core/Logo";
 
@@ -36,7 +37,6 @@ import Docs from "./Docs";
 export default function App() {
   const [active, setActive] = useState(null);
   const [tick, setTick] = useState(0);
-  const [view, setView] = useState("hero"); // "hero" or "docs"
   const [userOS, setUserOS] = useState({ name: "Windows", link: `${STATIC_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> });
 
   useEffect(() => {
@@ -58,10 +58,15 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  if (view === "docs") {
-    return <Docs onBack={() => setView("hero")} />;
-  }
+  return (
+    <Routes>
+      <Route path="/" element={<Hero active={active} setActive={setActive} userOS={userOS} VERSION={VERSION} />} />
+      <Route path="/docs" element={<Docs />} />
+    </Routes>
+  );
+}
 
+function Hero({ active, setActive, userOS, VERSION }) {
   return (
     <div className={styles.root}>
       {/* scanline overlay */}
@@ -79,7 +84,7 @@ export default function App() {
           <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '600', opacity: 0.5, marginLeft: '4px' }}>v{VERSION}</span>
         </div>
         <div className={styles.navSpacer} />
-        <span onClick={() => setView("docs")} className={styles.navLink}>Docs</span>
+        <Link to="/docs" className={styles.navLink}>Docs</Link>
       </nav>
 
       {/* MAIN GRID */}
@@ -114,6 +119,10 @@ export default function App() {
                 {userOS.link === "#" ? `Coming Soon for ${userOS.name}` : `Download for ${userOS.name}`}
               </span>
             </a>
+            <Link to="/docs" className={styles.btnSecondary}>
+              <Server size={18} />
+              Local Setup
+            </Link>
           </div>
 
           {/* TERMINAL PREVIEW */}
@@ -238,6 +247,37 @@ export default function App() {
                   </a>
                 );
               })}
+            </div>
+          </div>
+
+          {/* QUICK START SECTION */}
+          <div className={styles.setupCard}>
+            <div className={styles.setupHeader}>
+              <span className={styles.setupTitle}>PRIVATE SELF-HOSTED SETUP</span>
+              <Link to="/docs" className={styles.setupLink}>VIEW FULL DOCS →</Link>
+            </div>
+            <div className={styles.steps}>
+              <div className={styles.step}>
+                <span className={styles.stepNum}>01</span>
+                <div className={styles.stepContent}>
+                  <span className={styles.stepLabel}>PULL</span>
+                  <code>docker pull sundanpatyadsharma/payloadx-backend</code>
+                </div>
+              </div>
+              <div className={styles.step}>
+                <span className={styles.stepNum}>02</span>
+                <div className={styles.stepContent}>
+                  <span className={styles.stepLabel}>RUN</span>
+                  <code>docker run -d -p 3001:3001 -e MONGODB_URI="..." sundanpatyadsharma/payloadx-backend</code>
+                </div>
+              </div>
+              <div className={styles.step}>
+                <span className={styles.stepNum}>03</span>
+                <div className={styles.stepContent}>
+                  <span className={styles.stepLabel}>USE</span>
+                  <p>Connect Desktop App to http://localhost:3001</p>
+                </div>
+              </div>
             </div>
           </div>
 

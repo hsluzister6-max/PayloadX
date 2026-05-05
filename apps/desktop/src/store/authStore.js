@@ -30,7 +30,7 @@ export const useAuthStore = create(
           // payload can be { accessToken } or { code, redirectUri }
           const body = typeof payload === 'string' ? { accessToken: payload } : payload;
           const { data } = await api.post('/api/auth/google', body);
-          
+
           localStorage.setItem('payloadx_token', data.token);
           set({ user: data.user, token: data.token, isLoading: false });
           return { success: true };
@@ -83,7 +83,7 @@ export const useAuthStore = create(
         // 4. Clear all LocalStorage/SessionStorage
         localStorage.clear();
         sessionStorage.clear();
-        
+
         // 5. Reset all memory stores to initial state
         try {
           const { useCollectionStore } = await import('@/store/collectionStore');
@@ -110,7 +110,7 @@ export const useAuthStore = create(
         } catch (e) {
           console.error('[Logout] Store reset failed:', e);
         }
-        
+
         set({ user: null, token: null });
       },
 
@@ -132,7 +132,7 @@ export const useAuthStore = create(
           if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !navigator.onLine) {
             return;
           }
-          
+
           localStorage.removeItem('payloadx_token');
           set({ user: null, token: null });
         }
@@ -182,7 +182,7 @@ export const useAuthStore = create(
         try {
           const { data } = await api.post('/api/auth/verify-signup', { email, otp });
           const { user, token } = data;
-          
+
           localStorage.setItem('payloadx_token', token);
           set({ user, token, isLoading: false });
           return { success: true };

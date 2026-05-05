@@ -82,7 +82,7 @@ export default function LayoutV2({
   const [splitPercent, setSplitPercent] = useState(50);
 
   return (
-    <div 
+    <div
       className="v2-app"
       onDragOver={(e) => {
         e.preventDefault();
@@ -102,7 +102,7 @@ export default function LayoutV2({
       />
 
       {/* ── Body row ── */}
-      <div 
+      <div
         className="v2-body"
         onDragOver={(e) => {
           e.preventDefault();
@@ -146,7 +146,7 @@ export default function LayoutV2({
         )}
 
         {/* Main workspace */}
-        <div 
+        <div
           className="v2-workspace"
           onDragOver={(e) => {
             e.preventDefault();
@@ -241,8 +241,8 @@ export default function LayoutV2({
                           }
                         }}
                         className={`group flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
-                            ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)] relative after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-[color:var(--accent)]'
-                            : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)] opacity-80'
+                          ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)] relative after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-[color:var(--accent)]'
+                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)] opacity-80'
                           }`}
                       >
                         <span className={`text-[10px] font-bold tracking-wider ${methodColor} shrink-0`}>

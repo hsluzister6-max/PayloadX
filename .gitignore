@@ -9,3 +9,4 @@ target/
 .vercel/
 apps/backend/*.json
 !apps/backend/package.json
+!apps/backend/tsconfig.json
