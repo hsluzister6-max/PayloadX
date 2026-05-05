@@ -3,12 +3,12 @@ dist
 .git
 .gitignore
 README.md
-# Exclude TypeScript source files we created (not used by src/server.js)
+# Exclude TypeScript-only source files (not used by src/server.js)
 tsconfig.json
 src/index.ts
 src/controllers
 src/models
-src/routes
+src/routes/*.ts
 src/middleware
 src/utils/passport.ts
 src/types

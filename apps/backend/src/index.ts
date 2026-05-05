@@ -60,7 +60,7 @@ app.use('/api/workflows', workflowRoutes);
 // Socket.IO
 io.on('connection', (socket) => {
   console.log(`[Socket] Client connected: ${socket.id}`);
-  
+
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected: ${socket.id}`);
   });
