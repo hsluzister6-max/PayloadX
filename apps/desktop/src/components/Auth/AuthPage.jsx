@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { useServerConfigStore } from '@/store/serverConfigStore';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 import toast from 'react-hot-toast';
@@ -7,11 +8,46 @@ import PayloadX from '../core/logo';
 import ForgotPassword from './ForgotPassword';
 
 export default function AuthPage() {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot-password' | 'verify-signup'
+  const { serverMode, customUrl, setServerMode, setCustomUrl } = useServerConfigStore();
+  // If no server has been chosen yet, show the server-select screen first
+  const [mode, setMode] = useState(serverMode ? 'login' : 'server-select'); // 'server-select' | 'login' | 'signup' | 'forgot-password' | 'verify-signup'
   const [form, setForm] = useState({ name: '', email: '', password: '', otp: '' });
+  const [localUrl, setLocalUrl] = useState(customUrl || 'http://localhost:3001');
+  const [isTestingUrl, setIsTestingUrl] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, signup, loginWithGoogle, isLoading } = useAuthStore();
+
+  const handleSelectServer = async (selectedMode) => {
+    if (selectedMode === 'payloadx') {
+      setServerMode('payloadx');
+      setMode('login');
+    } else {
+      // For local, show the URL input — handled inline
+    }
+  };
+
+  const handleConfirmLocalUrl = async () => {
+    const url = localUrl.trim().replace(/\/$/, '');
+    if (!url) return toast.error('Please enter your backend URL');
+
+    setIsTestingUrl(true);
+    try {
+      const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        setCustomUrl(url);
+        setServerMode('local');
+        setMode('login');
+        toast.success('Connected to local server!');
+      } else {
+        toast.error(`Server returned ${response.status}. Check your URL.`);
+      }
+    } catch {
+      toast.error('Could not reach the server. Make sure it is running.');
+    } finally {
+      setIsTestingUrl(false);
+    }
+  };
 
   const processingOAuth = useRef(false);
 
@@ -196,7 +232,91 @@ export default function AuthPage() {
 
         {/* Form Container */}
         <div className="flex-1 flex flex-col justify-center px-10 lg:px-16 max-w-[440px] mx-auto w-full relative z-10">
-          {mode === 'forgot-password' ? (
+          {mode === 'server-select' ? (
+            <div className="space-y-8 animate-in">
+              {/* Heading */}
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold text-white tracking-tight leading-normal">Choose your server</h1>
+                <p className="text-slate-500 text-[13px]">Where is your PayloadX backend running?</p>
+              </div>
+
+              {/* PayloadX Cloud Option */}
+              <button
+                id="server-select-payloadx"
+                onClick={() => handleSelectServer('payloadx')}
+                className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 transition-all duration-200 text-left group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-semibold text-white">PayloadX Cloud</p>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">Recommended</span>
+                    </div>
+                    <p className="text-[12px] text-slate-500">Use the managed PayloadX server. No setup required.</p>
+                  </div>
+                  <svg className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Self-Hosted Option */}
+              <div className="space-y-3">
+                <button
+                  id="server-select-local"
+                  onClick={() => handleSelectServer('local-input')}
+                  className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 transition-all duration-200 text-left group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white mb-0.5">Self-Hosted / Local</p>
+                      <p className="text-[12px] text-slate-500">Connect to your own backend running via Docker or Node.js.</p>
+                    </div>
+                    <svg className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* Inline URL input for local server */}
+                <div className="space-y-2 px-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.1em]">Backend URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="local-server-url-input"
+                      className="flex-1 h-10 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-white placeholder:text-slate-700 focus:border-white/20 focus:bg-white/[0.04] outline-none transition-all duration-200 text-sm font-mono"
+                      type="url"
+                      placeholder="http://localhost:3001"
+                      value={localUrl}
+                      onChange={(e) => setLocalUrl(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConfirmLocalUrl()}
+                    />
+                    <button
+                      id="connect-local-server-btn"
+                      onClick={handleConfirmLocalUrl}
+                      disabled={isTestingUrl}
+                      className="h-10 px-4 btn-primary text-sm whitespace-nowrap"
+                    >
+                      {isTestingUrl ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : 'Connect'}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-600">Make sure your server is running before connecting.</p>
+                </div>
+              </div>
+            </div>
+          ) : mode === 'forgot-password' ? (
             <ForgotPassword onBack={() => setMode('login')} />
           ) : mode === 'verify-signup' ? (
             <div className="space-y-10 animate-in">
@@ -352,6 +472,16 @@ export default function AuthPage() {
                     {mode === 'login' ? 'Create an account' : 'Sign in'}
                   </button>
                 </p>
+              </div>
+
+              {/* Change Server Link */}
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => setMode('server-select')}
+                  className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+                >
+                  Connected to: <span className="text-slate-400">{serverMode === 'local' ? localUrl : 'PayloadX Cloud'}</span> · Change
+                </button>
               </div>
 
               {/* Creator Attribution */}

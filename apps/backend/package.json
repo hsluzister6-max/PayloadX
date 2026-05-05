@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "build": "echo 'No build step needed for plain JS backend'",
     "lint": "eslint src/**/*.js"
   },
   "dependencies": {

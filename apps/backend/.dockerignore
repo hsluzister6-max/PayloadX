@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+# Exclude TypeScript source files we created (not used by src/server.js)
+tsconfig.json
+src/index.ts
+src/controllers
+src/models
+src/routes
+src/middleware
+src/utils/passport.ts
+src/types
+src/services

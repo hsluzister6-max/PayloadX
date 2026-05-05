@@ -1,23 +1,31 @@
-
 import axios from 'axios';
-import { useSyncQueueStore } from '@/store/syncQueueStore';
+import { useServerConfigStore } from '@/store/serverConfigStore';
 
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const API_URL = import.meta.env.VITE_API_URL || 'https://payloadx-ykjd.onrender.com';
+const PAYLOADX_SERVER_URL = 'https://payloadx-ykjd.onrender.com';
+
+// Dynamically read the base URL from the persisted store each request
+const getBaseUrl = () => {
+  const { serverMode, customUrl } = useServerConfigStore.getState();
+  if (serverMode === 'local') {
+    return customUrl?.replace(/\/$/, '') || 'http://localhost:3001';
+  }
+  return PAYLOADX_SERVER_URL;
+};
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getBaseUrl(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Inject JWT token
+// Update baseURL on every request so it reflects the current saved config
 api.interceptors.request.use((config) => {
+  config.baseURL = getBaseUrl();
+
   const token = localStorage.getItem('payloadx_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
-
 
 // Handle 401
 api.interceptors.response.use(
