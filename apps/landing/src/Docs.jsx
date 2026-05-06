@@ -42,33 +42,56 @@ export default function Docs() {
             SMTP_PASS=your-app-password
           </code>
         </div>
-        
+
         <div className={styles.badge} style={{ marginTop: '1rem', marginBottom: '1rem', width: '100%', background: 'rgba(245, 158, 11, 0.05)', color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.1)' }}>
           🔥 <strong>Why Firebase?</strong> While PayloadX uses MongoDB for primary storage, it requires a Firebase Service Account key to securely authenticate users and coordinate background execution tasks—which is essential for running <strong>Workflows</strong> locally.
         </div>
 
-        <div className={styles.sectionTitle}>2. Pull the Registry Image</div>
+        <div className={styles.sectionTitle}>2. Docker Compose Setup</div>
+        <p className={styles.text}>
+          Create a <code>docker-compose.yml</code> file in the same folder as your <code>.env</code> file:
+        </p>
         <div className={styles.codeBlock}>
-          <code>docker pull sundanpatyadsharma/payloadx-backend:latest</code>
+          <div className={styles.codeHeader}><span>docker-compose.yml</span></div>
+          <code>
+            services:<br />
+            &nbsp;&nbsp;payloadx-backend:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;image: sundanpatyadsharma/payloadx-backend:latest<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;container_name: payloadx-backend<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;ports:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- "3001:3001"<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;env_file:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- .env<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;restart: unless-stopped
+          </code>
         </div>
 
-        <div className={styles.sectionTitle}>3. Execute the Container</div>
+        <div className={styles.sectionTitle}>3. Start the Backend</div>
         <p className={styles.text}>
-          Start the backend by mapping port 3001 and passing your environment configuration.
+          Run this command to automatically pull the image and start the server.
         </p>
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>Shell</span></div>
           <code>
-            docker run -d \<br />
-            &nbsp;&nbsp;--name payloadx-api \<br />
-            &nbsp;&nbsp;-p 3001:3001 \<br />
-            &nbsp;&nbsp;-e MONGODB_URI="mongodb://host.docker.internal:27017/payloadx" \<br />
-            &nbsp;&nbsp;-e JWT_SECRET="your_secret_key" \<br />
-            &nbsp;&nbsp;sundanpatyadsharma/payloadx-backend:latest
+            docker compose up -d
           </code>
         </div>
 
-        <div className={styles.sectionTitle}>4. Connect the Desktop App</div>
+        <div className={styles.sectionTitle}>4. Verify & Check Logs</div>
+        <p className={styles.text}>
+          Ensure everything is running smoothly or watch live logs:
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Shell</span></div>
+          <code>
+            # Check basic logs<br />
+            docker logs payloadx-backend<br /><br />
+            # Watch logs continuously<br />
+            docker logs -f payloadx-backend
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>5. Connect the Desktop App</div>
         <p className={styles.text}>
           Open the PayloadX Desktop Client. On the first launch, select <strong>"Self-Hosted / Local"</strong>
           and enter <code>http://localhost:3001</code>. All your data will now be synced to your private local instance.
@@ -538,9 +561,7 @@ export default function Docs() {
           <span style={{ marginLeft: '8px', fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', color: '#5a6070', border: '1px solid rgba(255,255,255,0.05)' }}>BETA</span>
         </div>
         <div className={styles.navSpacer} />
-        <a href="https://github.com/Sundanpatyad/api-test" target="_blank" rel="noreferrer" className={styles.navLink}>
-          <Github size={16} />
-        </a>
+
       </nav>
 
       <main className={styles.container}>

@@ -11,7 +11,8 @@ export default defineConfig({
     sourcemap: true,
   },
   server: {
-    port: 3000,
-    open: true
+    port: 3002,
+    open: true,
+    allowedHosts: ['sasha-nonannihilable-britt.ngrok-free.dev']
   }
 })

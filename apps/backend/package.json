@@ -6,7 +6,7 @@
   "private": true,
   "main": "src/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.js",
+    "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "build": "tsc",
     "build:clean": "rimraf dist && tsc",
