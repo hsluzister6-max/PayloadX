@@ -1,21 +1,68 @@
-/**
- * Project Routes
- * GET /api/project?teamId=
- * POST /api/project
- * GET /api/project/:id
- * PUT /api/project/:id
- * DELETE /api/project/:id
- */
-
 import express from 'express';
 import Project from '../../models/Project.js';
 import Team from '../../models/Team.js';
-import User from '../../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Projects
+ *   description: Project management and workspace organization
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Project:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         teamId:
+ *           type: string
+ *         ownerId:
+ *           $ref: '#/components/schemas/User'
+ *         description:
+ *           type: string
+ *         visibility:
+ *           type: string
+ *           enum: [team, public]
+ *         color:
+ *           type: string
+ */
+
 // GET /api/project?teamId=xxx
+/**
+ * @swagger
+ * /api/project:
+ *   get:
+ *     summary: List projects
+ *     description: Returns projects for a specific team or the user's personal projects.
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: query
+ *         name: teamId
+ *         schema:
+ *           type: string
+ *         description: Filter by team ID
+ *     responses:
+ *       200:
+ *         description: List of projects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 projects:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Project'
+ */
 router.get('/', authenticate, async (req, res) => {
   try {
     const { teamId } = req.query;
@@ -54,6 +101,35 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/project:
+ *   post:
+ *     summary: Create a project
+ *     description: Creates a new project within a team.
+ *     tags: [Projects]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, teamId]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               teamId:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               visibility:
+ *                 type: string
+ *               color:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Project created
+ */
 // POST /api/project
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -83,6 +159,23 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/project/{id}:
+ *   get:
+ *     summary: Get project details
+ *     description: Returns detailed information about a single project.
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project details returned
+ */
 // GET /api/project/:id
 router.get('/:id', authenticate, async (req, res) => {
   try {

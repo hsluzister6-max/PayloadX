@@ -85,9 +85,24 @@ const swaggerOptions = {
         description: 'Local development server',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
   apis: ['./src/routes/*.js'], // Path to the API docs
 };
+
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
@@ -302,6 +317,8 @@ io.on('connection', (socket) => {
   socket.on('typing_stop', ({ teamId, requestId, userId }) => {
     socket.to(`team:${teamId}`).emit('user_stopped_typing', { requestId, userId });
   });
+
+
 
   // ── CURSOR / PRESENCE ────────────────────────────────────────────────────
   socket.on('cursor_update', ({ teamId, requestId, userId, cursor }) => {

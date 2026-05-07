@@ -14,7 +14,16 @@ import ContextSelector from './ContextSelector';
 import TeamPresence from './TeamPresence';
 
 
-export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, onToggleOrientation }) {
+import { Zap } from 'lucide-react';
+
+export default function TopBarV2({ 
+  onToggleSidebar, 
+  sidebarOpen, 
+  orientation, 
+  onToggleOrientation,
+  hasSyncNotification,
+  onOpenSync
+}) {
   const { theme, toggleTheme, toggleLayout, setActiveV2Nav, rightSidebarOpen, rightSidebarActiveTab, openRightSidebarTab, toggleRightSidebar } = useUIStore();
   const { user } = useAuthStore();
   const { isConnected } = useSocketStore();
@@ -163,6 +172,18 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
 
       {/* Right — controls */}
       <div className="v2-header-right">
+        {/* AST Sync Notification */}
+        {hasSyncNotification && (
+          <button
+            onClick={onOpenSync}
+            className="v2-header-icon-btn relative animate-pulse"
+            title="New backend routes detected!"
+          >
+            <Zap size={15} className="text-accent fill-accent/20" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full border border-surface-1" />
+          </button>
+        )}
+
         {/* Sync Status */}
         <SyncStatusTag />
 
