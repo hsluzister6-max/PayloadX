@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { requestStorePersistStorage } from './requestStorePersistStorage';
 import api from '@/lib/api';
 import { localStorageService } from '@/services/localStorageService';
 import { syncService } from '@/services/syncService';
@@ -12,14 +13,88 @@ import { useCollectionStore } from '@/store/collectionStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
 
+function rebuildTabsById(openTabs) {
+  const m = new Map();
+  (openTabs || []).forEach((t) => m.set(t.id, t));
+  return m;
+}
+
+/** Per-field caps so Zustand persist stays under browser localStorage quota (~5MB shared). */
+const MAX_PERSIST_RESPONSE_BODY_CHARS = 1024;
+const MAX_PERSIST_REQUEST_RAW_CHARS = 32 * 1024;
+const MAX_PERSIST_RESPONSE_HEADERS_JSON = 4000;
+
+function truncateForPersist(str, max, kind) {
+  if (typeof str !== 'string' || str.length <= max) return str;
+  return `${str.slice(0, max)}\n… [${kind}: ${String(str.length)} chars not saved to disk — re-run request to view]`;
+}
+
+function responseHeadersForPersist(headers) {
+  if (!headers || typeof headers !== 'object') return headers;
+  try {
+    if (JSON.stringify(headers).length <= MAX_PERSIST_RESPONSE_HEADERS_JSON) return headers;
+    const out = {};
+    let budget = MAX_PERSIST_RESPONSE_HEADERS_JSON;
+    for (const [k, v] of Object.entries(headers)) {
+      const s = typeof v === 'string' ? v : JSON.stringify(v);
+      const clipped = s.length > 320 ? `${s.slice(0, 320)}…` : s;
+      const cost = k.length + clipped.length + 8;
+      if (cost > budget) break;
+      out[k] = typeof v === 'string' ? clipped : v;
+      budget -= cost;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function responseForPersist(response) {
+  if (!response) return null;
+  const withHeaders = { ...response, headers: responseHeadersForPersist(response.headers) };
+  const body = withHeaders.body;
+  if (typeof body === 'string') {
+    return { ...withHeaders, body: truncateForPersist(body, MAX_PERSIST_RESPONSE_BODY_CHARS, 'Response body') };
+  }
+  if (body != null && typeof body === 'object') {
+    return {
+      ...withHeaders,
+      body: '[Response body not saved to disk — send request again]',
+    };
+  }
+  return withHeaders;
+}
+
+function requestForPersist(req) {
+  if (!req?.body || req.body.mode !== 'raw' || typeof req.body.raw !== 'string') return req;
+  const raw = req.body.raw;
+  if (raw.length <= MAX_PERSIST_REQUEST_RAW_CHARS) return req;
+  return {
+    ...req,
+    body: {
+      ...req.body,
+      raw: truncateForPersist(raw, MAX_PERSIST_REQUEST_RAW_CHARS, 'Request body'),
+    },
+  };
+}
+
+function openTabForPersist(tab) {
+  return {
+    ...tab,
+    request: requestForPersist(tab.request),
+    originalRequest: tab.originalRequest ? requestForPersist(tab.originalRequest) : tab.originalRequest,
+    response: responseForPersist(tab.response),
+  };
+}
+
 const defaultRequest = () => ({
   _id: null,
   name: 'Untitled Request',
   method: 'GET',
   protocol: 'http', // 'http' | 'ws' | 'socketio'
   url: '',
-  headers: [{ id: uuidv4(), key: '', value: '', enabled: true }],
-  params: [{ id: uuidv4(), key: '', value: '', enabled: true }],
+  headers: [{ id: uuidv4(), key: '', value: '', description: '', enabled: true }],
+  params: [{ id: uuidv4(), key: '', value: '', description: '', enabled: true }],
   body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] },
   auth: { type: 'none', bearer: { token: '' }, basic: { username: '', password: '' }, apikey: { key: '', value: '', in: 'header' } },
   collectionId: null,
@@ -356,18 +431,24 @@ export const useRequestStore = create(
           return { activeTab: tab, openTabs, _tabsById: newTabsById };
         }),
 
-      setResponse: (response) => set((state) => {
-        // Persist response into the active tab so switching back restores it
-        const openTabs = [...state.openTabs];
-        const tIdx = openTabs.findIndex(t => t.id === state.activeTabId);
-        const newTabsById = new Map(state._tabsById);
-        if (tIdx >= 0) {
-          const updatedTab = { ...openTabs[tIdx], response };
-          openTabs[tIdx] = updatedTab;
-          newTabsById.set(state.activeTabId, updatedTab);
-        }
-        return { response, openTabs, _tabsById: newTabsById };
-      }),
+      setResponse: (response, forTabId) =>
+        set((state) => {
+          const targetId = forTabId != null ? forTabId : state.activeTabId;
+          const openTabs = state.openTabs.map((t) => ({ ...t }));
+          const tIdx = openTabs.findIndex((t) => t.id === targetId);
+          const newTabsById = new Map(state._tabsById);
+          if (tIdx >= 0) {
+            const updatedTab = { ...openTabs[tIdx], response };
+            openTabs[tIdx] = updatedTab;
+            newTabsById.set(updatedTab.id, updatedTab);
+          }
+          const activeIdx = openTabs.findIndex((t) => t.id === state.activeTabId);
+          const nextTopResponse =
+            state.activeTabId === targetId
+              ? response
+              : (activeIdx >= 0 ? openTabs[activeIdx].response ?? null : state.response);
+          return { response: nextTopResponse, openTabs, _tabsById: newTabsById };
+        }),
 
       setIsExecuting: (isExecuting) => set({ isExecuting }),
 
@@ -440,12 +521,31 @@ export const useRequestStore = create(
       },
 
       saveRequest: async () => {
-        const req = get().currentRequest;
+        const start = get();
+        const savingTabId = start.activeTabId;
+        const req = start.currentRequest;
+
+        if (!savingTabId) {
+          set({ isSaving: false });
+          return { success: false, error: 'No active tab' };
+        }
+
         set({ isSaving: true });
 
         const handleOfflineSave = () => {
           syncService.queueChange('update_request', { id: req._id, ...req });
-          set({ isSaving: false });
+          set((state) => {
+            const newTabs = state.openTabs.map((t) => ({ ...t }));
+            const idx = newTabs.findIndex((t) => t.id === savingTabId);
+            if (idx >= 0) {
+              newTabs[idx] = { ...newTabs[idx], request: { ...req }, isDirty: true };
+            }
+            return {
+              openTabs: newTabs,
+              _tabsById: rebuildTabsById(newTabs),
+              isSaving: false,
+            };
+          });
           toast.success('Saved locally (Sync pending)');
           return { success: true, offline: true };
         };
@@ -454,14 +554,34 @@ export const useRequestStore = create(
           if (req._id) {
             const { data } = await api.put(`/api/request/${req._id}`, req);
 
-            set(state => {
-              const newTabs = [...state.openTabs];
-              const idx = newTabs.findIndex(t => t.id === state.activeTabId);
-              if (idx >= 0) newTabs[idx] = { ...newTabs[idx], request: data.request, originalRequest: deepClone(data.request), isDirty: false };
-              return { currentRequest: data.request, openTabs: newTabs, isSaving: false };
+            set((state) => {
+              const newTabs = state.openTabs.map((t) => ({ ...t }));
+              const idx = newTabs.findIndex((t) => t.id === savingTabId);
+              if (idx >= 0) {
+                newTabs[idx] = {
+                  ...newTabs[idx],
+                  request: data.request,
+                  originalRequest: deepClone(data.request),
+                  isDirty: false,
+                };
+              }
+              const newTabsById = rebuildTabsById(newTabs);
+              const userOnSavedTab = state.activeTabId === savingTabId;
+              return {
+                openTabs: newTabs,
+                _tabsById: newTabsById,
+                currentRequest: userOnSavedTab ? data.request : state.currentRequest,
+                isSaving: false,
+              };
             });
 
-            localStorageService.saveCurrentRequest(data.request);
+            const { useCollectionStore } = await import('@/store/collectionStore');
+            useCollectionStore.getState().updateRequest(data.request);
+
+            const after = get();
+            if (after.activeTabId === savingTabId) {
+              localStorageService.saveCurrentRequest(data.request);
+            }
             const { useSocketStore } = await import('@/store/socketStore');
             const { useAuthStore } = await import('@/store/authStore');
             const { useTeamStore } = await import('@/store/teamStore');
@@ -471,17 +591,42 @@ export const useRequestStore = create(
               useAuthStore.getState().user?._id
             );
             return { success: true };
-          } else if (req.collectionId) {
+          }
+
+          if (req.collectionId) {
             const { data } = await api.post('/api/request', req);
 
-            set(state => {
-              const newTabs = [...state.openTabs];
-              const idx = newTabs.findIndex(t => t.id === state.activeTabId);
-              if (idx >= 0) newTabs[idx] = { id: data.request._id, request: data.request, originalRequest: deepClone(data.request), isDirty: false };
-              return { currentRequest: data.request, openTabs: newTabs, activeTabId: data.request._id, isSaving: false };
+            set((state) => {
+              const newTabs = state.openTabs.map((t) => ({ ...t }));
+              const idx = newTabs.findIndex((t) => t.id === savingTabId);
+              if (idx < 0) {
+                return { isSaving: false };
+              }
+              const prev = newTabs[idx];
+              const newId = data.request._id;
+              const updatedTab = {
+                ...prev,
+                id: newId,
+                request: data.request,
+                originalRequest: deepClone(data.request),
+                isDirty: false,
+              };
+              newTabs[idx] = updatedTab;
+              const newTabsById = rebuildTabsById(newTabs);
+              const userStillOnSavedTab = state.activeTabId === savingTabId;
+              return {
+                openTabs: newTabs,
+                activeTabId: userStillOnSavedTab ? newId : state.activeTabId,
+                currentRequest: userStillOnSavedTab ? data.request : state.currentRequest,
+                _tabsById: newTabsById,
+                isSaving: false,
+              };
             });
 
-            localStorageService.saveCurrentRequest(data.request);
+            const afterSave = get();
+            if (afterSave.currentRequest?._id === data.request._id) {
+              localStorageService.saveCurrentRequest(data.request);
+            }
             const { useSocketStore } = await import('@/store/socketStore');
             const { useAuthStore } = await import('@/store/authStore');
             const { useTeamStore } = await import('@/store/teamStore');
@@ -497,13 +642,18 @@ export const useRequestStore = create(
             return { success: true, request: data.request };
           }
         } catch (err) {
-          const isNetError = !err.response && (err.code === 'ERR_NETWORK' || !navigator.onLine);
-          if (isNetError && req._id) {
+          // Only queue offline when the browser reports offline — do not treat ERR_NETWORK
+          // (e.g. server down) as "saved locally" while still "online".
+          const browserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+          if (browserOffline && req._id) {
             return handleOfflineSave();
           }
           set({ isSaving: false });
-          return { success: false, error: err.response?.data?.error || 'Save failed' };
+          return { success: false, error: err.response?.data?.error || err.message || 'Save failed' };
         }
+
+        set({ isSaving: false });
+        return { success: false, error: 'Nothing to save — open a collection or assign an existing request' };
       },
       createRequest: async (requestData) => {
         const { collectionId } = requestData;
@@ -836,11 +986,17 @@ export const useRequestStore = create(
     {
       name: 'syncnest-request',
       partialize: (state) => ({
-        currentRequest: state.currentRequest,
-        history: state.history,
-        openTabs: state.openTabs,
+        currentRequest: requestForPersist(state.currentRequest),
+        history: state.history
+          .slice(0, 40)
+          .map((entry) => ({
+            ...entry,
+            response: entry.response ? responseForPersist(entry.response) : entry.response,
+          })),
+        openTabs: state.openTabs.map(openTabForPersist),
         activeTabId: state.activeTabId
       }),
+      storage: requestStorePersistStorage,
       merge: (persistedState, currentState) => {
         if (persistedState?.currentRequest) {
           const ensureIds = (arr = []) =>

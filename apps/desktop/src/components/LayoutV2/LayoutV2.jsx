@@ -240,9 +240,9 @@ export default function LayoutV2({
                             setActiveTabId(tab.id);
                           }
                         }}
-                        className={`group flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
+                        className={`group/tab flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
                           ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)] relative after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-[color:var(--accent)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)] opacity-80'
+                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)]'
                           }`}
                       >
                         <span className={`text-[10px] font-bold tracking-wider ${methodColor} shrink-0`}>
@@ -252,18 +252,24 @@ export default function LayoutV2({
                           {tab.request.name || 'Untitled'}
                         </span>
 
-                        {/* Dot / Close Icon Container */}
-                        <div className="w-[14px] h-[14px] flex items-center justify-center shrink-0">
-                          {tab.isDirty && (
-                            <div className={`w-[6px] h-[6px] rounded-full bg-[color:var(--accent)] ${isActive ? 'group-hover:hidden' : ''}`} />
-                          )}
+                        {/* Postman-style: dirty → dot only; hover tab → X only (same for active + inactive). Named group avoids parent group-hover conflicts. */}
+                        <div className="relative h-[14px] w-[14px] shrink-0">
+                          {tab.isDirty ? (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center group-hover/tab:hidden"
+                            >
+                              <span className="h-[6px] w-[6px] rounded-full bg-[color:var(--accent)] shadow-[0_0_0_1px_rgba(0,0,0,0.15)]" />
+                            </span>
+                          ) : null}
                           <button
+                            type="button"
+                            title="Close tab"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCloseTab(tab.id);
                             }}
-                            className={`w-[14px] h-[14px] rounded hover:bg-[color:var(--surface-3)] flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors ${tab.isDirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'
-                              } ${isActive && !tab.isDirty ? 'opacity-100' : ''}`}
+                            className="absolute inset-0 hidden items-center justify-center rounded text-[color:var(--text-muted)] group-hover/tab:flex hover:bg-[color:var(--surface-3)] hover:text-[color:var(--text-primary)]"
                           >
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

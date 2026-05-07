@@ -151,6 +151,19 @@ textarea,
 [contenteditable],
 .selectable {
   user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Re-enable mouse selection where body uses user-select: none (Tauri / WebKit needs -webkit). */
+.response-mouse-select {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.response-mouse-select .json-lineno,
+.response-mouse-select .json-copy-btn {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ══════════════════════════════════════════════════════════════════

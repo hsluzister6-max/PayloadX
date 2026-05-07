@@ -3,12 +3,15 @@ import { Clock, Trash2, ArrowUpRight, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export default function HistoryPanel() {
-  const { history, clearHistory, setCurrentRequest } = useRequestStore();
+  const { history, clearHistory, setCurrentRequest, activeTabId } = useRequestStore();
   const [search, setSearch] = useState('');
 
-  const filteredHistory = (history || []).filter(item => 
-    (item.request?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.request?.url || '').toLowerCase().includes(search.toLowerCase())
+  const filteredHistory = (history || []).filter((item) =>
+    (item.tabId == null || item.tabId === activeTabId)
+    && (
+      (item.request?.name || '').toLowerCase().includes(search.toLowerCase())
+      || (item.request?.url || '').toLowerCase().includes(search.toLowerCase())
+    ),
   ).reverse(); // Most recent first
 
   const formatTime = (ts) => {

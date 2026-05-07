@@ -2,14 +2,20 @@ import { useState, useMemo } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import { getStatusClass, formatSize, formatTime, formatBody } from '@/utils/helpers';
+import { getStatusClass, formatSize, formatTime, formatBody, getResponseContentType, getQuotaExceededHint } from '@/utils/helpers';
+import { isRealHttpStatus, parseTransportError } from '@/utils/transportErrors';
 import JsonEditor from '../RequestBuilder/tabs/JsonEditor';
 import JsonTreeViewer from './JsonTreeViewer';
+import VirtualizedResponseText from './VirtualizedResponseText.jsx';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import './swagger-theme.css';
 
 const RESPONSE_TABS = ['Pretty', 'Raw', 'Headers', 'Cookies', 'Docs', 'User'];
+/** Swagger `useMemo` must not parse multi-megabyte bodies on the main thread (DMG / release WebKit). */
+const MAX_SWAGGER_EMBED_CHARS = 80_000;
+/** Raw tab: single `<pre>` of a minified body will freeze the UI past this size. */
+const RAW_VIRTUAL_THRESHOLD = 96 * 1024;
 
 export default function ResponseViewer() {
   const { response, isExecuting, currentRequest } = useRequestStore();
@@ -19,11 +25,58 @@ export default function ResponseViewer() {
   const [copied, setCopied] = useState(false);
   const [responseLanguage, setResponseLanguage] = useState(null);
 
-  const contentType = response?.headers?.['content-type'] || '';
+  const contentType = getResponseContentType(response?.headers);
 
   // ── Construct Swagger Spec ──────────────────────────────────────────────
   const swaggerPreview = useMemo(() => {
     if (!currentRequest) return null;
+
+    const rawBody = currentRequest.body?.mode === 'raw' ? (currentRequest.body.raw || '') : '';
+    const requestJsonSchema =
+      currentRequest.body?.mode === 'raw'
+        ? (() => {
+            if (rawBody.length > MAX_SWAGGER_EMBED_CHARS) {
+              return { type: 'object', description: 'Request body too large for Docs preview.' };
+            }
+            try {
+              return JSON.parse(rawBody || '{}');
+            } catch {
+              return { type: 'string', example: rawBody };
+            }
+          })()
+        : (currentRequest.body?.mode === 'form-data' || currentRequest.body?.mode === 'urlencoded')
+          ? {
+              type: 'object',
+              properties: (currentRequest.body.mode === 'form-data'
+                ? (currentRequest.body.formData || [])
+                : (currentRequest.body.urlencoded || []))
+                .filter((i) => i.enabled && i.key)
+                .reduce((acc, i) => ({ ...acc, [i.key]: { type: 'string', example: i.value } }), {}),
+            }
+          : {};
+
+    const responseSchemaForDocs = () => {
+      const b = response?.body;
+      if (b == null || b === '') return {};
+      if (typeof b === 'string') {
+        if (b.length > MAX_SWAGGER_EMBED_CHARS) {
+          return {
+            type: 'object',
+            description: 'Response body is large; Docs omits the example. Use Pretty or Raw.',
+          };
+        }
+        try {
+          return { type: 'object', example: JSON.parse(b) };
+        } catch {
+          return { type: 'string', example: b };
+        }
+      }
+      try {
+        return { type: 'object', example: b };
+      } catch {
+        return { type: 'string' };
+      }
+    };
 
     return {
       openapi: "3.0.0",
@@ -54,15 +107,7 @@ export default function ResponseViewer() {
             requestBody: ['POST', 'PUT', 'PATCH'].includes(currentRequest.method) ? {
               content: {
                 "application/json": {
-                  schema: currentRequest.body?.mode === 'raw' ? (() => {
-                    try { return JSON.parse(currentRequest.body.raw || '{}') } catch { return { type: 'string', example: currentRequest.body.raw } }
-                  })() :
-                    (currentRequest.body?.mode === 'formdata' || currentRequest.body?.mode === 'urlencoded') ? {
-                      type: 'object',
-                      properties: (currentRequest.body[currentRequest.body.mode] || []).filter(i => i.enabled && i.key).reduce((acc, i) => ({
-                        ...acc, [i.key]: { type: 'string', example: i.value }
-                      }), {})
-                    } : {}
+                  schema: requestJsonSchema,
                 }
               }
             } : undefined,
@@ -71,14 +116,7 @@ export default function ResponseViewer() {
                 description: response?.statusText || "Success",
                 content: {
                   [contentType || "application/json"]: {
-                    schema: response?.body ? (() => {
-                      try {
-                        const parsed = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
-                        return { type: 'object', example: parsed };
-                      } catch {
-                        return { type: 'string', example: response.body };
-                      }
-                    })() : {}
+                    schema: responseSchemaForDocs(),
                   }
                 }
               }
@@ -97,8 +135,8 @@ export default function ResponseViewer() {
     return <EmptyState />;
   }
 
-  if (response.error && response.status === 0) {
-    return <ErrorState error={response.error} />;
+  if (!isRealHttpStatus(response.status)) {
+    return <TransportErrorView response={response} />;
   }
 
   const prettyBody = formatBody(response.body, contentType);
@@ -245,20 +283,25 @@ export default function ResponseViewer() {
         {activeTab === 'Pretty' && (
           <JsonTreeViewer
             value={typeof response.body === 'string' ? response.body : JSON.stringify(response.body)}
+            contentType={contentType}
             className="h-full"
           />
         )}
 
         {activeTab === 'Raw' && (
-          <div className="h-full overflow-auto p-4 bg-[var(--surface-1)]">
-            <pre className="text-xs text-tx-secondary font-mono whitespace-pre-wrap break-all leading-relaxed">
-              {response.body}
-            </pre>
+          <div className="h-full min-h-0 overflow-hidden p-4 bg-[var(--surface-1)] flex flex-col response-mouse-select">
+            {typeof response.body === 'string' && response.body.length > RAW_VIRTUAL_THRESHOLD ? (
+              <VirtualizedResponseText text={response.body} />
+            ) : (
+              <pre className="selectable text-xs text-tx-secondary font-mono whitespace-pre-wrap break-all leading-relaxed h-full overflow-auto cursor-text">
+                {response.body}
+              </pre>
+            )}
           </div>
         )}
 
         {activeTab === 'Headers' && (
-          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)]">
+          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)] response-mouse-select">
             <div className="max-w-3xl">
               <table className="w-full text-[11px] border-collapse">
                 <thead>
@@ -281,7 +324,7 @@ export default function ResponseViewer() {
         )}
 
         {activeTab === 'Cookies' && (
-          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)]">
+          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)] response-mouse-select">
             {responseCookies.length > 0 ? (
               <table className="w-full text-[11px]">
                 <thead>
@@ -389,63 +432,115 @@ function EmptyState() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-8 bg-[var(--bg-primary)] relative overflow-hidden">
-      {/* Background radial glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[var(--accent)]/5 rounded-full blur-3xl animate-pulse" />
-
-      {/* Stylish Radar/Ring Loader */}
-      <div className="relative w-24 h-24 flex items-center justify-center">
-        {/* Outer dashed orbit */}
-        <div className="absolute inset-0 rounded-full border border-[var(--accent)]/20 border-dashed animate-[spin_8s_linear_infinite]" />
-
-        {/* Middle fast scanner ring */}
-        <div className="absolute inset-2 rounded-full border border-[var(--border-1)] border-t-[var(--accent)] animate-[spin_1.5s_cubic-bezier(0.4,0,0.2,1)_infinite]" />
-        <div className="absolute inset-2 rounded-full border border-transparent border-b-[var(--accent)]/50 animate-[spin_2s_linear_infinite_reverse]" />
-
-        {/* Inner solid orbit */}
-        <div className="absolute inset-5 rounded-full border border-[var(--accent)]/10 bg-[var(--surface-2)]/50 backdrop-blur-md shadow-[inset_0_0_12px_rgba(255,255,255,0.02)]" />
-
-        {/* Core 'X' Logo */}
-        <div className="relative z-10 flex items-center justify-center animate-pulse">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#metal-grad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0 0 8px rgba(200,205,216,0.5))' }}>
-            <defs>
-              <linearGradient id="metal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f5f7fa" />
-                <stop offset="35%" stopColor="#8e93a0" />
-                <stop offset="65%" stopColor="#e4e7ec" />
-                <stop offset="100%" stopColor="#6b7280" />
-              </linearGradient>
-            </defs>
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-1.5 z-10">
-        <p className="text-sm font-black tracking-widest uppercase drop-shadow-md" style={{ fontFamily: 'Syne, sans-serif' }}>
-          <span style={{ backgroundImage: 'var(--grad-logo)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Payload</span>
-          <span style={{ backgroundImage: 'var(--grad-chrome)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 4px rgba(200,205,216,0.4))' }}>X</span>
+    <div className="flex flex-col items-center justify-center h-full gap-6 bg-[var(--bg-primary)] px-6">
+      <div
+        className="h-9 w-9 rounded-full border-2 border-[var(--border-1)] border-t-[var(--accent)] motion-safe:animate-spin motion-reduce:animate-none"
+        role="status"
+        aria-label="Loading response"
+      />
+      <div className="flex flex-col items-center gap-1 text-center max-w-xs">
+        <p className="text-sm font-semibold text-tx-secondary" style={{ fontFamily: 'Syne, sans-serif' }}>
+          Loading response
         </p>
-        <p className="text-tx-muted text-[10px] font-mono uppercase tracking-[0.3em] animate-pulse">
-          Establishing Connection...
+        <p className="text-xs text-tx-muted font-medium leading-relaxed">
+          This may take a moment depending on the server and payload size.
         </p>
       </div>
     </div>
   );
 }
 
-function ErrorState({ error }) {
+function TransportErrorView({ response }) {
+  const [copied, setCopied] = useState(false);
+  const parsed = response?.clientError || parseTransportError(response?.error || response?.body || '');
+  const quotaHint = getQuotaExceededHint(parsed.raw);
+  const textToCopy = response?.body || parsed.raw;
+  const isCancelled = parsed.code === 'CANCELLED';
+
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8 bg-[var(--bg-primary)]">
-      <div className="w-16 h-16 rounded-3xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-sm">
-        <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '5px 10px',
+          borderBottom: '1px solid var(--border-1)',
+          background: 'var(--surface-1)',
+          flexShrink: 0,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 900,
+            fontFamily: 'JetBrains Mono, monospace',
+            letterSpacing: '0.02em',
+            padding: '2px 7px',
+            borderRadius: 5,
+            background: isCancelled ? 'rgba(251,191,36,0.12)' : 'rgba(248,113,113,0.12)',
+            color: isCancelled ? 'var(--warning)' : 'var(--error)',
+            border: `1px solid ${isCancelled ? 'rgba(251,191,36,0.28)' : 'rgba(248,113,113,0.28)'}`,
+          }}
+        >
+          {isCancelled ? 'Cancelled' : 'Error'}
+          {!isCancelled && parsed.code ? ` · ${parsed.code}` : ''}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+          No HTTP response (client / transport)
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border-1)', marginLeft: 4 }}>
+          ⏱ {formatTime(response?.responseTimeMs)}
+        </span>
+        <div style={{ marginLeft: 'auto' }}>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(textToCopy).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+            title={copied ? 'Copied!' : 'Copy error details'}
+            style={iconBtn(copied)}
+          >
+            {copied
+              ? <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#4ade80" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              : <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>}
+          </button>
+        </div>
       </div>
-      <div>
-        <p className="text-red-500 text-base font-black tracking-tight uppercase" style={{ fontFamily: 'Syne, sans-serif' }}>Request Failed</p>
-        <p className="text-surface-500 text-xs mt-2 max-w-xs font-medium leading-relaxed italic">{error}</p>
+
+      <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-2xl mx-auto w-full">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-tx-muted mb-2">Could not complete request</p>
+          <h2 className="text-lg font-bold text-tx-primary mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>
+            {parsed.headline}
+          </h2>
+          <p className="text-sm text-tx-secondary leading-relaxed mb-4">
+            {parsed.summary}
+          </p>
+          {parsed.hints.length > 0 && (
+            <div className="rounded-lg border border-[var(--border-1)] bg-[var(--surface-2)] p-4 mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-tx-muted mb-2">What to try</p>
+              <ul className="text-xs text-tx-secondary space-y-2 list-disc pl-4">
+                {parsed.hints.map((h, i) => (
+                  <li key={i}>{h}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {quotaHint && (
+            <p className="text-xs text-tx-secondary border border-[var(--border-1)] rounded-lg p-3 bg-[var(--surface-2)] mb-4 leading-relaxed">
+              {quotaHint}
+            </p>
+          )}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-tx-muted mb-1">Technical detail</p>
+          <pre className="selectable cursor-text text-[11px] font-mono text-tx-secondary whitespace-pre-wrap break-all leading-relaxed p-3 rounded-lg bg-[var(--surface-1)] border border-[var(--border-1)]">
+            {parsed.raw}
+          </pre>
+        </div>
       </div>
     </div>
   );
