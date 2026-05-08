@@ -1,19 +1,91 @@
-/**
- * Request Routes
- * GET /api/request?collectionId=&projectId=&teamId=&search=
- * POST /api/request
- * GET /api/request/:id
- * PUT /api/request/:id
- * DELETE /api/request/:id
- */
-
 import express from 'express';
 import Request from '../../models/Request.js';
+import Collection from '../../models/Collection.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Requests
+ *   description: API request management (REST, WebSockets, Socket.IO)
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Request:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         method:
+ *           type: string
+ *           enum: [GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS]
+ *         url:
+ *           type: string
+ *         protocol:
+ *           type: string
+ *           enum: [http, ws, socketio]
+ *         collectionId:
+ *           type: string
+ *         projectId:
+ *           type: string
+ *         teamId:
+ *           type: string
+ *         creatorId:
+ *           $ref: '#/components/schemas/User'
+ *         body:
+ *           type: object
+ *         headers:
+ *           type: array
+ *           items:
+ *             type: object
+ */
+
 // GET /api/request
+/**
+ * @swagger
+ * /api/request:
+ *   get:
+ *     summary: List requests
+ *     description: Returns a list of API requests filtered by collection, project, or team.
+ *     tags: [Requests]
+ *     parameters:
+ *       - in: query
+ *         name: collectionId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: teamId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name or URL
+ *     responses:
+ *       200:
+ *         description: List of requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 requests:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Request'
+ */
 router.get('/', authenticate, async (req, res) => {
   try {
     const { collectionId, projectId, teamId, search } = req.query;
@@ -45,6 +117,39 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/request:
+ *   post:
+ *     summary: Create a request
+ *     description: Creates a new API request (REST, WebSocket, or Socket.IO).
+ *     tags: [Requests]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, collectionId, projectId, teamId]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               method:
+ *                 type: string
+ *               url:
+ *                 type: string
+ *               protocol:
+ *                 type: string
+ *               collectionId:
+ *                 type: string
+ *               projectId:
+ *                 type: string
+ *               teamId:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Request created
+ */
 // POST /api/request
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -118,6 +223,8 @@ router.put('/:id', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+
 
 // DELETE /api/request/:id
 router.delete('/:id', authenticate, async (req, res) => {

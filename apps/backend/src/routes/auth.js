@@ -177,6 +177,33 @@ router.post('/google', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/signup:
+ *   post:
+ *     summary: Register a new user
+ *     description: Stages a new user for registration and sends an OTP to their email for verification.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User staged, OTP sent
+ *       409:
+ *         description: Email already registered
+ */
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   try {
@@ -229,6 +256,31 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/verify-signup:
+ *   post:
+ *     summary: Verify signup OTP
+ *     description: Finalizes user registration by verifying the OTP sent during signup.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, otp]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired code
+ */
 // POST /api/auth/verify-signup
 router.post('/verify-signup', async (req, res) => {
   try {
@@ -273,6 +325,21 @@ router.post('/verify-signup', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     description: Returns the profile of the authenticated user.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile returned
+ *       401:
+ *         description: Unauthorized
+ */
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
   try {

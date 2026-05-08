@@ -980,12 +980,33 @@ textarea,
   font-size: 12px;
   font-family: 'DM Mono', monospace;
   color: var(--text-secondary);
-  cursor: pointer;
+  cursor: text;
   min-width: 0;
 }
 
 .v2-search-input::placeholder {
   color: var(--text-muted);
+}
+
+.v2-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+
+.v2-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
 }
 
 .v2-search-kbd {
@@ -1324,6 +1345,27 @@ textarea,
 .sdbv2-search-input::placeholder {
   color: var(--text-muted);
   opacity: 0.5;
+}
+
+.sdbv2-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+
+.sdbv2-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
 }
 
 .sdbv2-tree-body {

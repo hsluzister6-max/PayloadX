@@ -547,6 +547,48 @@ export default function Docs() {
           </tbody>
         </table>
       </div>
+    ),
+    swaggerApi: (
+      <div className={styles.section}>
+        <h1 className={styles.metallicTitle}>Live API Reference (Swagger)</h1>
+        <p className={styles.text}>
+          PayloadX automatically generates interactive API documentation using <strong>Swagger (OpenAPI 3.0)</strong>.
+          This allows you to test endpoints directly from your browser and understand the data structures used by the engine.
+        </p>
+
+        <div className={styles.sectionTitle}>Accessing the Docs</div>
+        <p className={styles.text}>
+          When running the backend locally, the interactive documentation is available at:
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Local URL</span></div>
+          <code>
+            http://localhost:3001/api-docs
+          </code>
+        </div>
+
+        <div className={styles.sectionTitle}>Key Features</div>
+        <div className={styles.featGrid}>
+          <div className={styles.badge} style={{ flex: '1' }}>
+            <strong>Interactive Sandbox:</strong> Execute requests (Login, Create Project, etc.) directly from the UI.
+          </div>
+          <div className={styles.badge} style={{ flex: '1' }}>
+            <strong>Schema Definitions:</strong> View strict Mongoose/TypeScript models for every request and response.
+          </div>
+        </div>
+
+        <div className={styles.sectionTitle}>Authentication in Swagger</div>
+        <p className={styles.text}>
+          Most endpoints require a <strong>JWT Bearer Token</strong>. 
+          1. Call <code>/api/auth/login</code> to get your token.<br />
+          2. Click the <strong>"Authorize"</strong> button at the top of the Swagger UI.<br />
+          3. Enter <code>Bearer YOUR_TOKEN_HERE</code>.
+        </p>
+
+        <div className={styles.badge} style={{ marginTop: '2rem', width: '100%', background: 'rgba(5, 150, 105, 0.05)', color: '#059669', borderColor: 'rgba(5, 150, 105, 0.1)' }}>
+          ✅ Swagger ensures that your team always has up-to-date documentation that stays in sync with the source code.
+        </div>
+      </div>
     )
   };
 
@@ -635,6 +677,17 @@ export default function Docs() {
             >
               <Terminal size={14} />
               Shortcuts
+            </div>
+          </div>
+
+          <div className={styles.sidebarSection}>
+            <span className={styles.sidebarTitle}>API Reference</span>
+            <div
+              className={`${styles.sidebarLink} ${activeSection === 'swaggerApi' ? styles.sidebarLinkActive : ''}`}
+              onClick={() => setActiveSection('swaggerApi')}
+            >
+              <Zap size={14} />
+              Swagger Docs
             </div>
           </div>
 
