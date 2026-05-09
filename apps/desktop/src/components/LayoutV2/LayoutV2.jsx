@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -17,6 +17,9 @@ import InlineDocViewer from '@/components/ResponseViewer/InlineDocViewer';
 import RightSidebar from './RightSidebar';
 import WorkflowBuilder from '@/components/WorkflowBuilder/WorkflowBuilder';
 import HistoryPanel from '@/components/History/HistoryPanel.jsx';
+import toast from 'react-hot-toast';
+import SyncSidebar from '@/components/Sync/SyncSidebar';
+import api from '@/lib/api';
 
 export default function LayoutV2({
   onShowTeamModal,
@@ -40,6 +43,10 @@ export default function LayoutV2({
   } = useUIStore();
 
   const [rightPanelTab, setRightPanelTab] = useState('Response');
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [syncDiff, setSyncDiff] = useState(null);
+  const [showSyncSidebar, setShowSyncSidebar] = useState(false);
+  const [hasNewSync, setHasNewSync] = useState(false);
 
   const { teams, currentTeam } = useTeamStore();
   const { projects, currentProject } = useProjectStore();
@@ -78,8 +85,67 @@ export default function LayoutV2({
   // Check if user needs onboarding (no teams or projects)
   const needsOnboarding = teams.length === 0 || projects.length === 0 || !currentProject;
 
-  // Split percentage for vertical mode — default 50/50
-  const [splitPercent, setSplitPercent] = useState(50);
+
+
+  // AST CLI WebSocket Listener
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:4040');
+    
+    ws.onopen = () => {
+      console.log('[PayloadX] Connected to local AST CLI Sync Server');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'SYNC_ROUTES') {
+          console.log('[PayloadX] Received route sync payload:', payload.data);
+          setSyncDiff(payload.data);
+          if (payload.data.newRoutes.length > 0 || payload.data.updatedRoutes.length > 0) {
+            setHasNewSync(true);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const handleSyncRoutes = async (routesToSync, collectionId) => {
+    if (!currentProject || !routesToSync.length) return;
+    
+    const loadingToast = toast.loading(`Importing ${routesToSync.length} routes...`);
+    try {
+      const promises = routesToSync.map(route => {
+        return api.post('/api/request', {
+          name: route.path,
+          method: route.method,
+          url: `{{baseUrl}}${route.path}`,
+          collectionId: collectionId,
+          projectId: currentProject._id,
+          teamId: currentProject.teamId,
+          description: `Auto-generated from ${route.handler} handler`,
+          headers: [],
+          params: [],
+          body: { mode: 'none' },
+          auth: { type: 'none' }
+        });
+      });
+      
+      await Promise.all(promises);
+      toast.success(`Successfully imported ${routesToSync.length} routes!`, { id: loadingToast });
+      setSyncDiff(null);
+      setHasNewSync(false);
+      setShowSyncSidebar(false);
+    } catch (err) {
+      console.error('Failed to sync routes', err);
+      toast.error('Failed to import routes', { id: loadingToast });
+    }
+  };
 
   return (
     <div
@@ -99,7 +165,18 @@ export default function LayoutV2({
         onToggleSidebar={toggleSidebarV2}
         orientation={workspaceOrientation}
         onToggleOrientation={toggleOrientation}
+        hasSyncNotification={hasNewSync}
+        onOpenSync={() => setShowSyncSidebar(true)}
       />
+
+      {showSyncSidebar && (
+        <SyncSidebar 
+          diff={syncDiff}
+          currentProject={currentProject}
+          onClose={() => setShowSyncSidebar(false)}
+          onSync={handleSyncRoutes}
+        />
+      )}
 
       {/* ── Body row ── */}
       <div
@@ -240,9 +317,9 @@ export default function LayoutV2({
                             setActiveTabId(tab.id);
                           }
                         }}
-                        className={`group flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
+                        className={`group/tab flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
                           ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)] relative after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-[color:var(--accent)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)] opacity-80'
+                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)]'
                           }`}
                       >
                         <span className={`text-[10px] font-bold tracking-wider ${methodColor} shrink-0`}>
@@ -252,18 +329,24 @@ export default function LayoutV2({
                           {tab.request.name || 'Untitled'}
                         </span>
 
-                        {/* Dot / Close Icon Container */}
-                        <div className="w-[14px] h-[14px] flex items-center justify-center shrink-0">
-                          {tab.isDirty && (
-                            <div className={`w-[6px] h-[6px] rounded-full bg-[color:var(--accent)] ${isActive ? 'group-hover:hidden' : ''}`} />
-                          )}
+                        {/* Postman-style: dirty → dot only; hover tab → X only (same for active + inactive). Named group avoids parent group-hover conflicts. */}
+                        <div className="relative h-[14px] w-[14px] shrink-0">
+                          {tab.isDirty ? (
+                            <span
+                              aria-hidden
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center group-hover/tab:hidden"
+                            >
+                              <span className="h-[6px] w-[6px] rounded-full bg-[color:var(--accent)] shadow-[0_0_0_1px_rgba(0,0,0,0.15)]" />
+                            </span>
+                          ) : null}
                           <button
+                            type="button"
+                            title="Close tab"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleCloseTab(tab.id);
                             }}
-                            className={`w-[14px] h-[14px] rounded hover:bg-[color:var(--surface-3)] flex items-center justify-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors ${tab.isDirty ? 'hidden group-hover:flex' : 'opacity-0 group-hover:opacity-100'
-                              } ${isActive && !tab.isDirty ? 'opacity-100' : ''}`}
+                            className="absolute inset-0 hidden items-center justify-center rounded text-[color:var(--text-muted)] group-hover/tab:flex hover:bg-[color:var(--surface-3)] hover:text-[color:var(--text-primary)]"
                           >
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

@@ -12,6 +12,7 @@ import HeadersTab from './tabs/HeadersTab';
 import BodyTab from './tabs/BodyTab';
 import AuthTab from './tabs/AuthTab';
 import VariableUrlInput from './VariableUrlInput';
+import { buildClientErrorResponse } from '@/utils/transportErrors';
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
 
@@ -34,27 +35,34 @@ export default function RESTRequestBuilder() {
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
 
   const executeRequest = useCallback(async () => {
-    if (!currentRequest.url.trim()) {
+    const store = useRequestStore.getState;
+
+    const runTabId = store().activeTabId;
+    const reqAtSend = store().currentRequest;
+
+    if (!runTabId) {
+      toast.error('Open a request tab first');
+      return;
+    }
+
+    if (!reqAtSend?.url?.trim()) {
       toast.error('Enter a URL first');
       return;
     }
 
-    // Always access setIsExecuting/setResponse via getState() to avoid stale closures
-    const store = useRequestStore.getState;
-
     store().setIsExecuting(true);
-    store().setResponse(null);
+    store().setResponse(null, runTabId);
     let isCancelled = false;
     useRequestStore.setState({
       cancelCurrentRequest: () => {
         isCancelled = true;
         store().setIsExecuting(false);
-        store().setResponse({ status: 'Cancelled', statusText: '', headers: {}, body: 'Request was cancelled by user.', responseTimeMs: 0, sizeBytes: 0 });
+        store().setResponse(buildClientErrorResponse('Request was cancelled by user.'), runTabId);
       }
     });
 
     try {
-      const resolvedUrl = resolveVariables(currentRequest.url);
+      const resolvedUrl = resolveVariables(reqAtSend.url);
       const unresolvedVars = [...(resolvedUrl.matchAll(/\{\{([^}]+)\}\}/g))].map(m => m[1].trim());
       if (unresolvedVars.length > 0) {
         toast.error(`Variables not found in environment: ${unresolvedVars.join(', ')}`);
@@ -62,21 +70,21 @@ export default function RESTRequestBuilder() {
         return;
       }
 
-      const resolvedHeaders = (currentRequest.headers || []).map((h) => ({
+      const resolvedHeaders = (reqAtSend.headers || []).map((h) => ({
         ...h,
         value: resolveVariables(h.value),
       }));
 
       const payload = {
-        method: currentRequest.method,
+        method: reqAtSend.method,
         url: resolvedUrl,
         headers: resolvedHeaders.filter((h) => h.enabled && h.key),
-        params: (currentRequest.params || []).filter((p) => p.enabled && p.key).map((p) => ({
+        params: (reqAtSend.params || []).filter((p) => p.enabled && p.key).map((p) => ({
           ...p,
           value: resolveVariables(p.value),
         })),
-        body: currentRequest.body,
-        auth: currentRequest.auth,
+        body: reqAtSend.body,
+        auth: reqAtSend.auth,
         timeoutMs: 30000,
       };
 
@@ -89,23 +97,27 @@ export default function RESTRequestBuilder() {
         return;
       }
 
-      store().setResponse(response);
+      store().setResponse(response, runTabId);
       store().addToHistory({
         id: uuidv4(),
-        request: { ...currentRequest, url: resolvedUrl },
+        tabId: runTabId,
+        request: { ...reqAtSend, url: resolvedUrl },
         response: { ...response, body: '[Body hidden in history]' },
         timestamp: Date.now(),
       });
 
       if (currentTeam && user) {
-        emitRequestUpdate(currentTeam._id, currentRequest, user.id);
+        emitRequestUpdate(currentTeam._id, reqAtSend, user.id);
       }
     } catch (err) {
       console.error('[ExecuteRequest] Error:', err);
-      const errorMsg = typeof err === 'string' ? err : (err.message || 'Request failed');
-      toast.error(`Error: ${errorMsg}`);
+      const errorMsg = typeof err === 'string'
+        ? err
+        : (err?.message || (() => { try { return JSON.stringify(err); } catch { return String(err); } })() || 'Request failed');
+      const failure = buildClientErrorResponse(errorMsg);
+      toast.error(`${failure.clientError.shortTitle}: ${failure.clientError.headline}`);
       if (!isCancelled) {
-        store().setResponse({ status: 'Error', statusText: '', headers: {}, body: errorMsg, responseTimeMs: 0, sizeBytes: 0 });
+        store().setResponse(failure, runTabId);
       }
     } finally {
       console.log('[ExecuteRequest] Finally block, isCancelled:', isCancelled);
@@ -116,7 +128,7 @@ export default function RESTRequestBuilder() {
       useRequestStore.setState({ cancelCurrentRequest: null });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRequest, activeEnvironment, resolveVariables, addToHistory, currentTeam, user, emitRequestUpdate]);
+  }, [resolveVariables, activeEnvironment, currentTeam, user, emitRequestUpdate]);
 
   // ── Listen for global send shortcut (Cmd/Ctrl+Enter via useKeyboardShortcuts) ──
   useEffect(() => {
@@ -204,11 +216,11 @@ export default function RESTRequestBuilder() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTab === 'params' && <ParamsTab />}
         {activeTab === 'headers' && <HeadersTab />}
-        {activeTab === 'body' && <BodyTab />}
-        {activeTab === 'auth' && <AuthTab />}
+        {activeTab === 'body' && <div className="flex-1 min-h-0 overflow-y-auto"><BodyTab /></div>}
+        {activeTab === 'auth' && <div className="flex-1 min-h-0 overflow-y-auto"><AuthTab /></div>}
       </div>
     </div>
   );

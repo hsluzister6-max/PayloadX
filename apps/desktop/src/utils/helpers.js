@@ -1,54 +1,42 @@
+import {
+  normalizeResponseBodyText,
+  parseJsonFamily,
+  isJsonFamilyContentType,
+  sniffLikelyJsonText,
+} from './jsonResponseParse.js';
+
 /**
- * Format response body with pretty-printing if JSON
- * Handles cross-platform line endings (Windows CRLF, Unix LF, Unicode BOM)
+ * Format response body with pretty-printing for JSON, NDJSON, JSON-seq.
  */
 export function formatBody(body, contentType = '') {
-  if (!body) return '';
-  
-  // Normalize the body: handle Windows CRLF, remove BOM, trim
-  let normalizedBody = body;
-  if (typeof body === 'string') {
-    // Remove Unicode BOM (Byte Order Mark) if present
-    normalizedBody = body.replace(/^\uFEFF/, '');
-    // Normalize Windows CRLF to LF for consistent processing
-    normalizedBody = normalizedBody.replace(/\r\n/g, '\n');
-    normalizedBody = normalizedBody.replace(/\r/g, '\n');
+  const normalizedBody = normalizeResponseBodyText(body);
+  if (!normalizedBody.trim()) return '';
+
+  const parsed = parseJsonFamily(normalizedBody, contentType);
+  if (parsed.ok && parsed.value !== null && parsed.value !== undefined) {
+    if ((parsed.format === 'ndjson' || parsed.format === 'json-seq') && Array.isArray(parsed.value)) {
+      return parsed.value.map((v) => JSON.stringify(v, null, 2)).join('\n');
+    }
+    return JSON.stringify(parsed.value, null, 2);
   }
 
-  if (contentType.includes('application/json') || isJson(normalizedBody)) {
+  if (parsed.ok && parsed.format === 'empty') return '';
+
+  if (!isJsonFamilyContentType(contentType) && sniffLikelyJsonText(normalizedBody)) {
     try {
-      // standard single-object JSON parse
-      return JSON.stringify(JSON.parse(normalizedBody), null, 2);
+      return JSON.stringify(JSON.parse(normalizedBody.trim()), null, 2);
     } catch {
-      // Fallback: it might be NDJSON (Newline Delimited JSON)
-      try {
-        const lines = normalizedBody.split('\n').filter(line => line.trim() !== '');
-        if (lines.length > 1) {
-          const formattedLines = lines.map(line => {
-            try {
-              return JSON.stringify(JSON.parse(line), null, 2);
-            } catch {
-              // If individual line isn't valid JSON, return as-is
-              return line;
-            }
-          });
-          return formattedLines.join('\n');
-        }
-      } catch (err) {
-        // If it's truly broken JSON, return the normalized unformatted string
-        return normalizedBody;
-      }
+      /* fall through */
     }
   }
+
   return normalizedBody;
 }
 
+export { getResponseContentType, getQuotaExceededHint } from './jsonResponseParse.js';
+
 export function isJson(str) {
-  if (!str || typeof str !== 'string') return false;
-  // Remove BOM and normalize whitespace for detection
-  const cleaned = str.replace(/^\uFEFF/, '').trim();
-  return (cleaned.startsWith('{') && cleaned.endsWith('}')) ||
-         (cleaned.startsWith('[') && cleaned.endsWith(']'));
+  return sniffLikelyJsonText(str);
 }
 
 /**

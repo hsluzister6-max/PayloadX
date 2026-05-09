@@ -216,10 +216,10 @@ export default function SIORequestBuilder() {
                 </button>
               ))}
             </div>
-            <div className="max-h-[180px] overflow-y-auto bg-[color:var(--surface-2)]">
+            <div className="max-h-[min(320px,45vh)] min-h-[140px] flex flex-col overflow-hidden bg-[color:var(--surface-2)]">
               {activeTab === 'query' && <ParamsTab />}
               {activeTab === 'headers' && <HeadersTab />}
-              {activeTab === 'auth' && <AuthTab />}
+              {activeTab === 'auth' && <div className="flex-1 min-h-0 overflow-y-auto"><AuthTab /></div>}
             </div>
           </div>
         )}

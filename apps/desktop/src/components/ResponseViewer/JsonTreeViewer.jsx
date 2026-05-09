@@ -1,22 +1,53 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useUIStore } from '@/store/uiStore';
+import { buildLines, collectPaths, buildNdjsonTreeLines, collectNdjsonPaths } from '@/utils/jsonTreeLines';
+import { normalizeResponseBodyText, parseJsonFamily } from '@/utils/jsonResponseParse';
+import { parseResponseInWorker, shouldParseResponseInWorker } from '@/utils/responseWorkerClient';
+import { buildTreeLinesInWorker, shouldUseTreeLinesWorker } from '@/utils/treeLinesWorkerClient';
+import VirtualizedResponseText from './VirtualizedResponseText.jsx';
+const ResponseMonacoViewer = lazy(() => import('./ResponseMonacoViewer.jsx'));
+import { RAW_VIRTUAL_MIN_CHARS, MONACO_RAW_MIN_CHARS } from '@/utils/responseViewThresholds';
 
 /**
  * PayloadX High-Performance JSON Viewer
- * 
- * - Handles standard JSON + NDJSON (newline-delimited JSON)
+ *
+ * - Standard JSON, NDJSON, JSON-seq (Content-Type aware)
+ * - Tree layout (incl. NDJSON / JSON-seq): Web Worker when payload ≥ ~40KB serialized,
+ *   otherwise sync on the main thread (lower latency for tiny responses). Worker + module
+ *   workers work across Tauri (WebKit / WebView2) and browsers.
  * - Virtualized rendering for huge payloads (800+ lines)
- * - Instant search with hit navigation (Enter/Shift+Enter)
- * - Expand/collapse all with path-based collapse tracking
- * - Per-row copy buttons
- * - Metallic PayloadX dark theme with vibrant syntax colors
+ * - Search, expand/collapse, per-row copy
  */
 
 const ROW_H = 22;
 const OVERSCAN = 10;
 const VTHRESH = 600; // lines before switching to virtual scroll
 const INDENT_PX = 14;
+/** Above this, Raw sub-tab virtualizes so a single-line/minified body does not freeze WebKit. */
+const RAW_VIRTUAL_THRESHOLD = RAW_VIRTUAL_MIN_CHARS;
+const PRETTY_TEXT_MAX_LINES = 300_000;
 
-import { useUIStore } from '@/store/uiStore';
+function textToSyntheticTreeLines(strings) {
+  return strings.map((raw, i) => ({
+    depth: 0,
+    path: `~${i}`,
+    col: false,
+    col2: false,
+    raw,
+    parts: [{ t: 'key', s: raw }],
+  }));
+}
+
+/** Main-thread tree build (small payloads + worker fallback). */
+function buildTreeLinesSync(parsed, parseFormat, collapsed) {
+  const stream =
+    (parseFormat === 'ndjson' || parseFormat === 'json-seq') &&
+    Array.isArray(parsed);
+  if (stream) {
+    return buildNdjsonTreeLines(parsed, collapsed);
+  }
+  return buildLines(parsed, 'root', 0, false, collapsed);
+}
 
 // ── Syntax colors ────────────────────────────────────────────────────────────
 const PALETTES = {
@@ -42,70 +73,10 @@ const PALETTES = {
   }
 };
 
-function esc(s) {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n').replace(/\r/g, '\\r')
-    .replace(/\t/g, '\\t');
-}
-
 function formatSize(n) {
   if (n < 1024) return n + ' B';
   if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
   return (n / 1048576).toFixed(2) + ' MB';
-}
-
-// ── Build flattened line array (recursive) ────────────────────────────────────
-function buildLines(v, path, depth, trail, collapsed) {
-  if (v === null) return [{ depth, path, col: false, col2: false, raw: 'null' + (trail ? ',' : ''), parts: [{ t: 'null', s: 'null' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-  if (v === true || v === false) return [{ depth, path, col: false, col2: false, raw: String(v) + (trail ? ',' : ''), parts: [{ t: 'bool', s: String(v) }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-  if (typeof v === 'number') return [{ depth, path, col: false, col2: false, raw: String(v) + (trail ? ',' : ''), parts: [{ t: 'num', s: String(v) }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-  if (typeof v === 'string') {
-    const i = esc(v);
-    const d = `"${i}"` + (trail ? ',' : '');
-    return [{ depth, path, col: false, col2: false, raw: d, parts: [{ t: 'str', s: `"${i}"` }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-  }
-
-  if (Array.isArray(v)) {
-    const isc = collapsed.has(path);
-    if (!v.length) return [{ depth, path, col: false, col2: false, raw: '[]' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '[]' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-    if (isc) {
-      const sum = `[…${v.length} item${v.length !== 1 ? 's' : ''}]` + (trail ? ',' : '');
-      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t: 'bkt', s: '[' }, { t: 'dim', s: `…${v.length} item${v.length !== 1 ? 's' : ''}` }, { t: 'bkt', s: ']' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-    }
-    const ls = [{ depth, path, col: true, col2: false, raw: '[', parts: [{ t: 'bkt', s: '[' }] }];
-    v.forEach((item, i) => { ls.push(...buildLines(item, `${path}[${i}]`, depth + 1, i < v.length - 1, collapsed)); });
-    ls.push({ depth, path, col: true, col2: false, raw: ']' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: ']' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] });
-    return ls;
-  }
-
-  if (typeof v === 'object') {
-    const isc = collapsed.has(path);
-    const keys = Object.keys(v);
-    if (!keys.length) return [{ depth, path, col: false, col2: false, raw: '{}' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '{}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-    if (isc) {
-      const prev = keys.slice(0, 3).join(', ') + (keys.length > 3 ? ', …' : '');
-      const sum = `{${prev}}` + (trail ? ',' : '');
-      return [{ depth, path, col: true, col2: true, raw: sum, parts: [{ t: 'bkt', s: '{' }, { t: 'dim', s: prev }, { t: 'bkt', s: '}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] }];
-    }
-    const ls = [{ depth, path, col: true, col2: false, raw: '{', parts: [{ t: 'bkt', s: '{' }] }];
-    keys.forEach((k, i) => {
-      const kp = `${path}.${k}`, kl = `"${esc(k)}"`;
-      const cl = buildLines(v[k], kp, depth + 1, i < keys.length - 1, collapsed);
-      const f = cl[0];
-      ls.push({ ...f, depth: depth + 1, path: kp, raw: `${kl}: ${f.raw}`, parts: [{ t: 'key', s: kl }, { t: 'pun', s: ': ' }, ...f.parts] });
-      for (let j = 1; j < cl.length; j++) ls.push(cl[j]);
-    });
-    ls.push({ depth, path, col: true, col2: false, raw: '}' + (trail ? ',' : ''), parts: [{ t: 'bkt', s: '}' }, ...(trail ? [{ t: 'pun', s: ',' }] : [])] });
-    return ls;
-  }
-  return [];
-}
-
-function collectPaths(v, path, out = new Set()) {
-  if (v === null || typeof v !== 'object') return out;
-  if (Array.isArray(v)) { if (v.length) { out.add(path); v.forEach((x, i) => collectPaths(x, `${path}[${i}]`, out)); } }
-  else { const k = Object.keys(v); if (k.length) { out.add(path); k.forEach(key => collectPaths(v[key], `${path}.${key}`, out)); } }
-  return out;
 }
 
 // ── Single Row Component ──────────────────────────────────────────────────────
@@ -126,6 +97,29 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style, colors, theme }) 
 
   const isDark = theme === 'dark';
 
+  if (ln.isDivider) {
+    return (
+      <div
+        style={{
+          ...(style || {}),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: ROW_H,
+          fontSize: 10,
+          fontFamily: 'Inter, sans-serif',
+          letterSpacing: '0.06em',
+          color: colors.dim,
+          userSelect: 'none',
+          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+        }}
+        className="json-row"
+      >
+        <span>{ln.dividerLabel || '──'}</span>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -135,8 +129,9 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style, colors, theme }) 
         height: ROW_H,
         fontSize: 11.5,
         fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-        cursor: 'default',
+        cursor: 'text',
         userSelect: 'text',
+        WebkitUserSelect: 'text',
         background: isCurrent
           ? (isDark ? 'rgba(251,191,36,0.18)' : 'rgba(251,191,36,0.25)')
           : isHit
@@ -148,13 +143,14 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style, colors, theme }) 
     >
       {/* Line number */}
       <div
+        className="json-lineno"
         onClick={() => ln.col && onToggle(ln.path)}
         style={{
           width: 48, minWidth: 48, textAlign: 'right', paddingRight: 10,
           color: colors.dim, borderRight: `0.5px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
           fontSize: 10.5, cursor: ln.col ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: 2, height: '100%', flexShrink: 0, userSelect: 'none',
+          gap: 2, height: '100%', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none',
         }}
       >
         {ln.col && (
@@ -166,7 +162,13 @@ function Row({ ln, lineNum, isHit, isCurrent, onToggle, style, colors, theme }) 
       </div>
 
       {/* Content */}
-      <div style={{ paddingLeft: 6 + ln.depth * INDENT_PX, flex: 1, whiteSpace: 'pre', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: ROW_H + 'px' }}>
+      <div
+        className="json-row-content selectable"
+        style={{
+          paddingLeft: 6 + ln.depth * INDENT_PX, flex: 1, whiteSpace: 'pre', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: ROW_H + 'px',
+          cursor: 'text', userSelect: 'text', WebkitUserSelect: 'text',
+        }}
+      >
         {ln.parts.map((p, i) => (
           <span key={i} style={{ color: colors[p.t] || colors.dim }}>{p.s}</span>
         ))}
@@ -227,7 +229,7 @@ function VirtualScroller({ lines, searchHits, searchIdx, onToggle, colors, theme
   const totalH = lines.length * ROW_H;
 
   return (
-    <div ref={outerRef} style={{ height: '100%', overflow: 'auto', position: 'relative' }}>
+    <div ref={outerRef} className="response-mouse-select" style={{ height: '100%', overflow: 'auto', position: 'relative' }}>
       <div style={{ height: totalH, position: 'relative' }}>
         {lines.slice(start, end + 1).map((ln, idx) => {
           const i = start + idx;
@@ -264,7 +266,7 @@ function FlatScroller({ lines, searchHits, searchIdx, onToggle, colors, theme })
   }, [searchIdx, searchHits]);
 
   return (
-    <div ref={ref} style={{ height: '100%', overflow: 'auto' }}>
+    <div ref={ref} className="response-mouse-select" style={{ height: '100%', overflow: 'auto' }}>
       {lines.map((ln, i) => (
         <div key={i} data-row={i}>
           <Row
@@ -283,52 +285,224 @@ function FlatScroller({ lines, searchHits, searchIdx, onToggle, colors, theme })
 }
 
 // ── Main Export ───────────────────────────────────────────────────────────────
-export default function JsonTreeViewer({ value, className = '' }) {
+export default function JsonTreeViewer({ value, contentType = '', className = '' }) {
   const [parsed, setParsed] = useState(null);
+  const [parseFormat, setParseFormat] = useState(null);
   const [parseError, setParseError] = useState(null);
+  const [parseBusy, setParseBusy] = useState(false);
   const [rawStr, setRawStr] = useState('');
+  /** tree = collapsible JSON tree; prettyText = large-response pretty lines (no IPC clone of full object graph). */
+  const [displayMode, setDisplayMode] = useState('tree');
+  const [prettyText, setPrettyText] = useState('');
   const [collapsed, setCollapsed] = useState(new Set());
+  /** Set when worker caps NDJSON / JSON-seq record count */
+  const [streamRecordCap, setStreamRecordCap] = useState(null);
   const [tab, setTab] = useState('pretty'); // 'pretty' | 'raw'
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHits, setSearchHits] = useState([]);
   const [searchIdx, setSearchIdx] = useState(0);
   const searchRef = useRef(null);
+  /** Tree rows built off-thread (or sync when tiny) */
+  const [treeLines, setTreeLines] = useState([]);
+  const [treeLinesBusy, setTreeLinesBusy] = useState(false);
 
-  // Parse whenever value changes
+  const collapsedKey = useMemo(
+    () => [...collapsed].sort().join('\n'),
+    [collapsed],
+  );
+
   useEffect(() => {
-    if (!value) { setParsed(null); setParseError(null); setRawStr(''); return; }
-    const cleaned = value.replace(/^\uFEFF/, '').trim();
-    setRawStr(value);
+    let cancelled = false;
+    if (value == null || value === '') {
+      setParsed(null);
+      setParseFormat(null);
+      setParseError(null);
+      setParseBusy(false);
+      setRawStr('');
+      setDisplayMode('tree');
+      setPrettyText('');
+      setStreamRecordCap(null);
+      setTreeLines([]);
+      setTreeLinesBusy(false);
+      return undefined;
+    }
+
+    const asStr = typeof value === 'string' ? value : JSON.stringify(value);
+    const normalized = normalizeResponseBodyText(asStr);
+    setRawStr(asStr);
     setCollapsed(new Set());
     setSearchQuery('');
     setSearchHits([]);
     setSearchIdx(0);
+    setDisplayMode('tree');
+    setPrettyText('');
+    setStreamRecordCap(null);
+    setTreeLines([]);
+    setTreeLinesBusy(false);
 
-    let p = null, err = null;
-    try {
-      p = JSON.parse(cleaned);
-    } catch (e) {
-      // Try NDJSON (newline-delimited JSON)
-      try {
-        const nlines = cleaned.split('\n').filter(l => l.trim());
-        if (nlines.length > 1) {
-          p = nlines.map(l => JSON.parse(l));
-        } else {
-          err = e.message;
-        }
-      } catch (e2) {
-        err = e2.message;
+    const runSync = () => {
+      const result = parseJsonFamily(normalized, contentType);
+      if (cancelled) return;
+      if (!result.ok) {
+        setParsed(null);
+        setParseFormat(null);
+        setParseError(result.error);
+        return;
       }
-    }
-    setParsed(p);
-    setParseError(err);
-  }, [value]);
+      setParseError(null);
+      setParseFormat(result.format);
+      if (result.format === 'empty') {
+        setParsed(null);
+        return;
+      }
+      setParsed(result.value);
+    };
 
-  // Build flat lines array
+    if (shouldParseResponseInWorker(normalized)) {
+      setParseBusy(true);
+      setParseError(null);
+      setParsed(null);
+      setParseFormat(null);
+      parseResponseInWorker(normalized, contentType)
+        .then((payload) => {
+          if (cancelled) return;
+          setParseBusy(false);
+          setParseError(null);
+          const {
+            format,
+            displayMode: dm = 'tree',
+            value: v,
+            prettyText: pt = '',
+            ndjsonTruncated = null,
+          } = payload;
+          setParseFormat(format);
+          setStreamRecordCap(ndjsonTruncated || null);
+          if (format === 'empty') {
+            setParsed(null);
+            setDisplayMode('tree');
+            setPrettyText('');
+            setStreamRecordCap(null);
+            return;
+          }
+          if (dm === 'prettyText') {
+            setDisplayMode('prettyText');
+            setPrettyText(pt);
+            setParsed(null);
+            setCollapsed(new Set());
+            return;
+          }
+          setDisplayMode('tree');
+          setPrettyText('');
+          setParsed(v);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          try {
+            const result = parseJsonFamily(normalized, contentType);
+            if (result.ok && result.format !== 'empty') {
+              setParseBusy(false);
+              setParseError(null);
+              setParseFormat(result.format);
+              setDisplayMode('tree');
+              setPrettyText('');
+              setStreamRecordCap(null);
+              setParsed(result.value);
+              return;
+            }
+          } catch {
+            /* ignore */
+          }
+          setParseBusy(false);
+          setParsed(null);
+          setPrettyText('');
+          setDisplayMode('tree');
+          setParseFormat(null);
+          setStreamRecordCap(null);
+          setParseError(e?.message || String(e));
+        });
+    } else {
+      setParseBusy(false);
+      runSync();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [value, contentType]);
+
+  const prettyLines = useMemo(() => {
+    if (displayMode !== 'prettyText' || !prettyText) return [];
+    const parts = prettyText.split('\n');
+    if (parts.length <= PRETTY_TEXT_MAX_LINES) return parts;
+    return [
+      ...parts.slice(0, PRETTY_TEXT_MAX_LINES),
+      `… [truncated ${parts.length - PRETTY_TEXT_MAX_LINES} lines — use Download for full body]`,
+    ];
+  }, [displayMode, prettyText]);
+
+  useEffect(() => {
+    if (parseBusy || parseError || parseFormat == null || parseFormat === 'empty') {
+      setTreeLines([]);
+      setTreeLinesBusy(false);
+      return;
+    }
+    if (displayMode !== 'tree' || parsed == null) {
+      setTreeLines([]);
+      setTreeLinesBusy(false);
+      return;
+    }
+
+    const collapsedPaths = collapsedKey ? collapsedKey.split('\n') : [];
+    let cancelled = false;
+
+    const applySync = () => {
+      try {
+        const built = buildTreeLinesSync(parsed, parseFormat, collapsed);
+        if (!cancelled) {
+          setTreeLines(built);
+          setTreeLinesBusy(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setTreeLines([]);
+          setTreeLinesBusy(false);
+        }
+      }
+    };
+
+    if (!shouldUseTreeLinesWorker(parsed, parseFormat)) {
+      setTreeLinesBusy(false);
+      applySync();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setTreeLinesBusy(true);
+    buildTreeLinesInWorker(parsed, parseFormat, collapsedPaths)
+      .then((built) => {
+        if (cancelled) return;
+        setTreeLines(built);
+        setTreeLinesBusy(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        applySync();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [parsed, parseFormat, displayMode, parseBusy, parseError, collapsedKey]);
+
   const lines = useMemo(() => {
-    if (!parsed) return [];
-    return buildLines(parsed, 'root', 0, false, collapsed);
-  }, [parsed, collapsed]);
+    if (parseBusy || parseError || parseFormat == null || parseFormat === 'empty') return [];
+    if (displayMode === 'prettyText') {
+      if (!prettyLines.length) return [];
+      return textToSyntheticTreeLines(prettyLines);
+    }
+    return treeLines;
+  }, [displayMode, prettyLines, treeLines, parseFormat, parseBusy, parseError]);
 
   // Search
   useEffect(() => {
@@ -350,9 +524,15 @@ export default function JsonTreeViewer({ value, className = '' }) {
   const handleExpandAll = useCallback(() => setCollapsed(new Set()), []);
 
   const handleCollapseAll = useCallback(() => {
-    if (!parsed) return;
+    if (parseFormat == null || parseFormat === 'empty' || displayMode !== 'tree' || parsed == null) {
+      return;
+    }
+    if ((parseFormat === 'ndjson' || parseFormat === 'json-seq') && Array.isArray(parsed)) {
+      setCollapsed(collectNdjsonPaths(parsed));
+      return;
+    }
     setCollapsed(collectPaths(parsed, 'root'));
-  }, [parsed]);
+  }, [parsed, parseFormat, displayMode]);
 
   const handleCopyAll = useCallback(() => {
     navigator.clipboard.writeText(rawStr).catch(() => { });
@@ -367,12 +547,15 @@ export default function JsonTreeViewer({ value, className = '' }) {
   const colors = PALETTES[theme] || PALETTES.dark;
 
   const sizeLabel = useMemo(() => rawStr ? formatSize(new TextEncoder().encode(rawStr).length) : '', [rawStr]);
-  const isNdjson = useMemo(() => Array.isArray(parsed) && rawStr?.includes('\n') && rawStr.trim().split('\n').length > 1, [parsed, rawStr]);
+  const streamFormatLabel =
+    parseFormat === 'ndjson' ? 'NDJSON'
+      : parseFormat === 'json-seq' ? 'JSON-seq'
+        : null;
 
   const isDark = theme === 'dark';
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (!value) {
+  if (value == null || value === '') {
     return (
       <div className={`flex items-center justify-center h-full ${className}`} style={{ color: 'rgba(255,255,255,0.15)', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>
         No response body
@@ -381,9 +564,9 @@ export default function JsonTreeViewer({ value, className = '' }) {
   }
 
   return (
-    <div className={`flex flex-col h-full ${className}`} style={{ background: 'transparent', overflow: 'hidden' }}>
+    <div className={`flex flex-col h-full response-mouse-select ${className}`} style={{ background: 'transparent', overflow: 'hidden' }}>
       {/* ── Minimal Floating Controls ─────────────────────────────────────── */}
-      {parsed && (
+      {lines.length > 0 && !parseBusy && (
         <div style={{
           position: 'absolute', top: 6, right: 14, zIndex: 10,
           display: 'flex', alignItems: 'center', gap: 4,
@@ -393,6 +576,17 @@ export default function JsonTreeViewer({ value, className = '' }) {
           border: `0.5px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'}`,
           boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.1)'
         }}>
+          {streamFormatLabel && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
+              padding: '2px 6px', borderRadius: 4,
+              background: isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)',
+              color: isDark ? '#A5B4FC' : '#4338CA',
+              marginRight: 2,
+            }}>
+              {streamFormatLabel}
+            </span>
+          )}
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <span style={{ position: 'absolute', left: 6, color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)', fontSize: 11, pointerEvents: 'none' }}>⌕</span>
@@ -425,34 +619,135 @@ export default function JsonTreeViewer({ value, className = '' }) {
 
           <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
 
-          {/* Expand / Collapse icons */}
-          <button onClick={handleExpandAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Expand all">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          <button onClick={handleCollapseAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Collapse all">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
-          </button>
+          {displayMode === 'prettyText' && (
+            <span
+              title="Tree view skipped for this size to keep the app stable"
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: isDark ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.2)',
+                color: isDark ? '#FBBF24' : '#B45309',
+                marginRight: 2,
+              }}
+            >
+              Large response
+            </span>
+          )}
+
+          {displayMode === 'tree' && (
+            <>
+              <button onClick={handleExpandAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Expand all">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              <button onClick={handleCollapseAll} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', padding: '2px 4px', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.8)':'rgba(0,0,0,0.8)'} onMouseLeave={e => e.currentTarget.style.color=isDark?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.4)'} title="Collapse all">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {streamRecordCap && !parseBusy && (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '6px 12px',
+            fontSize: 11,
+            lineHeight: 1.45,
+            color: isDark ? 'rgba(251,191,36,0.95)' : '#92400E',
+            background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.15)',
+            borderBottom: `1px solid ${isDark ? 'rgba(251,191,36,0.15)' : 'rgba(251,191,36,0.25)'}`,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          Showing {streamRecordCap.shown.toLocaleString()} of {streamRecordCap.total.toLocaleString()} NDJSON / JSON-seq records in the viewer. Download the response for the full stream.
         </div>
       )}
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {parseError && (
+        {tab === 'raw' && (
+          rawStr.length >= MONACO_RAW_MIN_CHARS ? (
+            <div className="h-full min-h-0 p-3 flex flex-col response-mouse-select">
+              <p className="text-[10px] text-tx-muted mb-1.5 shrink-0">
+                Large body — editor view. Switch to Pretty for tree when the payload is within parser limits.
+              </p>
+              <div className="flex-1 min-h-0">
+                <Suspense fallback={(
+                  <div className="h-full min-h-[160px] flex items-center justify-center text-tx-muted text-[11px] bg-[var(--surface-1)] rounded-md border border-[var(--border-1)]">
+                    Loading editor…
+                  </div>
+                )}
+                >
+                  <ResponseMonacoViewer
+                    value={rawStr}
+                    language={/json|ndjson|javascript/i.test(contentType || '') ? 'json' : 'plaintext'}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          ) : rawStr.length > RAW_VIRTUAL_THRESHOLD ? (
+            <div className="h-full min-h-0 p-3 response-mouse-select">
+              <VirtualizedResponseText text={rawStr} textClass="text-[11.5px] font-mono text-tx-secondary whitespace-pre-wrap break-all leading-snug" />
+            </div>
+          ) : (
+            <div className="response-mouse-select selectable" style={{ height: '100%', overflow: 'auto', padding: 12, fontSize: 11.5, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#C8CDD8', fontFamily: "'JetBrains Mono', monospace", cursor: 'text' }}>
+              {rawStr}
+            </div>
+          )
+        )}
+
+        {tab === 'pretty' && parseBusy && (
+          <div style={{
+            height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 10, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)', fontSize: 12, fontFamily: 'Inter, sans-serif',
+          }}>
+            <span style={{ fontSize: 22, opacity: 0.7 }}>⏳</span>
+            <span>Parsing large response in a worker…</span>
+            {sizeLabel ? <span style={{ fontSize: 10, opacity: 0.75 }}>{sizeLabel}</span> : null}
+          </div>
+        )}
+
+        {tab === 'pretty' && !parseBusy && !parseError && treeLinesBusy && displayMode === 'tree' && parsed != null && (
+          <div style={{
+            height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 10, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)', fontSize: 12, fontFamily: 'Inter, sans-serif',
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+          }}>
+            <span style={{ fontSize: 22, opacity: 0.7 }}>⚡</span>
+            <span>Building tree in a worker…</span>
+            {sizeLabel ? <span style={{ fontSize: 10, opacity: 0.75 }}>{sizeLabel}</span> : null}
+          </div>
+        )}
+
+        {tab === 'pretty' && !parseBusy && parseError && (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#F87171', fontSize: 12, fontFamily: 'Inter, sans-serif' }}>
             <span style={{ fontSize: 24 }}>⚠</span>
             <span style={{ opacity: 0.8, maxWidth: 360, textAlign: 'center', lineHeight: 1.5 }}>{parseError}</span>
-            <button onClick={() => setTab('raw')} style={{ ...btnStyle(), marginTop: 4 }}>view raw</button>
+            <button type="button" onClick={() => setTab('raw')} style={{ ...btnStyle(), marginTop: 4 }}>view raw</button>
           </div>
         )}
 
-        {!parseError && tab === 'raw' && (
-          <div style={{ height: '100%', overflow: 'auto', padding: 12, fontSize: 11.5, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#C8CDD8', fontFamily: "'JetBrains Mono', monospace" }}>
-            {rawStr}
+        {tab === 'pretty' && !parseBusy && !parseError && parsed === null && parseFormat === 'empty' && (
+          <div style={{
+            height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.35)', fontSize: 13, fontFamily: 'Inter, sans-serif',
+          }}>
+            Empty body
           </div>
         )}
 
-        {!parseError && tab === 'pretty' && parsed && (
-          <div style={{ height: '100%', overflow: 'hidden' }}>
+        {tab === 'pretty' && !parseBusy && !parseError && parsed === null && parseFormat == null && value !== '' && value != null && (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
+            Parsing…
+          </div>
+        )}
+
+        {tab === 'pretty' && !parseBusy && !parseError && lines.length > 0 && (
+          <div className="response-mouse-select" style={{ height: '100%', overflow: 'hidden' }}>
             {/* Row hover style via <style> injection to avoid inline-on-each-row overhead */}
             <style>{`.json-row:hover{background:${isDark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.035)'}!important}.json-copy-btn:hover{color:${isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'}!important}`}</style>
             {lines.length > VTHRESH ? (
@@ -460,12 +755,6 @@ export default function JsonTreeViewer({ value, className = '' }) {
             ) : (
               <FlatScroller lines={lines} searchHits={searchHits} searchIdx={searchIdx} onToggle={handleToggle} colors={colors} theme={theme} />
             )}
-          </div>
-        )}
-
-        {!parseError && tab === 'pretty' && !parsed && value && (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>
-            Parsing…
           </div>
         )}
       </div>

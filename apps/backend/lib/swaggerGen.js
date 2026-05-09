@@ -25,6 +25,38 @@ function mapType(t) {
 }
 
 /**
+ * Automatically convert a raw JSON object/example into an OpenAPI Schema.
+ * If the input is already a schema (has "type" or "properties"), it returns it as is.
+ */
+function jsonToSchema(val) {
+  if (!val || typeof val !== 'object') {
+    return { type: typeof val || 'string', example: val };
+  }
+
+  // If it already looks like a schema, don't double-convert
+  if (val.type || val.properties || val.items) {
+    return val;
+  }
+
+  if (Array.isArray(val)) {
+    return {
+      type: 'array',
+      items: val.length > 0 ? jsonToSchema(val[0]) : { type: 'string' }
+    };
+  }
+
+  const properties = {};
+  for (const [key, value] of Object.entries(val)) {
+    properties[key] = jsonToSchema(value);
+  }
+
+  return {
+    type: 'object',
+    properties
+  };
+}
+
+/**
  * Convert a single endpoint to an OpenAPI path-item operation object.
  */
 function buildOperation(endpoint) {
@@ -80,7 +112,7 @@ function buildOperation(endpoint) {
   // ── Request Body ─────────────────────────────────────
   const method = endpoint.method.toLowerCase();
   if (METHOD_WITH_BODY.includes(method)) {
-    const schema = safeParse(endpoint.requestBody?.schema);
+    const schema = jsonToSchema(safeParse(endpoint.requestBody?.schema));
     if (Object.keys(schema).length) {
       op.requestBody = {
         required: true,
@@ -96,7 +128,7 @@ function buildOperation(endpoint) {
   // ── Responses ─────────────────────────────────────────
   const responses = {};
   (endpoint.responses || []).forEach((r) => {
-    const schema = safeParse(r.schema);
+    const schema = jsonToSchema(safeParse(r.schema));
     const responseObj = { description: r.description || '' };
 
     if (Object.keys(schema).length) {

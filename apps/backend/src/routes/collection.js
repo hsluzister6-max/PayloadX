@@ -1,22 +1,63 @@
-/**
- * Collection Routes
- * GET /api/collection?projectId=&teamId=
- * POST /api/collection
- * GET /api/collection/:id
- * PUT /api/collection/:id
- * DELETE /api/collection/:id
- */
-
 import express from 'express';
 import Collection from '../../models/Collection.js';
 import Request from '../../models/Request.js';
-import User from '../../models/User.js';
 import { authenticate } from '../middleware/auth.js';
-import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Collections
+ *   description: API collection management and organization (Folders & Requests)
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Collection:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         projectId:
+ *           type: string
+ *         teamId:
+ *           type: string
+ *         description:
+ *           type: string
+ *         folders:
+ *           type: array
+ *           items:
+ *             type: object
+ *         createdBy:
+ *           $ref: '#/components/schemas/User'
+ */
+
 // GET /api/collection
+/**
+ * @swagger
+ * /api/collection:
+ *   get:
+ *     summary: List collections
+ *     description: Returns a list of API collections for a specific project or team.
+ *     tags: [Collections]
+ *     parameters:
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: teamId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of collections
+ */
 router.get('/', authenticate, async (req, res) => {
   try {
     const { projectId, teamId } = req.query;
@@ -36,6 +77,33 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/collection:
+ *   post:
+ *     summary: Create a collection
+ *     description: Creates a new API collection to group requests.
+ *     tags: [Collections]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, projectId, teamId]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               projectId:
+ *                 type: string
+ *               teamId:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Collection created
+ */
 // POST /api/collection
 router.post('/', authenticate, async (req, res) => {
   try {

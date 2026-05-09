@@ -6,7 +6,8 @@
     "apps/backend",
     "apps/realtime",
     "apps/desktop",
-    "apps/landing"
+    "apps/landing",
+    "packages/*"
   ],
   "scripts": {
     "backend": "cd apps/backend && npm run dev",

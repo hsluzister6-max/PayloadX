@@ -514,8 +514,8 @@
 .mockMethod {
   font-size: 0.55rem;
   font-weight: 700;
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.1);
+  color: #cbd5e1;
+  background: rgba(203, 213, 225, 0.1);
   padding: 2px 4px;
   border-radius: 4px;
   white-space: nowrap;
@@ -709,14 +709,14 @@
 
 .setupLink {
   font-size: 0.58rem;
-  color: #3178c6;
+  color: #94a3b8;
   cursor: pointer;
   font-weight: 600;
   transition: color 0.2s;
 }
 
 .setupLink:hover {
-  color: #60a5fa;
+  color: #fff;
 }
 
 .steps {
@@ -1104,6 +1104,10 @@
   .mockUrlBar {
     padding: 0 0.2rem;
     gap: 0.3rem;
+  }
+
+  .mockUrl {
+    font-size: 0.5rem;
   }
 
   .mockUrl {
