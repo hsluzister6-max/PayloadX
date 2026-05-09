@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import styles from "./App.module.css";
 import { Zap, Lock, Users, Code, Download, Server, Terminal } from 'lucide-react';
 import { FaApple, FaWindows, FaLinux } from 'react-icons/fa6';
-import PayloadX from "./components/core/Logo";
+import Header from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
 
 const FEATURES = [
   { icon: <Zap size={18} />, tag: "PERFORMANCE", title: "Lightning Fast", desc: "TypeScript & Rust engine" },
@@ -58,35 +59,32 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  const location = useLocation();
+  const isDocs = location.pathname.startsWith("/docs");
+
   return (
-    <Routes>
-      <Route path="/" element={<Hero active={active} setActive={setActive} userOS={userOS} VERSION={VERSION} />} />
-      <Route path="/docs" element={<Docs />} />
-      <Route path="/docs/:sectionId" element={<Docs />} />
-    </Routes>
+    <div className={`${styles.root} ${isDocs ? styles.rootDocs : styles.rootHome}`}>
+      <Header />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Routes>
+          <Route path="/" element={<Hero active={active} setActive={setActive} userOS={userOS} VERSION={VERSION} />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/docs/:sectionId" element={<Docs />} />
+        </Routes>
+      </div>
+      <Footer />
+    </div>
   );
 }
 
 function Hero({ active, setActive, userOS, VERSION }) {
   return (
-    <div className={styles.root}>
+    <>
       {/* scanline overlay */}
       <div className={styles.scanlines} aria-hidden />
 
       {/* mesh background */}
       <div className={styles.mesh} aria-hidden />
-
-      {/* NAV */}
-      <nav className={styles.nav}>
-        <PayloadX size="28px" fontSize="10px" />
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span className={`${styles.logoName} metallic-app-name py-2 px-1`}>PayloadX</span>
-          <span className={styles.betaBadge}>Beta</span>
-          <span style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: '600', opacity: 0.5, marginLeft: '4px' }}>v{VERSION}</span>
-        </div>
-        <div className={styles.navSpacer} />
-        <Link to="/docs" className={styles.navLink}>Docs</Link>
-      </nav>
 
       {/* MAIN GRID */}
       <main className={styles.main}>
@@ -121,7 +119,7 @@ function Hero({ active, setActive, userOS, VERSION }) {
               </span>
             </a>
             <Link to="/docs" className={styles.btnSecondary}>
-              <Server size={18} />
+              <Terminal size={18} />
               Local Setup
             </Link>
           </div>
@@ -313,18 +311,6 @@ function Hero({ active, setActive, userOS, VERSION }) {
         </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className={styles.footer}>
-        <div className={styles.footerBrand}>
-          <span className={styles.footerCopy}>© PayloadX <span className={styles.betaBadge} style={{ marginLeft: '4px' }}>Beta</span></span>
-          <span className={styles.footerDivider}>·</span>
-          <span className={styles.footerCreator}>
-            Crafted by <span className={styles.metallicText}>Sundan Sharma</span>
-          </span>
-        </div>
-        <div className={styles.footerLinks}>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }

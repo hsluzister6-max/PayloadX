@@ -7,15 +7,23 @@
 
 /* ---- ROOT ---- */
 .root {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: #07090d;
   color: #d0d4de;
   font-family: 'DM Mono', monospace;
-  overflow-x: hidden;
-  overflow-y: auto;
   position: relative;
+}
+
+.rootHome {
+  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.rootDocs {
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* scanline texture */
@@ -164,7 +172,6 @@
     grid-template-columns: 1fr;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
   }
   .left {
     border-right: none;

@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@300;400;500&display=swap');
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(7, 9, 13, 0.95);
+  flex-shrink: 0;
+  width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  z-index: 1000;
+  position: relative;
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 0.85rem 1rem;
+  }
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.logoName {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #9ca3b0;
+  letter-spacing: 0.04em;
+  padding: 0;
+}
+
+.betaBadge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #5a6070;
+  margin-left: 6px;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-transform: uppercase;
+}
+
+.versionText {
+  font-size: 9px;
+  color: #3d4455;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-left: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.navSpacer {
+  flex: 1;
+}
+
+.navLink {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5a6070;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.navLink:hover {
+  color: #d0d4de;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(7, 9, 13, 0.95);
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.footerBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footerCopy {
+  font-size: 0.62rem;
+  color: #1e2530;
+  letter-spacing: 0.06em;
+}
+
+.footerDivider {
+  color: #1e2530;
+  font-size: 0.62rem;
+}
+
+.footerCreator {
+  font-size: 0.62rem;
+  color: #3d4455;
+  letter-spacing: 0.04em;
+}
+
+.metallicText {
+  background: linear-gradient(175deg,
+      #f0f2f5 0%,
+      #c4c8d4 20%,
+      #8a8f9e 45%,
+      #b8bcc8 65%,
+      #e4e6ec 80%,
+      #9ca3b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: inline-block;
+  font-family: 'Syne', sans-serif;
+  text-decoration: none;
+}
+
+.metallicText:hover {
+  filter: brightness(1.2);
+}
+
+@media (max-width: 600px) {
+  .footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+}

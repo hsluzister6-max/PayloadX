@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Docs.module.css";
-import PayloadX from "./components/core/Logo";
 import {
   ChevronRight, Terminal, Cpu, Layers, Github, Zap,
   Server, Lock, Code, BookOpen, Keyboard, Menu, X
@@ -11,7 +10,7 @@ const NAV = [
   {
     group: "Getting Started",
     items: [
-      { id: "localSetup", label: "Local Setup", icon: <Server size={14} /> },
+      { id: "localSetup", label: "Local Setup", icon: <Terminal size={14} /> },
     ],
   },
   {
@@ -68,24 +67,8 @@ export default function Docs() {
   };
 
   return (
-    <div className={styles.root}>
+    <>
       <div className={styles.scanlines} aria-hidden />
-
-      {/* TOP NAV */}
-      <nav className={styles.nav}>
-        <div
-          onClick={() => navigate("/")}
-          style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
-        >
-          <PayloadX size="22px" fontSize="9px" />
-          <span className={styles.logoName}>PayloadX</span>
-        </div>
-        <div className={styles.navSpacer} />
-        <div className={styles.navVersion}>
-          <span className={styles.navDot} />
-          Docs v1.0.0
-        </div>
-      </nav>
 
       {/* LAYOUT */}
       <div className={styles.layout}>
@@ -142,7 +125,7 @@ export default function Docs() {
           </div>
         </main>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -156,7 +139,7 @@ function LocalSetup() {
 
       {/* HEADER */}
       <div>
-        <div className={styles.sectionBadge}><Server size={10} /> Self-Hosting</div>
+        <div className={styles.sectionBadge}><Terminal size={10} /> Self-Hosting</div>
         <h1 className={styles.metallicTitle}>Local Setup</h1>
         <p className={styles.lead}>
           Run the PayloadX backend on your own infrastructure using Docker.
