@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import styles from "./App.module.css";
-import { Zap, Lock, Users, Code, Download, Server } from 'lucide-react';
+import { Zap, Lock, Users, Code, Download, Server, Terminal } from 'lucide-react';
 import { FaApple, FaWindows, FaLinux } from 'react-icons/fa6';
 import PayloadX from "./components/core/Logo";
 
@@ -14,8 +14,8 @@ const FEATURES = [
 
 
 const STACK = [
-  { name: "TypeScript", percentage: 50, color: "#3178c6", desc: "Type-Safe Frontend Logic" },
-  { name: "Rust", percentage: 40, color: "#dea584", desc: "High-Performance Core Engine" },
+  { name: "TypeScript", percentage: 50, color: "#94a3b8", desc: "Type-Safe Frontend Logic" },
+  { name: "Rust", percentage: 40, color: "#64748b", desc: "High-Performance Core Engine" },
   { name: "CSS", percentage: 10, color: "#563d7c", desc: "Premium Metallic Styling" },
 ];
 
@@ -182,7 +182,7 @@ function Hero({ active, setActive, userOS, VERSION }) {
             <div className={styles.mockBody}>
               <div className={styles.mockSidebar}>
                 <div className={styles.mockSideItemActive}>
-                  <Zap size={12} style={{ color: '#60a5fa' }} />
+                  <Zap size={12} style={{ color: '#cbd5e1' }} />
                   <span>Get Users</span>
                 </div>
                 <div className={styles.mockSideItem}>
