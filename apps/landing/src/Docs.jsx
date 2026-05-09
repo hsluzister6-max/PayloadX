@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Docs.module.css";
 import PayloadX from "./components/core/Logo";
 import {
@@ -42,8 +42,13 @@ const NAV = [
 
 export default function Docs() {
   const navigate = useNavigate();
-  const [active, setActive] = useState("localSetup");
+  const { sectionId } = useParams();
+  const active = sectionId || "localSetup";
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [active]);
 
   const SECTIONS = {
     localSetup: <LocalSetup />,
@@ -58,7 +63,7 @@ export default function Docs() {
   };
 
   const handleNav = (id) => {
-    setActive(id);
+    navigate(`/docs/${id}`);
     setSidebarOpen(false);
   };
 

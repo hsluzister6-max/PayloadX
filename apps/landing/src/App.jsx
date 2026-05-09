@@ -62,6 +62,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Hero active={active} setActive={setActive} userOS={userOS} VERSION={VERSION} />} />
       <Route path="/docs" element={<Docs />} />
+      <Route path="/docs/:sectionId" element={<Docs />} />
     </Routes>
   );
 }
@@ -91,7 +92,7 @@ function Hero({ active, setActive, userOS, VERSION }) {
       <main className={styles.main}>
 
         {/* LEFT COLUMN */}
-        <div className={styles.left}>
+        <section className={styles.left}>
           <div className={styles.badge}>
             <span className={styles.badgeDot} />
             OPEN SOURCE · FREE FOREVER
@@ -102,7 +103,7 @@ function Hero({ active, setActive, userOS, VERSION }) {
             <span className={`${styles.titleX} metallic-app-name`}>X</span>
           </h1>
 
-          <p className={styles.tagline}>API Testing,<br />Simplified.</p>
+          <h2 className={styles.tagline}>API Testing,<br />Simplified.</h2>
 
           <p className={styles.sub}>
             The modern, lightweight alternative to Postman —
@@ -164,7 +165,7 @@ function Hero({ active, setActive, userOS, VERSION }) {
             <div className={styles.statDiv} />
             <div className={styles.stat}><span className={styles.statNum}>100%</span><span className={styles.statLabel}>free</span></div>
           </div>
-        </div>
+        </section>
 
         {/* RIGHT COLUMN */}
         <div className={styles.right}>
