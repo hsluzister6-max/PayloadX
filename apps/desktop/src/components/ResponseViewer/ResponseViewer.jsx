@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
@@ -7,6 +7,8 @@ import { isRealHttpStatus, parseTransportError } from '@/utils/transportErrors';
 import JsonEditor from '../RequestBuilder/tabs/JsonEditor';
 import JsonTreeViewer from './JsonTreeViewer';
 import VirtualizedResponseText from './VirtualizedResponseText.jsx';
+const ResponseMonacoViewer = lazy(() => import('./ResponseMonacoViewer.jsx'));
+import { RAW_VIRTUAL_MIN_CHARS, MONACO_RAW_MIN_CHARS } from '@/utils/responseViewThresholds';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import './swagger-theme.css';
@@ -14,8 +16,6 @@ import './swagger-theme.css';
 const RESPONSE_TABS = ['Pretty', 'Raw', 'Headers', 'Cookies', 'Docs', 'User'];
 /** Swagger `useMemo` must not parse multi-megabyte bodies on the main thread (DMG / release WebKit). */
 const MAX_SWAGGER_EMBED_CHARS = 80_000;
-/** Raw tab: single `<pre>` of a minified body will freeze the UI past this size. */
-const RAW_VIRTUAL_THRESHOLD = 96 * 1024;
 
 export default function ResponseViewer() {
   const { response, isExecuting, currentRequest } = useRequestStore();
@@ -290,7 +290,26 @@ export default function ResponseViewer() {
 
         {activeTab === 'Raw' && (
           <div className="h-full min-h-0 overflow-hidden p-4 bg-[var(--surface-1)] flex flex-col response-mouse-select">
-            {typeof response.body === 'string' && response.body.length > RAW_VIRTUAL_THRESHOLD ? (
+            {typeof response.body === 'string' && response.body.length >= MONACO_RAW_MIN_CHARS ? (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <p className="text-[10px] text-tx-muted mb-2 shrink-0">
+                  Large response — code editor view (virtualized). Pretty tab still uses tree / workers for JSON under the size caps.
+                </p>
+                <div className="flex-1 min-h-0">
+                  <Suspense fallback={(
+                    <div className="h-full min-h-[200px] flex items-center justify-center text-tx-muted text-xs bg-[var(--surface-1)] rounded-md border border-[var(--border-1)]">
+                      Loading code editor…
+                    </div>
+                  )}
+                  >
+                    <ResponseMonacoViewer
+                      value={response.body}
+                      language={/json|ndjson|javascript/i.test(contentType || '') ? 'json' : 'plaintext'}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            ) : typeof response.body === 'string' && response.body.length > RAW_VIRTUAL_MIN_CHARS ? (
               <VirtualizedResponseText text={response.body} />
             ) : (
               <pre className="selectable text-xs text-tx-secondary font-mono whitespace-pre-wrap break-all leading-relaxed h-full overflow-auto cursor-text">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -17,6 +17,9 @@ import InlineDocViewer from '@/components/ResponseViewer/InlineDocViewer';
 import RightSidebar from './RightSidebar';
 import WorkflowBuilder from '@/components/WorkflowBuilder/WorkflowBuilder';
 import HistoryPanel from '@/components/History/HistoryPanel.jsx';
+import toast from 'react-hot-toast';
+import SyncSidebar from '@/components/Sync/SyncSidebar';
+import api from '@/lib/api';
 
 export default function LayoutV2({
   onShowTeamModal,
@@ -40,6 +43,10 @@ export default function LayoutV2({
   } = useUIStore();
 
   const [rightPanelTab, setRightPanelTab] = useState('Response');
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [syncDiff, setSyncDiff] = useState(null);
+  const [showSyncSidebar, setShowSyncSidebar] = useState(false);
+  const [hasNewSync, setHasNewSync] = useState(false);
 
   const { teams, currentTeam } = useTeamStore();
   const { projects, currentProject } = useProjectStore();
@@ -78,8 +85,67 @@ export default function LayoutV2({
   // Check if user needs onboarding (no teams or projects)
   const needsOnboarding = teams.length === 0 || projects.length === 0 || !currentProject;
 
-  // Split percentage for vertical mode — default 50/50
-  const [splitPercent, setSplitPercent] = useState(50);
+
+
+  // AST CLI WebSocket Listener
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:4040');
+    
+    ws.onopen = () => {
+      console.log('[PayloadX] Connected to local AST CLI Sync Server');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'SYNC_ROUTES') {
+          console.log('[PayloadX] Received route sync payload:', payload.data);
+          setSyncDiff(payload.data);
+          if (payload.data.newRoutes.length > 0 || payload.data.updatedRoutes.length > 0) {
+            setHasNewSync(true);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  const handleSyncRoutes = async (routesToSync, collectionId) => {
+    if (!currentProject || !routesToSync.length) return;
+    
+    const loadingToast = toast.loading(`Importing ${routesToSync.length} routes...`);
+    try {
+      const promises = routesToSync.map(route => {
+        return api.post('/api/request', {
+          name: route.path,
+          method: route.method,
+          url: `{{baseUrl}}${route.path}`,
+          collectionId: collectionId,
+          projectId: currentProject._id,
+          teamId: currentProject.teamId,
+          description: `Auto-generated from ${route.handler} handler`,
+          headers: [],
+          params: [],
+          body: { mode: 'none' },
+          auth: { type: 'none' }
+        });
+      });
+      
+      await Promise.all(promises);
+      toast.success(`Successfully imported ${routesToSync.length} routes!`, { id: loadingToast });
+      setSyncDiff(null);
+      setHasNewSync(false);
+      setShowSyncSidebar(false);
+    } catch (err) {
+      console.error('Failed to sync routes', err);
+      toast.error('Failed to import routes', { id: loadingToast });
+    }
+  };
 
   return (
     <div
@@ -99,7 +165,18 @@ export default function LayoutV2({
         onToggleSidebar={toggleSidebarV2}
         orientation={workspaceOrientation}
         onToggleOrientation={toggleOrientation}
+        hasSyncNotification={hasNewSync}
+        onOpenSync={() => setShowSyncSidebar(true)}
       />
+
+      {showSyncSidebar && (
+        <SyncSidebar 
+          diff={syncDiff}
+          currentProject={currentProject}
+          onClose={() => setShowSyncSidebar(false)}
+          onSync={handleSyncRoutes}
+        />
+      )}
 
       {/* ── Body row ── */}
       <div

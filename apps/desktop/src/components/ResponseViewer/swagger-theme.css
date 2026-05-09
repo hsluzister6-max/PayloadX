@@ -10,6 +10,7 @@
 
 .swagger-container-v2 .swagger-ui {
     color: var(--text-primary);
+    background: var(--bg-primary) !important;
 }
 
 /* Typography */
@@ -46,6 +47,14 @@
     background: var(--surface-2) !important;
     border-color: var(--border-1) !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+.light .swagger-container-v2 .swagger-ui .opblock {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
+
+.swagger-container-v2 .swagger-ui .opblock .opblock-summary-method {
+    border-radius: 4px;
 }
 
 .swagger-container-v2 .swagger-ui .opblock-summary {

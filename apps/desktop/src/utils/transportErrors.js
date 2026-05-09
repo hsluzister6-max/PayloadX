@@ -114,6 +114,28 @@ export function parseTransportError(raw) {
   }
 
   if (
+    (lower.includes('chunk') && (lower.includes('eof') || lower.includes('unexpected')))
+    || (lower.includes('reading a body') && lower.includes('connection'))
+    || lower.includes('unexpected eof during chunk')
+    || lower.includes('failed to read response body')
+  ) {
+    return {
+      code: 'CHUNKED_BODY',
+      shortTitle: 'Incomplete body',
+      headline: 'Response stream ended before the full body arrived',
+      summary:
+        'The connection closed while reading a chunked or streaming response. The client never received the complete payload — this is a network / server / proxy issue, not the JSON viewer.',
+      hints: [
+        'Typical with ngrok free tier, reverse proxies, aggressive timeouts, or the server resetting mid-response.',
+        'Retry; try the same URL with curl to see if the full body downloads.',
+        'For very large responses, ensure nothing in the path (load balancer, tunnel) kills long transfers.',
+        'If the API uses chunked encoding, confirm the server finishes the final chunk before closing.',
+      ],
+      raw: text,
+    };
+  }
+
+  if (
     lower.includes('econnreset')
     || lower.includes('connection reset')
     || lower.includes('os error 10054')
@@ -128,7 +150,7 @@ export function parseTransportError(raw) {
       summary:
         'The server or an intermediate proxy closed the TCP connection before the response completed.',
       hints: [
-        'Common with free tunnels (ngrok), reverse proxies, or idle timeouts.',
+        'Common with free tunnels (ngrok), reverse proxies, or idle timeouts — especially on large or slow responses.',
         'Retry once; if it persists, try without a tunnel or inspect server/proxy logs.',
       ],
       raw: text,

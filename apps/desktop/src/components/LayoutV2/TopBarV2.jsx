@@ -14,7 +14,16 @@ import ContextSelector from './ContextSelector';
 import TeamPresence from './TeamPresence';
 
 
-export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, onToggleOrientation }) {
+import { Zap } from 'lucide-react';
+
+export default function TopBarV2({ 
+  onToggleSidebar, 
+  sidebarOpen, 
+  orientation, 
+  onToggleOrientation,
+  hasSyncNotification,
+  onOpenSync
+}) {
   const { theme, toggleTheme, toggleLayout, setActiveV2Nav, rightSidebarOpen, rightSidebarActiveTab, openRightSidebarTab, toggleRightSidebar } = useUIStore();
   const { user } = useAuthStore();
   const { isConnected } = useSocketStore();
@@ -113,7 +122,27 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
             value={globalSearch}
             onChange={(e) => { setGlobalSearch(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
+            onClick={(e) => e.stopPropagation()}
           />
+          {globalSearch.length > 0 && (
+            <button
+              type="button"
+              className="v2-search-clear"
+              aria-label="Clear search"
+              title="Clear"
+              onClick={(e) => {
+                e.stopPropagation();
+                setGlobalSearch('');
+                setSearchResults(null);
+                setShowDropdown(false);
+                searchInputRef.current?.focus();
+              }}
+            >
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
           <kbd className="v2-search-kbd">{(navigator.userAgentData?.platform?.toLowerCase().includes('mac') || (/mac/i.test(navigator.userAgent) && !/iphone|ipad/i.test(navigator.userAgent))) ? '⌘K' : 'Ctrl+K'}</kbd>
         </div>
 
@@ -163,6 +192,18 @@ export default function TopBarV2({ onToggleSidebar, sidebarOpen, orientation, on
 
       {/* Right — controls */}
       <div className="v2-header-right">
+        {/* AST Sync Notification */}
+        {hasSyncNotification && (
+          <button
+            onClick={onOpenSync}
+            className="v2-header-icon-btn relative animate-pulse"
+            title="New backend routes detected!"
+          >
+            <Zap size={15} className="text-accent fill-accent/20" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full border border-surface-1" />
+          </button>
+        )}
+
         {/* Sync Status */}
         <SyncStatusTag />
 

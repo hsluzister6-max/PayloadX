@@ -919,6 +919,14 @@ export default function SidebarV2({
         localStorage.setItem('sidebar_expanded_projects', JSON.stringify([...next]));
     };
 
+    /** Close every expanded collection (and folder) under the tree; project rows stay expanded or collapsed as-is. */
+    const collapseAllCollections = () => {
+        setExpandedCollections(new Set());
+        setExpandedFolders(new Set());
+        setCurrentFolderId(null);
+        localStorage.setItem('sidebar_expanded_collections', JSON.stringify([]));
+    };
+
     const toggleFolder = (fid, collectionId) => {
         const next = new Set(expandedFolders);
         if (next.has(fid)) {
@@ -1038,6 +1046,22 @@ export default function SidebarV2({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                    {searchQuery.length > 0 && (
+                        <button
+                            type="button"
+                            className="sdbv2-search-clear"
+                            aria-label="Clear search"
+                            title="Clear"
+                            onClick={() => {
+                                setSearchQuery('');
+                                setSearchResults(null);
+                            }}
+                        >
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
 
                 <div className="sdbv2-tree-body">
@@ -1214,6 +1238,16 @@ export default function SidebarV2({
                                                 tooltip="Sync everything"
                                                 size={12}
                                             />
+                                            <button
+                                                type="button"
+                                                className="sdbv2-section-add"
+                                                onClick={(e) => { e.stopPropagation(); collapseAllCollections(); }}
+                                                title="Collapse all collections (projects unchanged)"
+                                            >
+                                                <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 15l-6-6-6 6M18 9l-6-6-6 6" />
+                                                </svg>
+                                            </button>
                                             <button className="sdbv2-section-add" onClick={onShowImportModal} title="Import">
                                                 <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                                             </button>

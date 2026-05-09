@@ -1,0 +1,10 @@
+{
+  "name": "parser-express",
+  "version": "1.0.0",
+  "description": "PayloadX AST Parser for Express",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "parser-core": "*"
+  }
+}

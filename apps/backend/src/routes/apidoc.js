@@ -1,16 +1,3 @@
-/**
- * API Documentation Routes
- * GET /api/apidoc?projectId=&teamId=
- * POST /api/apidoc
- * GET /api/apidoc/:id
- * PUT /api/apidoc/:id
- * DELETE /api/apidoc/:id
- * POST /api/apidoc/:id/endpoints
- * PUT /api/apidoc/:id/endpoints
- * DELETE /api/apidoc/:id/endpoints
- * GET /api/apidoc/:id/export
- */
-
 import express from 'express';
 import ApiDoc from '../../models/ApiDoc.js';
 import { authenticate } from '../middleware/auth.js';
@@ -18,7 +5,61 @@ import { generateSpec } from '../../lib/swaggerGen.js';
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Documentation
+ *   description: User-facing API documentation management (Manual & Swagger-based)
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ApiDoc:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         description:
+ *           type: string
+ *         version:
+ *           type: string
+ *         baseUrl:
+ *           type: string
+ *         projectId:
+ *           type: string
+ *         teamId:
+ *           type: string
+ *         endpoints:
+ *           type: array
+ *           items:
+ *             type: object
+ */
+
 // GET /api/apidoc
+/**
+ * @swagger
+ * /api/apidoc:
+ *   get:
+ *     summary: List API documentations
+ *     description: Returns a list of API documentation projects for a team or project.
+ *     tags: [Documentation]
+ *     parameters:
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: teamId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of docs
+ */
 router.get('/', authenticate, async (req, res) => {
   try {
     const { projectId, teamId } = req.query;
@@ -40,6 +81,35 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/apidoc:
+ *   post:
+ *     summary: Create an API documentation project
+ *     description: Starts a new API documentation project (can be manual or later updated via Swagger).
+ *     tags: [Documentation]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, projectId, teamId]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               projectId:
+ *                 type: string
+ *               teamId:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               version:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Doc created
+ */
 // POST /api/apidoc
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -221,6 +291,99 @@ router.get('/:id/export', authenticate, async (req, res) => {
     res.send(JSON.stringify(spec, null, 2));
   } catch (err) {
     console.error('API Doc Export error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/apidoc/{id}/import-swagger:
+ *   post:
+ *     summary: Import endpoints from a Swagger/OpenAPI JSON
+ *     description: Parses a Swagger JSON and adds its endpoints to the current documentation.
+ *     tags: [Documentation]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               spec:
+ *                 type: object
+ *                 description: The Swagger/OpenAPI JSON object
+ *     responses:
+ *       200:
+ *         description: Endpoints imported successfully
+ */
+router.post('/:id/import-swagger', authenticate, async (req, res) => {
+  try {
+    const { spec } = req.body;
+    if (!spec || !spec.paths) {
+      return res.status(400).json({ error: 'Valid Swagger/OpenAPI spec with "paths" is required' });
+    }
+
+    const doc = await ApiDoc.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'ApiDoc not found' });
+
+    const newEndpoints = [];
+    const paths = spec.paths;
+
+    for (const [path, methods] of Object.entries(paths)) {
+      for (const [method, data] of Object.entries(methods)) {
+        if (!['get', 'post', 'put', 'delete', 'patch', 'head', 'options'].includes(method.toLowerCase())) continue;
+
+        newEndpoints.push({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          path,
+          method: method.toUpperCase(),
+          summary: data.summary || '',
+          description: data.description || '',
+          tags: data.tags || [],
+          queryParams: (data.parameters || [])
+            .filter(p => p.in === 'query')
+            .map(p => ({
+              id: Math.random().toString(36).substr(2, 9),
+              name: p.name,
+              type: p.schema?.type || 'string',
+              required: p.required || false,
+              description: p.description || ''
+            })),
+          headers: (data.parameters || [])
+            .filter(p => p.in === 'header')
+            .map(p => ({
+              id: Math.random().toString(36).substr(2, 9),
+              key: p.name,
+              value: ''
+            })),
+          requestBody: {
+            schema: data.requestBody?.content?.['application/json']?.schema ? JSON.stringify(data.requestBody.content['application/json'].schema) : '{}',
+            contentType: 'application/json'
+          },
+          responses: Object.entries(data.responses || {}).map(([code, resData]) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            statusCode: parseInt(code) || 200,
+            description: resData.description || '',
+            schema: resData.content?.['application/json']?.schema ? JSON.stringify(resData.content['application/json'].schema) : '{}',
+            contentType: 'application/json'
+          }))
+        });
+      }
+    }
+
+    doc.endpoints = [...doc.endpoints, ...newEndpoints];
+    doc.spec = generateSpec(doc);
+    await doc.save();
+
+    res.json({ doc, importedCount: newEndpoints.length });
+  } catch (err) {
+    console.error('Swagger Import error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

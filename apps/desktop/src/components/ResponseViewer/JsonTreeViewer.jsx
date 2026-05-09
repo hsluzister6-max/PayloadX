@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useUIStore } from '@/store/uiStore';
 import { buildLines, collectPaths, buildNdjsonTreeLines, collectNdjsonPaths } from '@/utils/jsonTreeLines';
 import { normalizeResponseBodyText, parseJsonFamily } from '@/utils/jsonResponseParse';
 import { parseResponseInWorker, shouldParseResponseInWorker } from '@/utils/responseWorkerClient';
 import { buildTreeLinesInWorker, shouldUseTreeLinesWorker } from '@/utils/treeLinesWorkerClient';
 import VirtualizedResponseText from './VirtualizedResponseText.jsx';
+const ResponseMonacoViewer = lazy(() => import('./ResponseMonacoViewer.jsx'));
+import { RAW_VIRTUAL_MIN_CHARS, MONACO_RAW_MIN_CHARS } from '@/utils/responseViewThresholds';
 
 /**
  * PayloadX High-Performance JSON Viewer
@@ -22,7 +24,7 @@ const OVERSCAN = 10;
 const VTHRESH = 600; // lines before switching to virtual scroll
 const INDENT_PX = 14;
 /** Above this, Raw sub-tab virtualizes so a single-line/minified body does not freeze WebKit. */
-const RAW_VIRTUAL_THRESHOLD = 96 * 1024;
+const RAW_VIRTUAL_THRESHOLD = RAW_VIRTUAL_MIN_CHARS;
 const PRETTY_TEXT_MAX_LINES = 300_000;
 
 function textToSyntheticTreeLines(strings) {
@@ -668,7 +670,26 @@ export default function JsonTreeViewer({ value, contentType = '', className = ''
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {tab === 'raw' && (
-          rawStr.length > RAW_VIRTUAL_THRESHOLD ? (
+          rawStr.length >= MONACO_RAW_MIN_CHARS ? (
+            <div className="h-full min-h-0 p-3 flex flex-col response-mouse-select">
+              <p className="text-[10px] text-tx-muted mb-1.5 shrink-0">
+                Large body — editor view. Switch to Pretty for tree when the payload is within parser limits.
+              </p>
+              <div className="flex-1 min-h-0">
+                <Suspense fallback={(
+                  <div className="h-full min-h-[160px] flex items-center justify-center text-tx-muted text-[11px] bg-[var(--surface-1)] rounded-md border border-[var(--border-1)]">
+                    Loading editor…
+                  </div>
+                )}
+                >
+                  <ResponseMonacoViewer
+                    value={rawStr}
+                    language={/json|ndjson|javascript/i.test(contentType || '') ? 'json' : 'plaintext'}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          ) : rawStr.length > RAW_VIRTUAL_THRESHOLD ? (
             <div className="h-full min-h-0 p-3 response-mouse-select">
               <VirtualizedResponseText text={rawStr} textClass="text-[11.5px] font-mono text-tx-secondary whitespace-pre-wrap break-all leading-snug" />
             </div>
