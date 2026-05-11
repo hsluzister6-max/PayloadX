@@ -11,6 +11,7 @@ use std::time::Instant;
 use std::str::FromStr;
 use tauri::Window;
 use crate::AppCookieJar;
+use crate::cookie_jar;
 use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -244,18 +245,22 @@ impl WorkflowExecutor {
 
         // 3. HTTP method and URL
         let url_obj = ::url::Url::parse(url).context("Invalid URL format")?;
-        let host = url_obj.host_str().unwrap_or("").to_string();
 
         let mut request = self.client.request(
             method.parse().context("Invalid HTTP method")?,
             url,
         );
 
-        // Add headers
+        // Add headers (defer Cookie — merged with jar like collection REST)
         let mut header_map = HeaderMap::new();
+        let mut user_cookie_raw: Option<String> = None;
         if let Some(headers) = &mapped_node.data.headers {
             for header in headers {
                 if header.enabled {
+                    if header.key.eq_ignore_ascii_case("cookie") {
+                        user_cookie_raw = Some(header.value.clone());
+                        continue;
+                    }
                     if let (Ok(name), Ok(val)) = (
                         HeaderName::from_str(&header.key),
                         HeaderValue::from_str(&header.value),
@@ -266,25 +271,20 @@ impl WorkflowExecutor {
             }
         }
 
-        // Attach cookies from jar
-        if !host.is_empty() {
-            if let Some(jar_wrapper) = &self.cookie_jar {
-                if let Ok(jar) = jar_wrapper.0.lock() {
-                    if let Some(cookies) = jar.get(&host) {
-                        if !cookies.is_empty() {
-                            println!("DEBUG: Attaching {} cookies from jar for host {}", cookies.len(), host);
-                            let mut cookie_components = Vec::new();
-                            for (k, v) in cookies.iter() {
-                                if v.is_empty() {
-                                    cookie_components.push(k.clone());
-                                } else {
-                                    cookie_components.push(format!("{}={}", k, v));
-                                }
-                            }
-                            if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
-                                header_map.insert(reqwest::header::COOKIE, val);
-                            }
-                        }
+        let storage_keys = cookie_jar::lookup_keys_for_url(&url_obj);
+        let now = std::time::SystemTime::now();
+        if let Some(jar_wrapper) = &self.cookie_jar {
+            if let Ok(mut jar) = jar_wrapper.0.lock() {
+                cookie_jar::purge_expired(&mut jar);
+                if let Some(merged) = cookie_jar::build_cookie_header_value(
+                    &jar,
+                    &storage_keys,
+                    user_cookie_raw.as_deref(),
+                    url_obj.scheme() == "https",
+                    now,
+                ) {
+                    if let Ok(val) = HeaderValue::from_str(&merged) {
+                        header_map.insert(reqwest::header::COOKIE, val);
                     }
                 }
             }
@@ -350,22 +350,13 @@ impl WorkflowExecutor {
             .context("Failed to execute request")?;
 
         // Handle saving session
-        if mapped_node.data.save_session.unwrap_or(false) && !host.is_empty() {
+        if mapped_node.data.save_session.unwrap_or(false) {
             if let Some(jar_wrapper) = &self.cookie_jar {
-                let set_cookies = response.headers().get_all(reqwest::header::SET_COOKIE);
-                for cookie in set_cookies.iter() {
-                    if let Ok(c_str) = cookie.to_str() {
-                        // Parse key=value
-                        let parts: Vec<&str> = c_str.split(';').collect();
-                        if let Some(first_part) = parts.first() {
-                            let kv: Vec<&str> = first_part.splitn(2, '=').collect();
-                            if let Ok(mut jar) = jar_wrapper.0.lock() {
-                                let host_jar = jar.entry(host.clone()).or_insert_with(HashMap::new);
-                                let key = kv[0].trim().to_string();
-                                let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
-                                println!("DEBUG: Saving cookie {}={} for host {}", key, val, host);
-                                host_jar.insert(key, val);
-                            }
+                if let Ok(mut jar) = jar_wrapper.0.lock() {
+                    let set_cookies = response.headers().get_all(reqwest::header::SET_COOKIE);
+                    for cookie in set_cookies.iter() {
+                        if let Ok(c_str) = cookie.to_str() {
+                            cookie_jar::store_from_set_cookie(&mut jar, c_str, &url_obj);
                         }
                     }
                 }

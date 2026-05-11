@@ -140,6 +140,29 @@ export function tryRequestUrlHost(urlString) {
   }
 }
 
+/**
+ * Host key used by the Tauri cookie jar (matches Rust `cookie_storage_key`):
+ * lowercase host, loopback → localhost, non-default ports appended as `:port`.
+ */
+export function tryRequestUrlCookieKey(urlString) {
+  if (!urlString || !String(urlString).trim()) return null;
+  const s = String(urlString).trim();
+  try {
+    const withProto = /^[a-zA-Z][a-zA-Z+\-.]*:\/\//.test(s) ? s : `https://${s}`;
+    const u = new URL(withProto);
+    let host = (u.hostname || '').toLowerCase();
+    if (host === '127.0.0.1' || host === '::1') host = 'localhost';
+    if (!host) return null;
+    const port = u.port;
+    if (!port) return host;
+    const def = u.protocol === 'https:' ? '443' : u.protocol === 'http:' ? '80' : '';
+    if (def && port === def) return host;
+    return `${host}:${port}`;
+  } catch {
+    return null;
+  }
+}
+
 function clampTimeout(timeoutMs) {
   const parsed = Number(timeoutMs);
   if (!Number.isFinite(parsed) || parsed <= 0) {

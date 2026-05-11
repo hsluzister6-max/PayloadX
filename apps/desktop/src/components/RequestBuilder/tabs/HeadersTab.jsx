@@ -3,7 +3,7 @@ import { useRequestStore } from '@/store/requestStore';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import {
   getImplicitRequestHeadersPreview,
-  tryRequestUrlHost,
+  tryRequestUrlCookieKey,
 } from '@/services/requestService';
 import { isTauriRuntime } from '@/lib/runtime';
 import KeyValueDescriptionTable from './KeyValueDescriptionTable';
@@ -49,7 +49,7 @@ export default function HeadersTab() {
   const cookieHost = useMemo(() => {
     const raw = currentRequest.url || '';
     const resolved = resolveVariables(raw);
-    return tryRequestUrlHost(resolved) || tryRequestUrlHost(raw);
+    return tryRequestUrlCookieKey(resolved) || tryRequestUrlCookieKey(raw);
   }, [currentRequest.url, resolveVariables]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function HeadersTab() {
         <>
           No active cookie keys for{' '}
           <code className="text-[10px] px-0.5 rounded bg-[var(--surface-2)]">{cookieHost}</code>
-          — the <code className="text-[10px]">Cookie</code> header will not be added from the jar on Send.
+          — after a login response sets cookies, the next request to the same host/port sends them automatically (merged with any manual Cookie header).
         </>
       );
     }

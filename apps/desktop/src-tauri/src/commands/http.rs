@@ -8,6 +8,7 @@ use reqwest::{
     Method,
 };
 use crate::security::{validate_http_url, SsrfError};
+use crate::cookie_jar;
 
 // ── Request types ─────────────────────────────────────────────────────────────
 
@@ -161,9 +162,14 @@ pub async fn execute_request(
         }
     }
 
-    // Custom headers
+    // Custom headers — defer Cookie so it can be merged with the jar
+    let mut user_cookie_raw: Option<String> = None;
     if let Some(headers) = &payload.headers {
         for h in headers.iter().filter(|h| h.enabled.unwrap_or(true) && !h.key.is_empty()) {
+            if h.key.eq_ignore_ascii_case("cookie") {
+                user_cookie_raw = Some(h.value.clone());
+                continue;
+            }
             if let (Ok(name), Ok(val)) = (
                 HeaderName::from_str(&h.key),
                 HeaderValue::from_str(&h.value),
@@ -173,26 +179,21 @@ pub async fn execute_request(
         }
     }
 
-    // Extract Host for Cookie Jar
-    let host = url.host_str().unwrap_or("").to_string();
+    let url_is_https = url.scheme() == "https";
+    let storage_keys = cookie_jar::lookup_keys_for_url(&url);
+    let now = std::time::SystemTime::now();
 
-    // Attach saved cookies for this host
-    if !host.is_empty() {
-        if let Ok(jar) = cookie_jar.0.lock() {
-            if let Some(cookies) = jar.get(&host) {
-                if !cookies.is_empty() {
-                    let mut cookie_components = Vec::new();
-                    for (k, v) in cookies.iter() {
-                        if v.is_empty() {
-                            cookie_components.push(k.clone());
-                        } else {
-                            cookie_components.push(format!("{}={}", k, v));
-                        }
-                    }
-                    if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
-                        header_map.insert(reqwest::header::COOKIE, val);
-                    }
-                }
+    if let Ok(mut jar) = cookie_jar.0.lock() {
+        cookie_jar::purge_expired(&mut jar);
+        if let Some(merged) = cookie_jar::build_cookie_header_value(
+            &jar,
+            &storage_keys,
+            user_cookie_raw.as_deref(),
+            url_is_https,
+            now,
+        ) {
+            if let Ok(val) = HeaderValue::from_str(&merged) {
+                header_map.insert(reqwest::header::COOKIE, val);
             }
         }
     }
@@ -260,25 +261,21 @@ pub async fn execute_request(
     let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
 
     let mut resp_headers = HashMap::new();
-    
-    // Handle returning Set-Cookies
-    if !host.is_empty() {
+
+    {
         let set_cookies = response.headers().get_all(reqwest::header::SET_COOKIE);
         let mut new_cookies = Vec::new();
-        for cookie in set_cookies.iter() {
-            if let Ok(c_str) = cookie.to_str() {
-                new_cookies.push(c_str.to_string());
-                
-                // Parse key=value
-                let parts: Vec<&str> = c_str.split(';').collect();
-                if let Some(first_part) = parts.first() {
-                    let kv: Vec<&str> = first_part.splitn(2, '=').collect();
-                    if let Ok(mut jar) = cookie_jar.0.lock() {
-                        let host_jar = jar.entry(host.clone()).or_insert_with(HashMap::new);
-                        let key = kv[0].trim().to_string();
-                        let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
-                        host_jar.insert(key, val);
-                    }
+        if let Ok(mut jar) = cookie_jar.0.lock() {
+            for cookie in set_cookies.iter() {
+                if let Ok(c_str) = cookie.to_str() {
+                    new_cookies.push(c_str.to_string());
+                    cookie_jar::store_from_set_cookie(&mut jar, c_str, &url);
+                }
+            }
+        } else {
+            for cookie in set_cookies.iter() {
+                if let Ok(c_str) = cookie.to_str() {
+                    new_cookies.push(c_str.to_string());
                 }
             }
         }
@@ -331,8 +328,20 @@ pub async fn get_cookies(
     host: String,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<HashMap<String, String>, String> {
+    use std::time::SystemTime;
+    let now = SystemTime::now();
     if let Ok(jar) = cookie_jar.0.lock() {
-        Ok(jar.get(&host).cloned().unwrap_or_default())
+        let mut acc: HashMap<String, String> = HashMap::new();
+        for storage_key in cookie_jar::candidate_keys_from_host_input(&host) {
+            if let Some(host_map) = jar.get(&storage_key) {
+                for (name, sc) in host_map {
+                    if !sc.is_expired(now) {
+                        acc.insert(name.clone(), sc.value.clone());
+                    }
+                }
+            }
+        }
+        Ok(acc)
     } else {
         Err("Failed to lock cookie jar".to_string())
     }
@@ -346,8 +355,15 @@ pub async fn set_cookie(
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<(), String> {
     if let Ok(mut jar) = cookie_jar.0.lock() {
-        let host_jar = jar.entry(host).or_insert_with(HashMap::new);
-        host_jar.insert(key, value);
+        let host_jar = jar.entry(host).or_default();
+        host_jar.insert(
+            key,
+            cookie_jar::StoredCookie {
+                value,
+                expires_at: None,
+                secure: false,
+            },
+        );
         Ok(())
     } else {
         Err("Failed to lock cookie jar".to_string())
@@ -361,8 +377,10 @@ pub async fn delete_cookie(
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<(), String> {
     if let Ok(mut jar) = cookie_jar.0.lock() {
-        if let Some(host_jar) = jar.get_mut(&host) {
-            host_jar.remove(&key);
+        for storage_key in cookie_jar::candidate_keys_from_host_input(&host) {
+            if let Some(host_jar) = jar.get_mut(&storage_key) {
+                host_jar.remove(&key);
+            }
         }
         Ok(())
     } else {
@@ -374,7 +392,8 @@ pub async fn delete_cookie(
 pub async fn list_cookie_domains(
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<Vec<String>, String> {
-    if let Ok(jar) = cookie_jar.0.lock() {
+    if let Ok(mut jar) = cookie_jar.0.lock() {
+        cookie_jar::purge_expired(&mut jar);
         Ok(jar.keys().cloned().collect())
     } else {
         Err("Failed to lock cookie jar".to_string())

@@ -4,6 +4,7 @@
 use tauri::Manager;
 
 mod commands;
+mod cookie_jar;
 mod security;
 mod workflow;
 
@@ -18,8 +19,14 @@ use commands::postman::parse_postman_collection;
 use std::sync::Mutex;
 use std::collections::HashMap;
 
-#[derive(Default, Clone)]
-pub struct AppCookieJar(pub std::sync::Arc<Mutex<HashMap<String, HashMap<String, String>>>>);
+#[derive(Clone)]
+pub struct AppCookieJar(pub std::sync::Arc<Mutex<cookie_jar::AppJar>>);
+
+impl Default for AppCookieJar {
+    fn default() -> Self {
+        Self(std::sync::Arc::new(std::sync::Mutex::new(HashMap::new())))
+    }
+}
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
