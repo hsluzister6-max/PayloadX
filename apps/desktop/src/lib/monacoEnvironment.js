@@ -18,3 +18,6 @@ globalThis.MonacoEnvironment = {
 loader.config({ monaco });
 
 export { monaco };
+
+
+
