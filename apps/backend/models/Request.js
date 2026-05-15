@@ -91,6 +91,10 @@ const RequestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+/** Narrow list + search to a project first (sidebar / Cmd+K search). */
+RequestSchema.index({ projectId: 1, order: 1, createdAt: 1 });
+RequestSchema.index({ teamId: 1, projectId: 1 });
+
 if (mongoose.models.Request) {
   delete mongoose.models.Request;
 }

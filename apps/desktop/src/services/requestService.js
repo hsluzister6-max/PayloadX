@@ -1,5 +1,9 @@
 import api from '@/lib/api';
 import { getRequestRuntime, isTauriRuntime } from '@/lib/runtime';
+import { getDomainDefaultHeaderPairs } from './domainDefaultHeadersService';
+import { jsoncToWireString } from '@/utils/jsonc';
+
+export { tryRequestUrlHost, tryRequestUrlCookieKey } from './requestUrlKeys';
 
 const REQUEST_PROXY_PATH = '/api/request/execute';
 const NATIVE_WATCHDOG_TIMEOUT_MS = 35_000;
@@ -50,6 +54,7 @@ export function getImplicitRequestHeadersPreview({
   body = { mode: 'none' },
   auth = { type: 'none' },
   resolveVariables = (x) => x,
+  resolvedUrl = null,
 } = {}) {
   const rows = [];
   const keys = enabledUserHeaderKeys(headers);
@@ -125,19 +130,19 @@ export function getImplicitRequestHeadersPreview({
     }
   }
 
-  return rows;
-}
-
-export function tryRequestUrlHost(urlString) {
-  if (!urlString || !String(urlString).trim()) return null;
-  const s = String(urlString).trim();
-  try {
-    const withProto = /^[a-zA-Z][a-zA-Z+\-.]*:\/\//.test(s) ? s : `https://${s}`;
-    const u = new URL(withProto);
-    return u.hostname || null;
-  } catch {
-    return null;
+  if (resolvedUrl) {
+    getDomainDefaultHeaderPairs(resolvedUrl).forEach(({ key, value }) => {
+      if (!keys.has(key.toLowerCase())) {
+        rows.push({
+          key,
+          value: maskSecret(value),
+          source: 'Default for this host (saved under Headers → save for domain)',
+        });
+      }
+    });
   }
+
+  return rows;
 }
 
 function clampTimeout(timeoutMs) {
@@ -149,7 +154,7 @@ function clampTimeout(timeoutMs) {
   return Math.min(Math.max(parsed, 1_000), MAX_TIMEOUT_MS);
 }
 
-function normalizeHeaderList(headers = []) {
+function normalizeHeaderList(headers = [], resolvedUrl = null) {
   const normalized = [];
 
   headers
@@ -161,6 +166,14 @@ function normalizeHeaderList(headers = []) {
         enabled: true,
       });
     });
+
+  if (resolvedUrl) {
+    getDomainDefaultHeaderPairs(resolvedUrl).forEach(({ key, value }) => {
+      if (!normalized.some((h) => h.key.toLowerCase() === key.toLowerCase())) {
+        normalized.push({ key, value, enabled: true });
+      }
+    });
+  }
 
   AUTO_FORWARD_HEADERS.forEach(([key, value]) => {
     const alreadyPresent = normalized.some(
@@ -179,9 +192,14 @@ function normalizeBody(body = {}) {
   const mode = body?.mode || 'none';
 
   if (mode === 'raw') {
+    let raw = body.raw ?? '';
+    const lang = String(body.rawLanguage || 'text').toLowerCase();
+    if (lang === 'json') {
+      raw = jsoncToWireString(raw);
+    }
     return {
       mode,
-      raw: body.raw ?? '',
+      raw,
       rawLanguage: body.rawLanguage || 'text',
     };
   }
@@ -209,7 +227,7 @@ function normalizePayload(payload) {
   }
 
   const method = (payload.method || 'GET').toUpperCase();
-  const headers = normalizeHeaderList(payload.headers);
+  const headers = normalizeHeaderList(payload.headers, payload.url);
   const body = normalizeBody(payload.body);
   const timeoutMs = clampTimeout(payload.timeoutMs);
 

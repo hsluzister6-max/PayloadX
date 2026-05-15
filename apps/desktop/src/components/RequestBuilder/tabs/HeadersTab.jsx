@@ -1,11 +1,17 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import {
   getImplicitRequestHeadersPreview,
-  tryRequestUrlHost,
 } from '@/services/requestService';
+import { tryRequestUrlCookieKey } from '@/services/requestUrlKeys';
+import {
+  getSavedHeadersForDomainKey,
+  removeHeaderForDomain,
+  saveHeaderForDomain,
+} from '@/services/domainDefaultHeadersService';
 import { isTauriRuntime } from '@/lib/runtime';
+import toast from 'react-hot-toast';
 import KeyValueDescriptionTable from './KeyValueDescriptionTable';
 
 const COMMON_HEADERS = [
@@ -21,8 +27,20 @@ export default function HeadersTab() {
   const headers = currentRequest.headers || [];
   const [showAutoHeaders, setShowAutoHeaders] = useState(false);
   const [jarCookies, setJarCookies] = useState({ loading: false, names: [] });
+  /** Bumps when domain default headers in localStorage change (save or other tab). */
+  const [domainStorageTick, setDomainStorageTick] = useState(0);
 
   const setHeaders = (h) => updateField('headers', h);
+
+  const resolvedUrlPreview = useMemo(() => {
+    try {
+      const u = resolveVariables(currentRequest.url || '');
+      return u?.trim() ? u : null;
+    } catch {
+      const raw = (currentRequest.url || '').trim();
+      return raw || null;
+    }
+  }, [currentRequest.url, resolveVariables]);
 
   const implicitRows = useMemo(
     () =>
@@ -32,6 +50,7 @@ export default function HeadersTab() {
         body: currentRequest.body,
         auth: currentRequest.auth,
         resolveVariables,
+        resolvedUrl: resolvedUrlPreview,
       }),
     [
       currentRequest.headers,
@@ -39,6 +58,7 @@ export default function HeadersTab() {
       currentRequest.body,
       currentRequest.auth,
       resolveVariables,
+      resolvedUrlPreview,
     ],
   );
 
@@ -49,8 +69,67 @@ export default function HeadersTab() {
   const cookieHost = useMemo(() => {
     const raw = currentRequest.url || '';
     const resolved = resolveVariables(raw);
-    return tryRequestUrlHost(resolved) || tryRequestUrlHost(raw);
+    return tryRequestUrlCookieKey(resolved) || tryRequestUrlCookieKey(raw);
   }, [currentRequest.url, resolveVariables]);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'payloadx_domain_default_headers_v1') setDomainStorageTick((t) => t + 1);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const savedByHeaderNameLower = useMemo(() => {
+    const m = new Map();
+    if (!cookieHost) return m;
+    for (const { key, value } of getSavedHeadersForDomainKey(cookieHost)) {
+      const name = String(key ?? '').trim();
+      if (!name) continue;
+      m.set(name.toLowerCase(), { key: name, value: String(value ?? '') });
+    }
+    return m;
+  }, [cookieHost, domainStorageTick]);
+
+  const getDomainPinStatus = useCallback(
+    (row) => {
+      const name = String(row.key ?? '').trim();
+      if (!name || !cookieHost) return 'none';
+      const saved = savedByHeaderNameLower.get(name.toLowerCase());
+      if (!saved) return 'unsaved';
+      let resolvedVal;
+      try {
+        resolvedVal = resolveVariables(String(row.value ?? ''));
+      } catch {
+        resolvedVal = String(row.value ?? '');
+      }
+      return saved.value === resolvedVal ? 'saved' : 'dirty';
+    },
+    [cookieHost, savedByHeaderNameLower, resolveVariables],
+  );
+
+  const handleToggleHeaderForDomain = useCallback(
+    (row) => {
+      const host = tryRequestUrlCookieKey(resolveVariables(currentRequest.url || ''))
+        || tryRequestUrlCookieKey(currentRequest.url || '');
+      if (!host) {
+        toast.error('Set a URL with a host (e.g. https://api.example.com/...)');
+        return;
+      }
+      const name = String(row.key ?? '').trim();
+      if (!name) return;
+      const pin = getDomainPinStatus(row);
+      if (pin === 'saved') {
+        removeHeaderForDomain(host, name);
+        toast.success(`Removed «${name}» from saved defaults for ${host}`);
+      } else {
+        saveHeaderForDomain(host, name, resolveVariables(String(row.value ?? '')));
+        toast.success(`Saved «${name}» for ${host}`);
+      }
+      setDomainStorageTick((t) => t + 1);
+    },
+    [currentRequest.url, resolveVariables, getDomainPinStatus],
+  );
 
   useEffect(() => {
     if (!isTauriRuntime() || !cookieHost) {
@@ -144,7 +223,7 @@ export default function HeadersTab() {
         {showAutoHeaders && implicitRows.length > 0 && (
           <div className="space-y-2 pt-1 border-t border-[var(--border-1)]/80">
             <p className="text-[10px] text-tx-muted/90 leading-relaxed">
-              Merged by the client or inferred from Auth / Body. Add the same key in the table below to override tunnel
+              Merged by the client or inferred from Auth / Body. Domain headers you save with the bookmark column apply on Send for the same host/port unless you set the same key below. Add the same key in the table below to override tunnel
               helpers; an enabled <code className="text-[10px]">Authorization</code> header overrides the Auth tab.
             </p>
             <div className="rounded-md border border-[var(--border-1)] bg-[var(--surface-2)]/40 overflow-hidden">
@@ -187,6 +266,9 @@ export default function HeadersTab() {
           valuePlaceholder="Value"
           descriptionPlaceholder="Description"
           datalistId="common-headers"
+          domainKey={cookieHost}
+          onToggleHeaderForDomain={handleToggleHeaderForDomain}
+          getDomainPinStatus={getDomainPinStatus}
         />
       </div>
     </div>

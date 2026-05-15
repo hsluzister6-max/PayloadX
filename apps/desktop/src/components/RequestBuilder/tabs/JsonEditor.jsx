@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code, Search } from 'lucide-react';
+import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
+import { toggleJsonLineComment } from '@/utils/jsonLineComment';
+import { REST_KEYS, VALUE_SNIPPETS } from './jsonEditorConstants';
 
 // ── Syntax Highlighter ────────────────────────────────────────────────────────
 function highlight(code) {
@@ -15,34 +18,16 @@ function highlight(code) {
     .replace(/([{}\[\]])/g, '<span class="jbk">$1</span>');
 }
 
-// ── Autocomplete Data ─────────────────────────────────────────────────────────
-const REST_KEYS = [
-  'id','_id','uuid','name','firstName','lastName','email','phone','username',
-  'password','token','accessToken','refreshToken','apiKey','role','permissions',
-  'status','isActive','isDeleted','enabled','type','category','tags',
-  'createdAt','updatedAt','deletedAt','timestamp','page','limit','offset','total',
-  'data','meta','message','error','code','success','result','results','items','count',
-  'address','city','country','zipCode','price','amount','quantity','rating','score',
-  'url','imageUrl','thumbnail','description','title','slug','content',
-  'userId','projectId','parentId','avatar','weight',
-];
-
-const VALUE_SNIPPETS = [
-  { label: 'true',  insert: 'true' },
-  { label: 'false', insert: 'false' },
-  { label: 'null',  insert: 'null' },
-  { label: '[]',    insert: '[]' },
-  { label: '{}',    insert: '{}' },
-];
-
 function extractKeys(str) {
   try {
+    const parsed = tryParseJsoncValue(str);
+    if (parsed === undefined || parsed === null || typeof parsed !== 'object') return [];
     const keys = new Set();
     const walk = (o, d = 0) => {
       if (d > 5 || !o || typeof o !== 'object') return;
       Object.keys(o).forEach(k => { keys.add(k); walk(o[k], d + 1); });
     };
-    walk(JSON.parse(str));
+    walk(parsed);
     return [...keys];
   } catch { return []; }
 }
@@ -115,6 +100,20 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   const handleKeyDown = useCallback((e) => {
     const ta = e.target;
 
+    // JSON / JSONC: Cmd/Ctrl + /  toggles line comments
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault();
+      if (readOnly || language !== 'json') return;
+      const ta = e.target;
+      const { text, selStart, selEnd } = toggleJsonLineComment(ta.value, ta.selectionStart, ta.selectionEnd);
+      onChange(text);
+      setTimeout(() => {
+        ta.selectionStart = selStart;
+        ta.selectionEnd = selEnd;
+      }, 0);
+      return;
+    }
+
     // Autocomplete navigation
     if (ac.open) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx + 1) % a.items.length })); return; }
@@ -165,7 +164,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       const newPos = s + newLine.length;
       setTimeout(() => { ta.selectionStart = ta.selectionEnd = newPos; }, 0);
     }
-  }, [ac, applyAc, onChange, readOnly]);
+  }, [ac, applyAc, onChange, readOnly, language]);
 
   const handleInput = useCallback((e) => {
     const ta = e.target;
@@ -176,13 +175,27 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
 
   // ── Toolbar actions ─────────────────────────────────────────────────────────
   const handleFormat = useCallback(() => {
-    try { onChange(JSON.stringify(JSON.parse(value || ''), null, 2)); toast.success('JSON Formatted'); }
-    catch { toast.error('Invalid JSON'); }
+    const raw = value || '';
+    if (!raw.trim()) return;
+    const v = tryParseJsoncValue(raw);
+    if (v === undefined) {
+      toast.error('Invalid JSON');
+      return;
+    }
+    onChange(JSON.stringify(v, null, 2));
+    toast.success('JSON formatted');
   }, [value, onChange]);
 
   const handleMinify = useCallback(() => {
-    try { onChange(JSON.stringify(JSON.parse(value || ''))); toast.success('JSON Minified'); }
-    catch { toast.error('Invalid JSON'); }
+    const raw = value || '';
+    if (!raw.trim()) return;
+    const v = tryParseJsoncValue(raw);
+    if (v === undefined) {
+      toast.error('Invalid JSON');
+      return;
+    }
+    onChange(JSON.stringify(v));
+    toast.success('JSON minified');
   }, [value, onChange]);
 
   const handleCopy = useCallback(() => {
@@ -194,7 +207,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   // ── Validation ──────────────────────────────────────────────────────────────
   const validStatus = useMemo(() => {
     if (!value?.trim()) return null;
-    try { JSON.parse(value); return true; } catch { return false; }
+    const { ok } = validateJsonc(value);
+    return ok;
   }, [value]);
 
   const lineCount = useMemo(() => (value || '').split('\n').length, [value]);
@@ -265,14 +279,19 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ padding: '4px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.06)' }}>{getLangIcon()}</div>
-            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>
-              {language === 'json' ? 'JSON Editor' : language === 'xml' ? 'XML Editor' : language === 'html' ? 'HTML Editor' : 'Plain Text'}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.15 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent, #58a6ff)' }}>
+                PayloadX
+              </span>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+                {language === 'json' ? 'JSON (JSONC)' : language === 'xml' ? 'XML' : language === 'html' ? 'HTML' : 'Plain text'}
+              </span>
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {!readOnly && language === 'json' && (
               <>
-                <button className="tb-btn" onClick={handleFormat} title="Format JSON (Ctrl+Shift+F)"><Braces size={12} /> Format</button>
+                <button className="tb-btn" onClick={handleFormat} title="Format (removes comments, ⌘/Ctrl+/ toggles line comments)"><Braces size={12} /> Format</button>
                 <button className="tb-btn" onClick={handleMinify} title="Minify JSON"><AlignLeft size={12} /> Minify</button>
                 <div style={{ width: 0.5, height: 14, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
               </>
@@ -316,7 +335,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}
             onClick={() => setAc(a => ({ ...a, open: false }))}
-            placeholder={language === 'json' ? '{\n  "key": "value"\n}' : ''}
+            placeholder={language === 'json' ? '{\n  "key": "value"  // JSONC\n}' : ''}
           />
 
           {/* Autocomplete dropdown */}
@@ -348,7 +367,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         <div style={{ padding: '3px 12px', borderTop: '0.5px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: validStatus ? '#4ade80' : '#f87171', boxShadow: validStatus ? '0 0 6px rgba(74,222,128,0.5)' : '0 0 6px rgba(248,113,113,0.5)' }} />
           <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: validStatus ? '#4ade80' : '#f87171' }}>
-            {validStatus ? 'Valid JSON' : 'Syntax Error'}
+            {validStatus ? 'Valid JSONC' : 'Syntax error'}
           </span>
           <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>
             {lineCount} lines · {(value || '').length} chars

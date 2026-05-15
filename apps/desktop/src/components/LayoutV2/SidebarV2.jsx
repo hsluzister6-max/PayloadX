@@ -959,7 +959,7 @@ export default function SidebarV2({
             } finally {
                 setIsSearching(false);
             }
-        }, 400);
+        }, 280);
         return () => clearTimeout(timer);
     }, [searchQuery, currentProject?._id]);
 

@@ -8,10 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
+    "tauri:dev": "bash scripts/run-tauri-dev.sh",
     "tauri:build": "tauri build",
     "tauri:build:app": "tauri build -b app",
-    "tauri:build:dmg": "tauri build -b app && bash scripts/make-dmg.sh"
+    "tauri:build:dmg": "tauri build -b app && bash scripts/make-dmg.sh",
+    "tauri:build:mac-publish": "bash scripts/build-macos-publish.sh"
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",
@@ -22,6 +23,7 @@
     "axios": "^1.7.2",
     "date-fns": "^3.6.0",
     "firebase": "^12.12.1",
+    "jsonc-parser": "^3.3.1",
     "lucide-react": "^0.395.0",
     "monaco-editor": "^0.52.2",
     "react": "^18.3.1",

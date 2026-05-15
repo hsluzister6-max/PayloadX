@@ -2,6 +2,7 @@ import express from 'express';
 import Request from '../../models/Request.js';
 import Collection from '../../models/Collection.js';
 import { authenticate } from '../middleware/auth.js';
+import { buildRequestSearchFilter } from '../lib/requestSearch.js';
 
 const router = express.Router();
 
@@ -72,7 +73,7 @@ const router = express.Router();
  *         name: search
  *         schema:
  *           type: string
- *         description: Search by name or URL
+ *         description: Search by name, URL, route/path, HTTP method, description (e.g. "GET /users", "api/v1")
  *     responses:
  *       200:
  *         description: List of requests
@@ -95,19 +96,17 @@ router.get('/', authenticate, async (req, res) => {
     if (projectId) query.projectId = projectId;
     if (teamId) query.teamId = teamId;
 
-    if (search) {
-      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query.$or = [
-        { name: { $regex: safeSearch, $options: 'i' } },
-        { url: { $regex: safeSearch, $options: 'i' } }
-      ];
+    const searchFilter = search ? buildRequestSearchFilter(String(search)) : null;
+    if (searchFilter) {
+      query.$and = [...(query.$and || []), searchFilter];
     }
 
     const mQuery = Request.find(query)
       .populate('creatorId', 'name email avatar')
-      .sort({ order: 1, createdAt: 1 });
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
 
-    if (search) mQuery.limit(50);
+    if (search) mQuery.limit(100);
 
     const requests = await mQuery;
     res.json({ requests });

@@ -150,12 +150,19 @@ function CollectionsPanel({ onShowTeamModal, onShowProjectModal, onShowCollectio
 
   const filteredRequests = (collectionId) =>
     requests.filter(
-      (r) =>
-        r.collectionId === collectionId &&
-        (searchQuery
-          ? r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            r.url.toLowerCase().includes(searchQuery.toLowerCase())
-          : true)
+      (r) => {
+        if (r.collectionId !== collectionId) return false;
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.trim().toLowerCase();
+        const name = (r.name || '').toLowerCase();
+        const url = (r.url || '').toLowerCase();
+        const method = (r.method || '').toLowerCase();
+        const desc = (r.description || '').toLowerCase();
+        if (name.includes(q) || url.includes(q) || method.includes(q) || desc.includes(q)) return true;
+        const pathOnly = url.replace(/^https?:\/\/[^/]+/i, '');
+        if (pathOnly.includes(q)) return true;
+        return false;
+      }
     );
 
   return (
@@ -169,7 +176,7 @@ function CollectionsPanel({ onShowTeamModal, onShowProjectModal, onShowCollectio
           </svg>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search name, URL, route, method..."
             className="input pl-7 py-1 text-xs"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

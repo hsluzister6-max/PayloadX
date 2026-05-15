@@ -81,7 +81,7 @@ export default function TopBarV2({
       } finally {
         setIsSearching(false);
       }
-    }, 400);
+    }, 280);
     return () => clearTimeout(timer);
   }, [globalSearch, currentProject?._id]);
 

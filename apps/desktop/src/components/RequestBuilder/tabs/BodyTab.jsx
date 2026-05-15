@@ -1,7 +1,5 @@
 import { useRequestStore } from '@/store/requestStore';
-import { useUIStore } from '@/store/uiStore';
 import JsonEditor from './JsonEditor';
-
 
 const BODY_MODES = [
   { id: 'none',        label: 'None' },
@@ -14,7 +12,6 @@ const RAW_LANGUAGES = ['json', 'text', 'xml', 'html'];
 
 export default function BodyTab() {
   const { currentRequest, updateBody } = useRequestStore();
-  const { theme } = useUIStore();
   const body = currentRequest.body || { mode: 'none', raw: '', rawLanguage: 'json' };
 
   const setMode = (mode) => updateBody({ mode });

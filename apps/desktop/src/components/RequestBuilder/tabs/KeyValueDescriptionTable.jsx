@@ -34,8 +34,18 @@ export default function KeyValueDescriptionTable({
   valuePlaceholder = 'Value',
   descriptionPlaceholder = 'Description',
   datalistId,
+  /** When set with onToggleHeaderForDomain, shows a Domain column to save/remove default for this host. */
+  domainKey = null,
+  onToggleHeaderForDomain,
+  /** (row) => 'none' | 'unsaved' | 'saved' | 'dirty' — saved vs current value for this host */
+  getDomainPinStatus,
 }) {
   const rows = ensureTrailingEmptyRow(items);
+
+  const showDomainSave = Boolean(domainKey && typeof onToggleHeaderForDomain === 'function');
+  const gridCols = showDomainSave
+    ? '36px minmax(120px,1fr) minmax(120px,1fr) minmax(100px,0.85fr) minmax(48px,56px) 32px'
+    : '36px minmax(140px,1fr) minmax(140px,1fr) minmax(160px,1.15fr) 32px';
 
   const rowId = (row, index) => row.id || row._id || `idx-${index}`;
 
@@ -66,6 +76,16 @@ export default function KeyValueDescriptionTable({
       {title ? (
         <div className="shrink-0 px-3 pt-3 pb-2 border-b border-[var(--border-1)]">
           <h3 className="text-[13px] font-semibold text-tx-primary tracking-tight">{title}</h3>
+          {showDomainSave && domainKey && typeof getDomainPinStatus === 'function' ? (
+            <p className="text-[10px] text-tx-muted mt-1.5 leading-snug">
+              <span className="inline-flex items-center gap-0.5 mr-2.5">
+                <span className="text-[var(--success)]" aria-hidden>●</span> Saved — click to remove
+              </span>
+              <span className="inline-flex items-center gap-0.5">
+                <span className="text-tx-muted" aria-hidden>○</span> Unsaved — click to save
+              </span>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -73,7 +93,7 @@ export default function KeyValueDescriptionTable({
         {/* Column headers — horizontal dividers only (avoids light vertical strips / checkbox halo) */}
         <div
           className="grid items-stretch border-b border-[var(--border-1)] bg-[var(--surface-1)] sticky top-0 z-[1]"
-          style={{ gridTemplateColumns: '36px minmax(140px,1fr) minmax(140px,1fr) minmax(160px,1.15fr) 32px' }}
+          style={{ gridTemplateColumns: gridCols }}
         >
           <div className="flex items-center justify-center" aria-hidden />
           <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-tx-muted py-2 px-2">
@@ -85,6 +105,11 @@ export default function KeyValueDescriptionTable({
           <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-tx-muted py-2 px-2">
             Description
           </div>
+          {showDomainSave ? (
+            <div className="text-[9px] font-bold uppercase tracking-[0.06em] text-tx-muted py-2 px-0.5 text-center" title="Saved / Unsaved for this host (click to toggle)">
+              Domain
+            </div>
+          ) : null}
           <div className="py-2" aria-hidden />
         </div>
 
@@ -96,7 +121,7 @@ export default function KeyValueDescriptionTable({
             <div
               key={id}
               className="group grid items-stretch border-b border-[var(--border-1)] hover:bg-[var(--surface-2)]/35 transition-colors"
-              style={{ gridTemplateColumns: '36px minmax(140px,1fr) minmax(140px,1fr) minmax(160px,1.15fr) 32px' }}
+              style={{ gridTemplateColumns: gridCols }}
             >
               <div className="flex items-center justify-center py-1 pl-1 pr-0.5">
                 <input
@@ -141,6 +166,79 @@ export default function KeyValueDescriptionTable({
                   spellCheck={false}
                 />
               </div>
+              {showDomainSave ? (
+                <div className="flex flex-col items-center justify-center gap-0.5 min-w-[36px] py-0.5">
+                  {(() => {
+                    const pin =
+                      typeof getDomainPinStatus === 'function'
+                        ? getDomainPinStatus(row)
+                        : 'none';
+                    const keyTrim = String(row.key ?? '').trim();
+                    const isSaved = pin === 'saved';
+                    const label = isSaved ? 'Saved' : keyTrim && (pin === 'unsaved' || pin === 'dirty' || pin === 'none') ? 'Unsaved' : '';
+                    const domainPrompt = domainKey ? ` for ${domainKey}` : '';
+                    const title =
+                      pin === 'saved'
+                        ? `Saved${domainPrompt} — click to remove from defaults`
+                        : pin === 'dirty'
+                          ? `Value differs from saved default${domainPrompt} — click to update saved default`
+                          : pin === 'unsaved'
+                            ? `Not saved${domainPrompt} — click to save`
+                            : domainKey
+                              ? `Save defaults${domainPrompt}`
+                              : 'Resolve URL host first';
+
+                    const btnClass =
+                      pin === 'saved'
+                        ? 'text-[var(--success)] hover:text-[var(--success)]'
+                        : pin === 'dirty'
+                          ? 'text-[var(--warning)] hover:text-[var(--warning)]'
+                          : pin === 'unsaved'
+                            ? 'text-tx-muted hover:text-[var(--accent)]'
+                            : 'text-tx-muted/50 hover:text-[var(--accent)]';
+
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onToggleHeaderForDomain(row)}
+                          disabled={!keyTrim || pin === 'none'}
+                          className={`p-0.5 rounded transition-colors ${btnClass} disabled:opacity-30 disabled:pointer-events-none`}
+                          title={title}
+                          aria-label={title}
+                          aria-pressed={isSaved}
+                        >
+                          {pin === 'saved' ? (
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                              <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                          )}
+                        </button>
+                        {keyTrim ? (
+                          <span
+                            className={`text-[8px] font-bold uppercase leading-none tracking-tight max-w-[44px] truncate ${
+                              pin === 'saved'
+                                ? 'text-[var(--success)]'
+                                : pin === 'dirty'
+                                  ? 'text-[var(--warning)]'
+                                  : pin === 'unsaved'
+                                    ? 'text-tx-muted'
+                                    : 'text-transparent'
+                            }`}
+                            title={label}
+                          >
+                            {label}
+                          </span>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
+              ) : null}
               <div className="flex items-center justify-center">
                 <button
                   type="button"
