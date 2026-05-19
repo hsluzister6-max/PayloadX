@@ -207,7 +207,11 @@ function normalizeBody(body = {}) {
   if (mode === 'form-data') {
     return {
       mode,
-      formData: (body.formData || []).filter((item) => item?.enabled !== false && item?.key),
+      formData: (body.formData || []).filter((item) => {
+        if (item?.enabled === false || !item?.key?.trim()) return false;
+        if (item.type === 'file') return Boolean(item.base64);
+        return true;
+      }),
     };
   }
 

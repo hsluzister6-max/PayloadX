@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 use serde::{Deserialize, Serialize};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
-    multipart::Form,
+    multipart::{Form, Part},
     Method,
 };
 use crate::security::{validate_http_url, SsrfError};
@@ -19,10 +20,22 @@ pub struct RequestHeader {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct RequestParam {
     pub key: String,
-    pub value: String,
+    /// Plain field value when `param_type` is not `"file"`.
+    #[serde(default)]
+    pub value: Option<String>,
     pub enabled: Option<bool>,
+    /// `"text"` (default) or `"file"` — files use `base64` + optional `file_name` / `mime_type`.
+    #[serde(rename = "type", default)]
+    pub param_type: Option<String>,
+    #[serde(default)]
+    pub file_name: Option<String>,
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    #[serde(default)]
+    pub base64: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -227,7 +240,30 @@ pub async fn execute_request(
 
                 if let Some(items) = &body.form_data {
                     for item in items.iter().filter(|item| item.enabled.unwrap_or(true) && !item.key.is_empty()) {
-                        form = form.text(item.key.clone(), item.value.clone());
+                        let is_file = item.param_type.as_deref() == Some("file");
+                        if is_file {
+                            let Some(b64_raw) = item.base64.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) else {
+                                continue;
+                            };
+                            let bytes = STANDARD.decode(b64_raw).map_err(|e| {
+                                format!("multipart field '{}': invalid base64 ({})", item.key, e)
+                            })?;
+                            let fname = item
+                                .file_name
+                                .clone()
+                                .filter(|s| !s.is_empty())
+                                .unwrap_or_else(|| "upload.bin".to_string());
+                            let mut part = Part::bytes(bytes).file_name(fname);
+                            if let Some(mt) = item.mime_type.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                                part = part.mime_str(mt).map_err(|e| {
+                                    format!("multipart field '{}': bad MIME ({})", item.key, e)
+                                })?;
+                            }
+                            form = form.part(item.key.clone(), part);
+                        } else {
+                            let val = item.value.clone().unwrap_or_default();
+                            form = form.text(item.key.clone(), val);
+                        }
                     }
                 }
 

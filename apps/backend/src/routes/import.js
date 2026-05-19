@@ -99,6 +99,10 @@ function buildRequest(item, collectionId, projectId, teamId, folderId) {
           key: f.key || '',
           value: f.value || '',
           enabled: !f.disabled,
+          type: f.type === 'file' ? 'file' : 'text',
+          fileName: '',
+          mimeType: '',
+          base64: '',
         })),
       };
     } else if (r.body.mode === 'urlencoded') {

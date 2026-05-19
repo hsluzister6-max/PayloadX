@@ -14,6 +14,19 @@ const ParamSchema = new mongoose.Schema({
   enabled: { type: Boolean, default: true },
 });
 
+const FormDataPartSchema = new mongoose.Schema(
+  {
+    key: { type: String, default: '' },
+    value: { type: String, default: '' },
+    enabled: { type: Boolean, default: true },
+    type: { type: String, enum: ['text', 'file'], default: 'text' },
+    fileName: { type: String, default: '' },
+    mimeType: { type: String, default: '' },
+    base64: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const RequestSchema = new mongoose.Schema(
   {
     name: {
@@ -45,7 +58,7 @@ const RequestSchema = new mongoose.Schema(
       },
       raw: { type: String, default: '' },
       rawLanguage: { type: String, enum: ['json', 'text', 'xml', 'html', 'javascript'], default: 'json' },
-      formData: [{ key: String, value: String, enabled: Boolean }],
+      formData: [FormDataPartSchema],
       urlencoded: [{ key: String, value: String, enabled: Boolean }],
     },
     auth: {

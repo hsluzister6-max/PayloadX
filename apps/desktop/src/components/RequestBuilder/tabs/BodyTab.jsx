@@ -1,5 +1,6 @@
 import { useRequestStore } from '@/store/requestStore';
 import JsonEditor from './JsonEditor';
+import FormMultipartEditor from './FormMultipartEditor.jsx';
 
 const BODY_MODES = [
   { id: 'none',        label: 'None' },
@@ -73,7 +74,7 @@ export default function BodyTab() {
         )}
 
         {body.mode === 'form-data' && (
-          <FormDataEditor
+          <FormMultipartEditor
             items={body.formData || []}
             onChange={(formData) => updateBody({ formData })}
           />

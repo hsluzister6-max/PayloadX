@@ -80,12 +80,23 @@ const mapRequestToPostman = (req) => {
   } else if (bodyData.mode === 'form-data') {
     body = {
       mode: 'formdata',
-      formdata: (bodyData.formData || []).filter(f => f.key).map(f => ({
-        key: f.key,
-        value: f.value,
-        type: 'text',
-        disabled: !f.enabled,
-      })),
+      formdata: (bodyData.formData || []).filter((f) => f.key).map((f) => {
+        if (f.type === 'file') {
+          return {
+            key: f.key,
+            type: 'file',
+            disabled: !f.enabled,
+            description: 'PayloadX file field — re-attach file in Postman',
+            src: [],
+          };
+        }
+        return {
+          key: f.key,
+          value: f.value ?? '',
+          type: 'text',
+          disabled: !f.enabled,
+        };
+      }),
     };
   } else if (bodyData.mode === 'url-encoded') {
     body = {

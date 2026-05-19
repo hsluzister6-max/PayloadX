@@ -1,21 +1,222 @@
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
 import { toggleJsonLineComment } from '@/utils/jsonLineComment';
 import { REST_KEYS, VALUE_SNIPPETS } from './jsonEditorConstants';
 
-// ── Syntax Highlighter ────────────────────────────────────────────────────────
-function highlight(code) {
-  if (!code) return '';
-  return code
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+// ── Syntax Highlighter (JSONC: faded full-line //, /* */, trailing // outside strings) ──
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function highlightJsonTokens(escapedLine) {
+  if (!escapedLine) return '';
+  return escapedLine
     .replace(/"((?:[^"\\]|\\.)*)"\s*:/g, '<span class="jk">"$1"</span>:')
     .replace(/:\s*"((?:[^"\\]|\\.)*)"/g, ': <span class="js">"$1"</span>')
     .replace(/:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, ': <span class="jn">$1</span>')
     .replace(/:\s*(true|false)/g, ': <span class="jb">$1</span>')
     .replace(/:\s*(null)/g, ': <span class="jnu">$1</span>')
     .replace(/([{}\[\]])/g, '<span class="jbk">$1</span>');
+}
+
+/** `//` comment start outside double-quoted strings */
+function splitTrailingLineComment(rawLine) {
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < rawLine.length - 1; i++) {
+    const c = rawLine[i];
+    if (esc) {
+      esc = false;
+      continue;
+    }
+    if (inStr) {
+      if (c === '\\') {
+        esc = true;
+        continue;
+      }
+      if (c === '"') {
+        inStr = false;
+        continue;
+      }
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      continue;
+    }
+    if (c === '/' && rawLine[i + 1] === '/') {
+      return { code: rawLine.slice(0, i), comment: rawLine.slice(i) };
+    }
+  }
+  return { code: rawLine, comment: '' };
+}
+
+function highlightJsonc(raw) {
+  if (!raw) return '';
+  const lines = raw.split('\n');
+  let inBlock = false;
+  const parts = [];
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    const nl = li < lines.length - 1 ? '\n' : '';
+
+    if (inBlock) {
+      parts.push(`<span class="jc-comment">${escapeHtml(line)}</span>${nl}`);
+      if (line.includes('*/')) inBlock = false;
+      continue;
+    }
+
+    const m = /^(\s*)(.*)$/.exec(line);
+    const ws = m ? m[1] : '';
+    const trimmed = m ? m[2] : line;
+
+    if (trimmed.startsWith('//')) {
+      parts.push(`<span class="jc-comment">${escapeHtml(line)}</span>${nl}`);
+      continue;
+    }
+
+    if (trimmed.startsWith('/*')) {
+      parts.push(`<span class="jc-comment">${escapeHtml(line)}</span>${nl}`);
+      if (!trimmed.includes('*/')) inBlock = true;
+      continue;
+    }
+
+    const { code, comment } = splitTrailingLineComment(line);
+    let html = highlightJsonTokens(escapeHtml(code));
+    if (comment) {
+      html += `<span class="jc-comment">${escapeHtml(comment)}</span>`;
+    }
+    parts.push(html + nl);
+  }
+  return parts.join('');
+}
+
+function highlightPlain(code) {
+  return escapeHtml(code || '');
+}
+
+function duplicateSelectedLines(text, selStart, selEnd) {
+  const s0 = Math.min(selStart, selEnd);
+  const s1 = Math.max(selStart, selEnd);
+  const lines = text.split('\n');
+  const sl = text.slice(0, s0).split('\n').length - 1;
+  const el = text.slice(0, s1).split('\n').length - 1;
+
+  let lineStart = 0;
+  for (let i = 0; i < sl; i++) lineStart += lines[i].length + 1;
+
+  let lineAfterEnd = lineStart;
+  for (let i = sl; i <= el; i++) {
+    lineAfterEnd += lines[i].length + (i < lines.length - 1 ? 1 : 0);
+  }
+
+  const selected = text.slice(lineStart, lineAfterEnd);
+  let insert = selected;
+  if (!insert.endsWith('\n')) {
+    insert = `\n${insert}`;
+  }
+  const newText = text.slice(0, lineAfterEnd) + insert + text.slice(lineAfterEnd);
+  const dupStart = lineAfterEnd;
+  const dupEnd = lineAfterEnd + insert.length;
+  return { text: newText, selStart: dupStart, selEnd: dupEnd };
+}
+
+function deleteSelectedLines(text, selStart, selEnd) {
+  const s0 = Math.min(selStart, selEnd);
+  const s1 = Math.max(selStart, selEnd);
+  const lines = text.split('\n');
+  const sl = text.slice(0, s0).split('\n').length - 1;
+  const el = text.slice(0, s1).split('\n').length - 1;
+
+  let lineStart = 0;
+  for (let i = 0; i < sl; i++) lineStart += lines[i].length + 1;
+
+  let lineAfterEnd = lineStart;
+  for (let i = sl; i <= el; i++) {
+    lineAfterEnd += lines[i].length + (i < lines.length - 1 ? 1 : 0);
+  }
+
+  const newText = text.slice(0, lineStart) + text.slice(lineAfterEnd);
+  const pos = Math.min(lineStart, newText.length);
+  return { text: newText, selStart: pos, selEnd: pos };
+}
+
+function indentSelectedLines(text, selStart, selEnd, spaces = '  ') {
+  const s0 = Math.min(selStart, selEnd);
+  const s1 = Math.max(selStart, selEnd);
+  const lines = text.split('\n');
+  const sl = text.slice(0, s0).split('\n').length - 1;
+  const el = text.slice(0, s1).split('\n').length - 1;
+  const newLines = lines.map((ln, i) => (i >= sl && i <= el ? spaces + ln : ln));
+  const newText = newLines.join('\n');
+  const n = spaces.length;
+  return {
+    text: newText,
+    selStart: shiftPosAfterIndent(text, sl, el, s0, n),
+    selEnd: shiftPosAfterIndent(text, sl, el, s1, n),
+  };
+}
+
+/** After prepending `n` spaces to lines [sl..el], map global offset `pos`. */
+function shiftPosAfterIndent(text, sl, el, pos, n) {
+  const lines = text.split('\n');
+  let o = 0;
+  const posLine = text.slice(0, pos).split('\n').length - 1;
+  let shift = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const L = o;
+    if (i >= sl && i <= el) {
+      if (i < posLine) shift += n;
+      else if (i === posLine && pos >= L) shift += n;
+    }
+    o += lines[i].length + (i < lines.length - 1 ? 1 : 0);
+  }
+  return pos + shift;
+}
+
+function outdentSelectedLines(text, selStart, selEnd) {
+  const s0 = Math.min(selStart, selEnd);
+  const s1 = Math.max(selStart, selEnd);
+  const lines = text.split('\n');
+  const sl = text.slice(0, s0).split('\n').length - 1;
+  const el = text.slice(0, s1).split('\n').length - 1;
+
+  const newLines = lines.map((ln, i) => {
+    if (i < sl || i > el) return ln;
+    if (ln.startsWith('  ')) return ln.slice(2);
+    if (ln.startsWith('\t')) return ln.slice(1);
+    return ln;
+  });
+  const newText = newLines.join('\n');
+
+  return {
+    text: newText,
+    selStart: s0 - charsRemovedBeforePos(lines, sl, el, s0),
+    selEnd: s1 - charsRemovedBeforePos(lines, sl, el, s1),
+  };
+}
+
+/** Prefix stripped from lines [sl..el]: count how many deleted chars fell strictly before `pos`. */
+function charsRemovedBeforePos(lines, sl, el, pos) {
+  let removed = 0;
+  let o = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const ln = lines[i];
+    const L = o;
+    if (i >= sl && i <= el) {
+      const rm = ln.startsWith('  ') ? 2 : ln.startsWith('\t') ? 1 : 0;
+      if (rm && pos > L) {
+        removed += Math.min(rm, pos - L);
+      }
+    }
+    o += ln.length + (i < lines.length - 1 ? 1 : 0);
+  }
+  return removed;
 }
 
 function extractKeys(str) {
@@ -48,7 +249,11 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     }
   };
 
-  const highlighted = useMemo(() => highlight(value || '') + '\n', [value]);
+  const highlighted = useMemo(() => {
+    const v = value || '';
+    if (language === 'json') return highlightJsonc(v) + '\n';
+    return highlightPlain(v) + '\n';
+  }, [value, language]);
 
   // ── Autocomplete Logic ──────────────────────────────────────────────────────
   const computeAc = useCallback((val, cursorPos, ta) => {
@@ -99,55 +304,117 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   // ── Key Handling ────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
     const ta = e.target;
+    const mod = e.ctrlKey || e.metaKey;
 
-    // JSON / JSONC: Cmd/Ctrl + /  toggles line comments
-    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+    // JSON / JSONC: Cmd/Ctrl + / toggles line comments (⌘/ Ctrl+/)
+    if (mod && e.key === '/') {
       e.preventDefault();
-      if (readOnly || language !== 'json') return;
-      const ta = e.target;
-      const { text, selStart, selEnd } = toggleJsonLineComment(ta.value, ta.selectionStart, ta.selectionEnd);
-      onChange(text);
-      setTimeout(() => {
-        ta.selectionStart = selStart;
-        ta.selectionEnd = selEnd;
-      }, 0);
+      if (!readOnly && language === 'json') {
+        const { text, selStart, selEnd } = toggleJsonLineComment(ta.value, ta.selectionStart, ta.selectionEnd);
+        onChange(text);
+        setTimeout(() => {
+          ta.selectionStart = selStart;
+          ta.selectionEnd = selEnd;
+        }, 0);
+      }
+      return;
+    }
+
+    // Duplicate line(s): Cmd/Ctrl+D
+    if (mod && !e.shiftKey && (e.key === 'd' || e.key === 'D')) {
+      e.preventDefault();
+      if (!readOnly) {
+        const r = duplicateSelectedLines(ta.value, ta.selectionStart, ta.selectionEnd);
+        onChange(r.text);
+        setTimeout(() => {
+          ta.selectionStart = r.selStart;
+          ta.selectionEnd = r.selEnd;
+        }, 0);
+      }
+      return;
+    }
+
+    // Delete line(s): Cmd/Ctrl+Shift+K
+    if (mod && e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (!readOnly) {
+        const r = deleteSelectedLines(ta.value, ta.selectionStart, ta.selectionEnd);
+        onChange(r.text);
+        setTimeout(() => {
+          ta.selectionStart = r.selStart;
+          ta.selectionEnd = r.selEnd;
+        }, 0);
+      }
       return;
     }
 
     // Autocomplete navigation
     if (ac.open) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx + 1) % a.items.length })); return; }
-      if (e.key === 'ArrowUp')   { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx - 1 + a.items.length) % a.items.length })); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx - 1 + a.items.length) % a.items.length })); return; }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyAc(ac.items[ac.idx]); return; }
       if (e.key === 'Escape') { setAc(a => ({ ...a, open: false })); return; }
     }
 
-    // Tab → 2-space indent
+    // Tab / Shift+Tab — multi-line indent outdent, else insert spaces
     if (e.key === 'Tab') {
       e.preventDefault();
-      const s = ta.selectionStart, end = ta.selectionEnd;
+      if (readOnly) return;
+      const s = ta.selectionStart;
+      const end = ta.selectionEnd;
       const v = ta.value;
+      const lineS = v.slice(0, s).split('\n').length - 1;
+      const lineE = v.slice(0, end).split('\n').length - 1;
+      const multiLine = lineS !== lineE;
+
+      if (multiLine) {
+        const r = e.shiftKey
+          ? outdentSelectedLines(v, s, end)
+          : indentSelectedLines(v, s, end);
+        onChange(r.text);
+        setTimeout(() => {
+          ta.selectionStart = r.selStart;
+          ta.selectionEnd = r.selEnd;
+        }, 0);
+        return;
+      }
+
+      if (e.shiftKey) {
+        const r = outdentSelectedLines(v, s, end);
+        onChange(r.text);
+        setTimeout(() => {
+          ta.selectionStart = r.selStart;
+          ta.selectionEnd = r.selEnd;
+        }, 0);
+        return;
+      }
+
       const newVal = v.slice(0, s) + '  ' + v.slice(end);
       onChange(newVal);
-      setTimeout(() => { ta.selectionStart = ta.selectionEnd = s + 2; }, 0);
+      setTimeout(() => {
+        ta.selectionStart = ta.selectionEnd = s + 2;
+      }, 0);
       return;
     }
 
-    // Auto-close brackets & quotes
+    // Auto-close brackets & quotes (JSON bodies only — avoids breaking XML/HTML raw)
     const pairs = { '{': '}', '[': ']', '"': '"' };
-    if (pairs[e.key] && !readOnly) {
+    if (language === 'json' && pairs[e.key] && !readOnly) {
       e.preventDefault();
-      const s = ta.selectionStart, end = ta.selectionEnd;
+      const s = ta.selectionStart;
+      const end = ta.selectionEnd;
       const v = ta.value;
       const close = pairs[e.key];
       const newVal = v.slice(0, s) + e.key + v.slice(s, end) + close + v.slice(end);
       onChange(newVal);
-      setTimeout(() => { ta.selectionStart = ta.selectionEnd = s + 1; }, 0);
+      setTimeout(() => {
+        ta.selectionStart = ta.selectionEnd = s + 1;
+      }, 0);
       return;
     }
 
-    // Enter → smart indent
-    if (e.key === 'Enter' && !readOnly) {
+    // Enter → smart indent (JSON only)
+    if (language === 'json' && e.key === 'Enter' && !readOnly) {
       const s = ta.selectionStart;
       const lineStart = ta.value.lastIndexOf('\n', s - 1) + 1;
       const lineContent = ta.value.slice(lineStart, s);
@@ -162,7 +429,9 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       const newVal = v.slice(0, s) + newLine + closing + v.slice(s);
       onChange(newVal);
       const newPos = s + newLine.length;
-      setTimeout(() => { ta.selectionStart = ta.selectionEnd = newPos; }, 0);
+      setTimeout(() => {
+        ta.selectionStart = ta.selectionEnd = newPos;
+      }, 0);
     }
   }, [ac, applyAc, onChange, readOnly, language]);
 
@@ -229,6 +498,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         .jb  { color: var(--warning) }
         .jnu { color: var(--text-muted) }
         .jbk { color: var(--text-secondary) }
+        .jc-comment { opacity: 0.46; color: var(--text-muted) !important; font-style: italic; }
+        .jc-comment .jk, .jc-comment .js, .jc-comment .jn, .jc-comment .jb, .jc-comment .jnu, .jc-comment .jbk { color: inherit !important; opacity: 1; }
         .editor-ta {
           position: absolute; inset: 0; width: 100%; height: 100%;
           background: transparent; color: transparent; caret-color: var(--text-primary);
@@ -291,7 +562,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {!readOnly && language === 'json' && (
               <>
-                <button className="tb-btn" onClick={handleFormat} title="Format (removes comments, ⌘/Ctrl+/ toggles line comments)"><Braces size={12} /> Format</button>
+                <button className="tb-btn" onClick={handleFormat} title="Format JSON (strips comments). ⌘/ Ctrl+/ toggle line comment · ⌘D duplicate line · ⇧⌘K delete line · Tab / ⇧Tab indent"><Braces size={12} /> Format</button>
                 <button className="tb-btn" onClick={handleMinify} title="Minify JSON"><AlignLeft size={12} /> Minify</button>
                 <div style={{ width: 0.5, height: 14, background: 'rgba(255,255,255,0.1)', margin: '0 2px' }} />
               </>
@@ -368,6 +639,9 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: validStatus ? '#4ade80' : '#f87171', boxShadow: validStatus ? '0 0 6px rgba(74,222,128,0.5)' : '0 0 6px rgba(248,113,113,0.5)' }} />
           <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: validStatus ? '#4ade80' : '#f87171' }}>
             {validStatus ? 'Valid JSONC' : 'Syntax error'}
+          </span>
+          <span style={{ marginLeft: 12, fontSize: 8, color: 'rgba(255,255,255,0.22)', fontFamily: 'Inter, sans-serif', letterSpacing: '0.02em', maxWidth: 280, textAlign: 'right', lineHeight: 1.35 }}>
+            Comments &amp; commented-out keys are dropped when sending (JSONC → JSON wire).
           </span>
           <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>
             {lineCount} lines · {(value || '').length} chars

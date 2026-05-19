@@ -26,6 +26,14 @@ cd "$ROOT"
 
 command -v xcrun >/dev/null || { echo "Install Xcode CLI tools: xcode-select --install"; exit 1; }
 
+if ! security find-identity -v -p codesigning 2>/dev/null | grep -q 'Developer ID Application'; then
+  echo "No Developer ID Application certificate found in your login keychain."
+  echo "Apple Development certs cannot produce a Gatekeeper-ready publishable build."
+  echo "Create & install one: https://developer.apple.com/account/resources/certificates/list"
+  echo "(Certificate type: Developer ID Application → export .p12 into Keychain on this Mac)"
+  exit 1
+fi
+
 echo "==> vite build"
 npm run build
 

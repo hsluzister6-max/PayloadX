@@ -84,9 +84,24 @@ function buildTargetBody(payload, headers, method) {
     const formData = new FormData();
 
     (body.formData || [])
-      .filter((item) => item?.enabled !== false && item?.key)
+      .filter((item) => {
+        if (item?.enabled === false || !item?.key) return false;
+        if (item.type === 'file') return Boolean(item.base64);
+        return true;
+      })
       .forEach((item) => {
-        formData.append(item.key, item.value ?? '');
+        if (item.type === 'file' && item.base64) {
+          try {
+            const buf = Buffer.from(String(item.base64).trim(), 'base64');
+            const mime = item.mimeType || 'application/octet-stream';
+            const blob = new Blob([buf], { type: mime });
+            formData.append(item.key, blob, item.fileName || 'upload.bin');
+          } catch {
+            formData.append(item.key, '');
+          }
+        } else {
+          formData.append(item.key, item.value ?? '');
+        }
       });
 
     return formData;

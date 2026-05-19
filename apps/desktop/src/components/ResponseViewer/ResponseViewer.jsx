@@ -2,10 +2,13 @@ import { useState, useMemo, lazy, Suspense } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
+import { useEnvironmentStore } from '@/store/environmentStore';
 import { getStatusClass, formatSize, formatTime, formatBody, getResponseContentType, getQuotaExceededHint } from '@/utils/helpers';
+import { shouldTreatBodyAsHtml } from '@/utils/htmlResponseSniff.js';
 import { isRealHttpStatus, parseTransportError } from '@/utils/transportErrors';
 import JsonEditor from '../RequestBuilder/tabs/JsonEditor';
 import JsonTreeViewer from './JsonTreeViewer';
+import HtmlResponsePreview from './HtmlResponsePreview.jsx';
 import VirtualizedResponseText from './VirtualizedResponseText.jsx';
 const ResponseMonacoViewer = lazy(() => import('./ResponseMonacoViewer.jsx'));
 import { RAW_VIRTUAL_MIN_CHARS, MONACO_RAW_MIN_CHARS } from '@/utils/responseViewThresholds';
@@ -21,11 +24,22 @@ export default function ResponseViewer() {
   const { response, isExecuting, currentRequest } = useRequestStore();
   const { theme } = useUIStore();
   const { user } = useAuthStore();
+  const resolveVariables = useEnvironmentStore((s) => s.resolveVariables);
   const [activeTab, setActiveTab] = useState('Pretty');
   const [copied, setCopied] = useState(false);
   const [responseLanguage, setResponseLanguage] = useState(null);
 
   const contentType = getResponseContentType(response?.headers);
+
+  const htmlPreviewOpenUrl = useMemo(() => {
+    const u = currentRequest?.url;
+    if (!u?.trim()) return '';
+    try {
+      return resolveVariables(u).trim();
+    } catch {
+      return u.trim();
+    }
+  }, [currentRequest?.url, resolveVariables]);
 
   // ── Construct Swagger Spec ──────────────────────────────────────────────
   const swaggerPreview = useMemo(() => {
@@ -51,7 +65,13 @@ export default function ResponseViewer() {
                 ? (currentRequest.body.formData || [])
                 : (currentRequest.body.urlencoded || []))
                 .filter((i) => i.enabled && i.key)
-                .reduce((acc, i) => ({ ...acc, [i.key]: { type: 'string', example: i.value } }), {}),
+                .reduce((acc, i) => ({
+                  ...acc,
+                  [i.key]:
+                    i.type === 'file'
+                      ? { type: 'string', format: 'binary', description: i.fileName || 'multipart file' }
+                      : { type: 'string', example: i.value },
+                }), {}),
             }
           : {};
 
@@ -141,6 +161,7 @@ export default function ResponseViewer() {
 
   const prettyBody = formatBody(response.body, contentType);
   const statusClass = getStatusClass(response.status);
+  const isHtmlBody = shouldTreatBodyAsHtml(contentType, response.body);
   const autoLang = contentType.includes('json') ? 'json' : contentType.includes('xml') ? 'xml' : contentType.includes('html') ? 'html' : 'plaintext';
   const lang = responseLanguage || autoLang;
 
@@ -280,7 +301,14 @@ export default function ResponseViewer() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === 'Pretty' && (
+        {activeTab === 'Pretty' && isHtmlBody && (
+          <HtmlResponsePreview
+            html={typeof response.body === 'string' ? response.body : JSON.stringify(response.body)}
+            requestUrl={htmlPreviewOpenUrl || null}
+            className="h-full"
+          />
+        )}
+        {activeTab === 'Pretty' && !isHtmlBody && (
           <JsonTreeViewer
             value={typeof response.body === 'string' ? response.body : JSON.stringify(response.body)}
             contentType={contentType}
@@ -304,7 +332,13 @@ export default function ResponseViewer() {
                   >
                     <ResponseMonacoViewer
                       value={response.body}
-                      language={/json|ndjson|javascript/i.test(contentType || '') ? 'json' : 'plaintext'}
+                      language={
+                        /json|ndjson|javascript/i.test(contentType || '')
+                          ? 'json'
+                          : /html/i.test(contentType || '')
+                            ? 'html'
+                            : 'plaintext'
+                      }
                     />
                   </Suspense>
                 </div>
