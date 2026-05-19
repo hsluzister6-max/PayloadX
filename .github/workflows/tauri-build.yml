@@ -47,9 +47,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 
+      # npm ci + lockfile: each runner installs its @tauri-apps/cli-*-* binary (desktop optionalDependencies).
       - name: Install project dependencies
-        run: npm install
-
+        run: npm ci
 
 
       - name: Build and Upload Tauri App
