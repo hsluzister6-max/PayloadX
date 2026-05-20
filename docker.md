@@ -10,3 +10,4 @@ docker push sundanpatyadsharma/payloadx-backend:latest
 
 Redeploy on your server (pull the new image)
 docker compose pull && docker compose up -d
+pay

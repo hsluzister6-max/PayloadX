@@ -26,7 +26,7 @@ import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { listen } from '@tauri-apps/api/event';
 import { confirm } from '@tauri-apps/api/dialog';
-import * as XLSX from 'xlsx';
+import { writeWorkflowTestSheet } from '@/utils/workflowTestReport';
 
 const nodeTypes = {
   api: ApiNode,
@@ -300,68 +300,20 @@ function WorkflowCanvasInner() {
   };
 
   const handleExportExcel = () => {
-    if (!executionResult || !executionResult.node_results) {
+    const exported = writeWorkflowTestSheet(executionResult, currentWorkflow.name);
+    if (exported.ok) {
+      toast.success(`Report generated: ${exported.fileName}`);
+      return;
+    }
+    if (exported.reason === 'no_results') {
       toast.error('No execution results to export');
       return;
     }
-
-    try {
-      // Filter out delay nodes and map results
-      const data = executionResult.node_results
-        .filter(res => res.request) // Only include nodes with request data (API nodes)
-        .map(res => {
-          // Collect validation errors if any
-          const validationErrors = (res.validations || [])
-            .filter(v => !v.passed)
-            .map(v => v.message || `${v.type} check failed`)
-            .join('; ');
-
-          const executionError = res.error?.message || '';
-          const combinedError = [executionError, validationErrors].filter(Boolean).join(' | ');
-
-          return {
-            'Node Name': res.node_name,
-            'Method': res.request?.method || 'N/A',
-            'Status': res.status.toUpperCase(),
-            'HTTP Status': res.response?.status || 'N/A',
-            'Duration (ms)': res.duration,
-            'URL': res.request?.url || 'N/A',
-            'Payload': res.request?.body ? JSON.stringify(res.request.body, null, 2) : 'No Body',
-            'Error': combinedError || (res.status === 'FAILED' ? 'Unknown Failure' : ''),
-            'Execution Time': new Date(res.start_time).toLocaleString(),
-          };
-        });
-
-      if (data.length === 0) {
-        toast.error('No API nodes to export');
-        return;
-      }
-
-      const worksheet = XLSX.utils.json_to_sheet(data);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Test Results");
-
-      // Set column widths for a more detailed report
-      const wscols = [
-        { wch: 25 }, // Node Name
-        { wch: 10 }, // Method
-        { wch: 12 }, // Status
-        { wch: 12 }, // HTTP Status
-        { wch: 15 }, // Duration
-        { wch: 40 }, // URL
-        { wch: 50 }, // Payload
-        { wch: 30 }, // Error
-        { wch: 20 }, // Execution Time
-      ];
-      worksheet['!cols'] = wscols;
-
-      const fileName = `SyncNest_Report_${currentWorkflow.name.replace(/\s+/g, '_')}_${new Date().getTime()}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
-      toast.success('Report generated successfully');
-    } catch (error) {
-      console.error('Failed to generate Excel report:', error);
-      toast.error('Failed to generate report');
+    if (exported.reason === 'no_api_nodes') {
+      toast.error('No API nodes to export');
+      return;
     }
+    toast.error(exported.message || 'Failed to generate report');
   };
 
   const reactFlowInstance = useReactFlow();

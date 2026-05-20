@@ -532,6 +532,25 @@ export const useWorkflowStore = create(
             toast.error('Workflow execution failed');
           }
 
+          queueMicrotask(async () => {
+            try {
+              const { writeWorkflowTestSheet } = await import('@/utils/workflowTestReport');
+              const exported = writeWorkflowTestSheet(result, workflow.name);
+              if (exported.ok) {
+                toast.success(`Test sheet generated: ${exported.fileName}`);
+              } else if (exported.reason === 'no_api_nodes') {
+                toast('This run had no API nodes to include in the Excel test sheet.', {
+                  icon: 'ℹ️',
+                });
+              } else if (exported.reason === 'error') {
+                toast.error(exported.message || 'Could not generate test sheet');
+              }
+            } catch (e) {
+              console.error('[executeWorkflow] test sheet:', e);
+              toast.error('Could not generate test sheet');
+            }
+          });
+
           // Save execution to backend
           if (navigator.onLine && workflow.id) {
             await get().saveExecution(result);
