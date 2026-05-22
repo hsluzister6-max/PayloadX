@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useServerConfigStore } from '@/store/serverConfigStore';
 
-const PAYLOADX_SERVER_URL = 'https://payloadx-ykjd.onrender.com';
+const PAYLOADX_SERVER_URL = 'https://api-test-r9rp.onrender.com';
 
 // Dynamically read the base URL from the persisted store each request
 const getBaseUrl = () => {
