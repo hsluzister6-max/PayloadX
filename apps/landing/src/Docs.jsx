@@ -67,10 +67,10 @@ export default function Docs() {
   };
 
   return (
-    <>
+    <div className={styles.docsWrap}>
+      <div className={styles.mesh} aria-hidden />
       <div className={styles.scanlines} aria-hidden />
 
-      {/* LAYOUT */}
       <div className={styles.layout}>
 
         {/* MOBILE OVERLAY */}
@@ -125,7 +125,7 @@ export default function Docs() {
           </div>
         </main>
       </div>
-    </>
+    </div>
   );
 }
 

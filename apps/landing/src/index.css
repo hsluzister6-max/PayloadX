@@ -4,18 +4,11 @@
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-
-  /* PayloadX Logo Styles */
   --grad-logo: linear-gradient(145deg, #C8CDD8, #7A8090, #B0B5C0, #E0E3E8);
 }
 
@@ -27,9 +20,11 @@ html, body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #0f0f0f;
+  background: var(--gradient-page);
+  color: var(--text-primary);
   overflow-x: hidden;
   width: 100%;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 #root {
@@ -40,40 +35,19 @@ html, body {
   padding: 0;
 }
 
-/* Animations */
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%) skewX(-12deg);
-  }
-
-  100% {
-    transform: translateX(200%) skewX(-12deg);
-  }
+  0% { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
 }
 
 @keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 0.02;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.05;
-    transform: scale(1.05);
-  }
+  0%, 100% { opacity: 0.02; transform: scale(1); }
+  50% { opacity: 0.05; transform: scale(1.05); }
 }
 
-.animate-shimmer {
-  animation: shimmer 2.5s infinite linear;
-}
+.animate-shimmer { animation: shimmer 2.5s infinite linear; }
+.animate-pulse { animation: pulse 3s infinite ease-in-out; }
 
-.animate-pulse {
-  animation: pulse 3s infinite ease-in-out;
-}
-
-/* Solid Metal App Name Text with Shine */
 .metallic-app-name {
   font-family: 'Syne', sans-serif;
   font-weight: 900;
@@ -99,15 +73,27 @@ html, body {
   color: transparent;
   display: inline-block;
   animation: chromeShine 2.5s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+[data-theme="light"] .metallic-app-name {
+  background:
+    linear-gradient(110deg,
+      rgba(255, 255, 255, 0) 40%,
+      rgba(255, 255, 255, 0.5) 48%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(255, 255, 255, 0.5) 52%,
+      rgba(255, 255, 255, 0) 60%),
+    linear-gradient(to bottom,
+      #334155 0%,
+      #1e293b 30%,
+      #475569 60%,
+      #1e293b 100%);
+  background-size: 200% auto, 100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 @keyframes chromeShine {
-  0% {
-    background-position: -200% center, center;
-  }
-
-  100% {
-    background-position: 200% center, center;
-  }
+  0% { background-position: -200% center, center; }
+  100% { background-position: 200% center, center; }
 }

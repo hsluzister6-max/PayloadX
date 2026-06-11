@@ -1,0 +1,7 @@
+# Cloud Run buildpacks: production serves src/server.js (JS), not dist/
+[[build.env]]
+name = "GOOGLE_NODE_RUN_SCRIPTS"
+value = ""
+
+[build]
+exclude = ["dist", "node_modules", ".env"]

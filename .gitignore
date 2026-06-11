@@ -6,6 +6,7 @@ node_modules/
 dist/
 target/
 .DS_Store
+._*
 *.log
 .vercel/
 apps/backend/*.json

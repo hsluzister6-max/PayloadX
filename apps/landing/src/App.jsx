@@ -181,19 +181,19 @@ function Hero({ active, setActive, userOS, VERSION }) {
             <div className={styles.mockBody}>
               <div className={styles.mockSidebar}>
                 <div className={styles.mockSideItemActive}>
-                  <Zap size={12} style={{ color: '#cbd5e1' }} />
+                  <Zap size={12} className={styles.mockIconActive} />
                   <span>Get Users</span>
                 </div>
                 <div className={styles.mockSideItem}>
-                  <Code size={12} style={{ color: '#94a3b8' }} />
+                  <Code size={12} className={styles.mockIcon} />
                   <span>Auth User</span>
                 </div>
                 <div className={styles.mockSideItem}>
-                  <Users size={12} style={{ color: '#94a3b8' }} />
+                  <Users size={12} className={styles.mockIcon} />
                   <span>Team Sync</span>
                 </div>
                 <div className={styles.mockSideItem}>
-                  <Lock size={12} style={{ color: '#94a3b8' }} />
+                  <Lock size={12} className={styles.mockIcon} />
                   <span>List Vaults</span>
                 </div>
               </div>

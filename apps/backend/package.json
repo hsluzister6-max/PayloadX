@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "build": "tsc",
+    "compile": "tsc",
     "build:clean": "rimraf dist && tsc",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
