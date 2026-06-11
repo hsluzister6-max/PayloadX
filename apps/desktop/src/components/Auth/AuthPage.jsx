@@ -242,7 +242,7 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="flex h-screen bg-[#060606] overflow-hidden font-sans text-slate-400">
+    <div className="flex h-screen bg-[#060606] overflow-hidden font-mono text-slate-400">
       {/* ── Left Side: Auth Form ── */}
       <div className="w-full lg:w-[35%] flex flex-col bg-transparent relative border-r border-white/[0.03]">
         {/* App Logo */}

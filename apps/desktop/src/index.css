@@ -867,7 +867,17 @@ textarea,
   height: 100vh;
   overflow: hidden;
   background: var(--v2-workspace-bg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   transition: background 0.2s ease;
+}
+
+.v2-app h1,
+.v2-app h2,
+.v2-app h3,
+.v2-app h4,
+.v2-app h5,
+.v2-app h6 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .v2-body {
@@ -1438,39 +1448,47 @@ textarea,
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   min-width: 0;
+  min-height: 34px;
+  flex-shrink: 0;
+  box-sizing: border-box;
   text-align: left;
-  transition: background 0.1s;
+  position: relative;
+  transition: background 0.12s, border-color 0.12s;
 }
 
 .sdbv2-tree-row:hover {
-  background: transparent;
+  background: var(--dash-glass-inner, rgba(255, 255, 255, 0.04));
+  border-color: var(--dash-glass-border, rgba(255, 255, 255, 0.08));
 }
 
 .sdbv2-tree-row--active {
-  background: transparent;
+  background: var(--dash-glass-inner, rgba(255, 255, 255, 0.04));
+  border-color: var(--dash-glass-border, rgba(255, 255, 255, 0.08));
+  padding-right: 22px;
 }
 
 .sdbv2-tree-row--active::after {
   content: '';
-  display: block;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 5px;
   height: 5px;
   background: var(--accent);
   border-radius: 50%;
   box-shadow: 0 0 6px var(--accent);
-  flex-shrink: 0;
-  margin-left: 4px;
+  pointer-events: none;
   transition: opacity 0.15s;
 }
 
-.group:hover .sdbv2-tree-row--active::after,
-.sdbv2-tree-row:hover::after {
+.group:hover .sdbv2-tree-row--active::after {
   opacity: 0;
 }
 
@@ -1565,13 +1583,25 @@ textarea,
 }
 
 .sdbv2-indent {
-  margin-left: 16px;
-  padding-left: 0;
-  border-left: none;
+  margin-left: 14px;
+  padding: 4px 0 4px 10px;
+  border-left: 1px solid var(--border-1);
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
+  gap: 4px;
+  overflow: visible;
+}
+
+.sdbv2-tree-node {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.sdbv2-tree-node-head {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .sdbv2-empty-note {
@@ -2412,7 +2442,7 @@ textarea,
 }
 
 .dash-title {
-  font-family: 'DM Mono', monospace;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 26px;
   font-weight: 700;
   color: var(--text-primary);

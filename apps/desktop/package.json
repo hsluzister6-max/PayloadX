@@ -12,7 +12,9 @@
     "tauri:build": "tauri build",
     "tauri:build:app": "tauri build -b app",
     "tauri:build:dmg": "tauri build -b app && bash scripts/make-dmg.sh",
-    "tauri:build:mac-publish": "bash scripts/build-macos-publish.sh"
+    "tauri:build:mac-publish": "bash scripts/build-macos-publish.sh",
+    "signing:setup": "bash scripts/setup-local-signing.sh",
+    "signing:import": "bash scripts/import-developer-id-cert.sh"
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",

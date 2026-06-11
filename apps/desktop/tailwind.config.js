@@ -8,6 +8,7 @@ export default {
         sans: ['DM Mono', 'monospace'],
         title: ['Syne', 'sans-serif'],
         mono: ['DM Mono', 'monospace'],
+        inter: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         // ── Design system tokens (CSS-variable backed) ────────────────

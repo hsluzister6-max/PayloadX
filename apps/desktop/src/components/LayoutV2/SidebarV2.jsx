@@ -1286,8 +1286,8 @@ export default function SidebarV2({
                                                                 {projectCollections.map((col) => {
                                                                     const isExp = expandedCollections.has(col._id);
                                                                     return (
-                                                                        <div key={col._id}>
-                                                                            <div className="group relative pr-1">
+                                                                        <div key={col._id} className="sdbv2-tree-node">
+                                                                            <div className="sdbv2-tree-node-head group relative pr-1">
                                                                                 <button
                                                                                     onClick={() => toggleCollection(col)}
                                                                                     onContextMenu={(e) => showCollectionContextMenu(e, col)}
@@ -1333,7 +1333,7 @@ export default function SidebarV2({
                                                                                 </div>
                                                                             </div>
                                                                             {isExp && (
-                                                                                <div className="sdbv2-indent animate-in">
+                                                                                <div className="sdbv2-indent">
                                                                                     {loadingCollections[col._id] ? (
                                                                                         <div className="flex flex-col gap-1 py-1 pr-2 pl-4">
                                                                                             <div className="h-6 w-full bg-[var(--surface-3)] rounded-md animate-pulse" />
@@ -1511,8 +1511,8 @@ function RecursiveFolderListV2({
                 const totalItems = childRequests.length + childFolders.length;
 
                 return (
-                    <div key={folderId}>
-                        <div className="group relative pr-1">
+                    <div key={folderId} className="sdbv2-tree-node">
+                        <div className="sdbv2-tree-node-head group relative pr-1">
                             <button
                                 onClick={() => toggleFolder(folderId, collectionId)}
                                 onContextMenu={(e) => onFolderContextMenu ? onFolderContextMenu(e, collectionId, folder) : undefined}
@@ -1544,7 +1544,7 @@ function RecursiveFolderListV2({
                         </div>
 
                         {isExpanded && (
-                            <div className="sdbv2-indent animate-in">
+                            <div className="sdbv2-indent">
                                 <RecursiveFolderListV2
                                     folders={folders}
                                     requests={requests}

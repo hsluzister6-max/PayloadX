@@ -1,4 +1,5 @@
 node_modules/
+apps/desktop/certs/
 .env
 .env.local
 .env.apple
