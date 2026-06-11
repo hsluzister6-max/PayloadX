@@ -6,7 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useConnectivityStore } from '@/store/connectivityStore';
-import PayloadX from '@/components/core/logo';
+import ModalShell from './ModalShell';
 import toast from 'react-hot-toast';
 
 export default function CreateTeamModal() {
@@ -41,11 +41,11 @@ export default function CreateTeamModal() {
     <ModalWrapper onClose={() => setShowTeamModal(false)} title="Create Team">
       <form onSubmit={handleCreate} className="flex flex-col gap-4">
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Team Name</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Team Name</label>
           <input className="input" placeholder="e.g., Backend Squad" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Description (optional)</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Description (optional)</label>
           <input className="input" placeholder="What does this team work on?" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div className="flex gap-2 pt-1">
@@ -91,15 +91,15 @@ export function CreateProjectModal() {
     <ModalWrapper onClose={() => setShowProjectModal(false)} title="Create Project">
       <form onSubmit={handleCreate} className="flex flex-col gap-4">
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Project Name</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Project Name</label>
           <input className="input" placeholder="e.g., Payment API" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Description</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Description</label>
           <input className="input" placeholder="Optional description" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Color</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Color</label>
           <div className="flex gap-2">
             {COLORS.map((c) => (
               <button
@@ -152,11 +152,11 @@ export function CreateCollectionModal() {
     <ModalWrapper onClose={() => setShowCollectionModal(false)} title="Create Collection">
       <form onSubmit={handleCreate} className="flex flex-col gap-4">
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Collection Name</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Collection Name</label>
           <input className="input" placeholder="e.g., User Management APIs" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Description</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Description</label>
           <input className="input" placeholder="Optional" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         {!currentProject && (
@@ -207,7 +207,7 @@ export function CreateFolderModal() {
     <ModalWrapper onClose={() => setShowFolderModal(false)} title={isEdit ? 'Rename Folder' : 'New Folder'}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
-          <label className="block text-xs font-semibold text-surface-400 mb-1.5">Folder Name</label>
+          <label className="block text-xs font-semibold text-tx-secondary mb-1.5">Folder Name</label>
           <input className="input" placeholder="e.g., Auth APIs" value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </div>
         <div className="flex gap-2 pt-1">
@@ -293,7 +293,7 @@ export function InviteModal() {
   const ROLE_COLORS = {
     admin: 'bg-brand-500/10 text-brand-300 border border-brand-500/20',
     developer: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-    viewer: 'bg-surface-600/10 text-surface-400 border border-surface-600/20',
+    viewer: 'bg-surface-600/10 text-tx-secondary border border-surface-600/20',
   };
 
   return (
@@ -389,7 +389,7 @@ export function InviteModal() {
                             </button>
                             <button
                               onClick={() => setConfirmRemove(null)}
-                              className="text-[10px] px-2 py-1 rounded-lg bg-surface-700/50 text-surface-400 hover:bg-surface-600 transition-colors font-bold"
+                              className="text-[10px] px-2 py-1 rounded-lg bg-surface-700/50 text-tx-secondary hover:bg-surface-600 transition-colors font-bold"
                             >
                               NO
                             </button>
@@ -504,7 +504,7 @@ export function InviteModal() {
           )}
 
           <div className="mt-auto space-y-4">
-            <div className="p-4 rounded-2xl bg-surface-800/30 border border-[#1E2530] border-dashed">
+            <div className="p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-1)] border-dashed">
               <h4 className="text-[10px] font-bold text-surface-500 uppercase tracking-widest mb-2">Team Statistics</h4>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -527,33 +527,8 @@ export function InviteModal() {
 
 function ModalWrapper({ children, onClose, title, wide = false, showLogo = false }) {
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" 
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className={`bg-[#0b0d13]/95 backdrop-blur-2xl border border-white/5 rounded-[28px] shadow-[0_0_80px_rgba(0,0,0,0.9)] w-full ${wide ? 'max-w-4xl' : 'max-w-md'} relative flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden`}>
-        {/* Shimmering Top Highlight */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-400 to-transparent opacity-30 pointer-events-none" />
-
-        <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 bg-white/5 backdrop-blur-md relative z-10">
-          <div className="flex items-center gap-4">
-            {showLogo && (
-              <div className="flex items-center gap-3">
-                <PayloadX className="w-8 h-8" fontSize="10px" />
-                <div className="w-px h-6 bg-surface-700/50" />
-              </div>
-            )}
-            <div className="flex flex-col">
-              <h2 className="text-[14px] font-bold bg-gradient-to-r from-gray-200 via-gray-400 to-gray-500 bg-clip-text text-transparent uppercase tracking-wider leading-none mb-1">{title}</h2>
-              <p className="text-[9px] text-surface-500 font-bold uppercase tracking-[0.2em] opacity-50">PayloadX Studio Context</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-xl text-surface-500 hover:text-gray-200 hover:bg-surface-800 transition-all border border-transparent hover:border-surface-700/50">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div className="p-8 relative z-10">{children}</div>
-      </div>
-    </div>
+    <ModalShell onClose={onClose} title={title} wide={wide} showLogo={showLogo}>
+      {children}
+    </ModalShell>
   );
 }

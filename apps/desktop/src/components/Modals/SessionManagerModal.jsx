@@ -67,11 +67,12 @@ export default function SessionManagerModal() {
     <>
       {/* Dim Backdrop */}
       <div
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-40 modal-overlay"
         style={{
-          background: visible ? 'rgba(0,0,0,0.4)' : 'transparent',
+          background: visible ? undefined : 'transparent',
+          backdropFilter: visible ? undefined : 'none',
+          WebkitBackdropFilter: visible ? undefined : 'none',
           transition: 'background 0.3s ease',
-          backdropFilter: visible ? 'blur(4px)' : 'none',
         }}
         onClick={handleClose}
       />

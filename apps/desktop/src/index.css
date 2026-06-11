@@ -9,32 +9,21 @@
    DARK MODE TOKENS  (default — gray / off-white / black)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  /* PayloadX Metallic Theme */
-  --bg-primary: #07090D;
-  /* void */
-  --bg-secondary: #0B0D13;
-  /* abyss */
-  --bg-tertiary: #05070A;
-  /* terminal */
+  /* PayloadX Metallic Theme — elevated contrast for Windows / WebView2 */
+  --bg-primary: #12151C;
+  --bg-secondary: #161A24;
+  --bg-tertiary: #0E1118;
 
-  --surface-1: #0B0D13;
-  /* abyss */
-  --surface-2: #0C0E14;
-  /* graphite */
-  --surface-3: #0E111A;
-  /* slate */
+  --surface-1: #1A1F2B;
+  --surface-2: #1E2430;
+  --surface-3: #252B38;
 
-  --border-1: rgba(255, 255, 255, 0.05);
-  /* glass_edge_subtle */
-  --border-2: rgba(255, 255, 255, 0.12);
-  /* glass_edge_clear */
+  --border-1: rgba(255, 255, 255, 0.10);
+  --border-2: rgba(255, 255, 255, 0.18);
 
-  --text-primary: #D0D4DE;
-  /* platinum */
-  --text-secondary: #7A8090;
-  /* iron */
-  --text-muted: #6B7280;
-  /* pewter */
+  --text-primary: #E8ECF4;
+  --text-secondary: #9CA3B8;
+  --text-muted: #7B8394;
 
   /* Accent - Chrome */
   --accent: #C8CDD8;
@@ -65,7 +54,25 @@
   --term-min: #FEBC2E;
   --term-max: #28C840;
   --term-prompt: #3D4455;
-  --term-cmd: #7A8090;
+  --term-cmd: #9CA3B8;
+
+  /* Modals */
+  --modal-backdrop: rgba(0, 0, 0, 0.52);
+  --modal-bg: var(--surface-1);
+  --modal-header-bg: var(--surface-2);
+  --modal-border: var(--border-2);
+  --modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+  --modal-highlight: rgba(255, 255, 255, 0.12);
+
+  /* Layout rail (dark) */
+  --rail-bg: #161A24;
+  --panel-bg: #12151C;
+  --topbar-bg: #1A1F2B;
+  --rail-icon-color: #7B8394;
+  --rail-icon-active: #E8ECF4;
+  --rail-active-bar: var(--accent);
+  --rail-hover-bg: rgba(255, 255, 255, 0.06);
+  --rail-active-bg: rgba(255, 255, 255, 0.08);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -115,6 +122,14 @@
   --rail-active-bar: #4F46E5;
   --rail-hover-bg: #D1D5DB;
   --rail-active-bg: #E5E7EB;
+
+  /* Modals */
+  --modal-backdrop: rgba(15, 23, 42, 0.38);
+  --modal-bg: #FFFFFF;
+  --modal-header-bg: #F9FAFB;
+  --modal-border: var(--border-2);
+  --modal-shadow: 0 24px 64px rgba(15, 23, 42, 0.14);
+  --modal-highlight: rgba(79, 70, 229, 0.08);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -336,22 +351,17 @@ textarea,
 
   /* Input */
   .input {
-    background: #0B0F14;
+    background: var(--surface-2);
     border: 1px solid var(--border-2);
-    color: #E6EDF3;
+    color: var(--text-primary);
     height: 32px;
     font-size: 12px;
     border-radius: 6px;
     @apply px-2.5 w-full transition-all duration-150 outline-none;
   }
 
-  .light .input {
-    background: #FFFFFF;
-    color: #111111;
-  }
-
   .input::placeholder {
-    color: #6B7280;
+    color: var(--text-muted);
   }
 
   .input:focus {
@@ -887,40 +897,147 @@ textarea,
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   MODALS — theme-aware overlay + panel
+   ══════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-backdrop);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: 20px;
+  box-shadow: var(--modal-shadow);
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.modal-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--modal-highlight), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--modal-header-bg);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.modal-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-3);
+  border: 1px solid var(--border-1);
+  color: var(--text-secondary);
+}
+
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  margin: 0;
+  font-family: 'Syne', sans-serif;
+}
+
+.modal-subtitle {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin: 4px 0 0;
+  opacity: 0.85;
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.modal-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  border-color: var(--border-1);
+}
+
+.modal-body {
+  padding: 24px;
+  position: relative;
+  z-index: 2;
+  overflow-y: auto;
+}
+
+.modal-body--compact {
+  padding: 20px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    V2 EXTRA TOKENS (dark root already defined above)
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --v2-header-bg: #0f0f0f;
-  --v2-header-border: rgba(255, 255, 255, 0.08);
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #0f0f0f;
-  --surface-1: #0f0f0f;
-  --v2-sidebar-border: rgba(255, 255, 255, 0.06);
-  --v2-workspace-bg: #0f0f0f;
-  --v2-card-bg: #0f0f0f;
-  --v2-card-border: rgba(255, 255, 255, 0.08);
+  --v2-header-bg: var(--bg-primary);
+  --v2-header-border: var(--border-1);
+  --v2-sidebar-border: var(--border-1);
+  --v2-workspace-bg: var(--bg-primary);
+  --v2-card-bg: var(--surface-1);
+  --v2-card-border: var(--border-1);
   --v2-card-shadow: none;
-  --v2-card-title-bg: #0f0f0f;
-  --v2-breadcrumb-bg: #0f0f0f;
-  --v2-search-bg: rgba(255, 255, 255, 0.03);
-  --v2-search-border: rgba(255, 255, 255, 0.08);
+  --v2-card-title-bg: var(--surface-2);
+  --v2-breadcrumb-bg: var(--bg-secondary);
+  --v2-search-bg: var(--surface-2);
+  --v2-search-border: var(--border-1);
 }
 
 .light {
   --v2-header-bg: #FFFFFF;
-  --v2-header-border: rgba(0, 0, 0, 0.05);
-  --bg-primary: #F8F8F8;
-  --bg-secondary: #F8F8F8;
-  --surface-1: #F8F8F8;
-  --v2-sidebar-border: rgba(0, 0, 0, 0.05);
+  --v2-header-border: rgba(0, 0, 0, 0.06);
+  --v2-sidebar-border: rgba(0, 0, 0, 0.06);
   --v2-workspace-bg: #F8F8F8;
   --v2-card-bg: #FFFFFF;
-  --v2-card-border: rgba(0, 0, 0, 0.06);
+  --v2-card-border: rgba(0, 0, 0, 0.08);
   --v2-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
   --v2-card-title-bg: #F9F9FA;
   --v2-breadcrumb-bg: #FFFFFF;
   --v2-search-bg: #F5F5F7;
-  --v2-search-border: rgba(0, 0, 0, 0.05);
+  --v2-search-border: rgba(0, 0, 0, 0.06);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1325,15 +1442,15 @@ textarea,
   padding: 8px 12px;
   margin: 0 12px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
 .sdbv2-search-wrap:focus-within {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface-3);
+  border-color: var(--border-2);
 }
 
 .sdbv2-search-icon {
@@ -1992,8 +2109,12 @@ textarea,
 }
 
 .v2-context-menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-3);
   color: var(--text-primary);
+}
+
+.light .v2-context-menu-item:hover {
+  background: var(--surface-2);
 }
 
 .v2-context-menu-item--danger {
@@ -2021,7 +2142,7 @@ textarea,
 
 .v2-context-menu-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border-1);
   margin: 4px 6px;
 }
 

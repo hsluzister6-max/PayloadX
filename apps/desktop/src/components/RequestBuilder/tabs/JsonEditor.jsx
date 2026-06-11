@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
 import { toggleJsonLineComment } from '@/utils/jsonLineComment';
+import { handleJsonAutoPairBackspace, handleJsonAutoPairKeyDown } from '@/utils/editorTextEdit';
 import { REST_KEYS, VALUE_SNIPPETS } from './jsonEditorConstants';
 
 // ── Syntax Highlighter (JSONC: faded full-line //, /* */, trailing // outside strings) ──
@@ -238,8 +239,25 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   const taRef = useRef(null);
   const preRef = useRef(null);
   const acRef = useRef(null);
+  const pendingSelectionRef = useRef(null);
+  const suppressInputRef = useRef(false);
   const [copied, setCopied] = useState(false);
   const [ac, setAc] = useState({ open: false, items: [], idx: 0, top: 0, left: 0, mode: 'key' });
+
+  const applyEdit = useCallback(({ text, selStart, selEnd }) => {
+    pendingSelectionRef.current = { start: selStart, end: selEnd };
+    suppressInputRef.current = true;
+    onChange(text);
+  }, [onChange]);
+
+  useLayoutEffect(() => {
+    const ta = taRef.current;
+    const pending = pendingSelectionRef.current;
+    if (!ta || !pending) return;
+    ta.selectionStart = pending.start;
+    ta.selectionEnd = pending.end;
+    pendingSelectionRef.current = null;
+  }, [value]);
 
   // Sync scroll between textarea and highlight layer
   const syncScroll = () => {
@@ -295,27 +313,27 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     const wordLen = wordMatch ? wordMatch[0].length : 0;
     const insert = typeof item === 'string' ? item : (item.insert || item.label);
     const newVal = val.slice(0, pos - wordLen) + insert + val.slice(pos);
-    onChange(newVal);
-    const newCursor = pos - wordLen + insert.length;
-    setTimeout(() => { ta.selectionStart = ta.selectionEnd = newCursor; ta.focus(); }, 0);
+    applyEdit({ text: newVal, selStart: pos - wordLen + insert.length, selEnd: pos - wordLen + insert.length });
+    ta.focus();
     setAc(a => ({ ...a, open: false }));
-  }, [onChange]);
+  }, [applyEdit]);
 
   // ── Key Handling ────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
     const ta = e.target;
     const mod = e.ctrlKey || e.metaKey;
+    const editOpts = {
+      readOnly,
+      getValue: () => ta.value,
+      applyEdit,
+    };
 
     // JSON / JSONC: Cmd/Ctrl + / toggles line comments (⌘/ Ctrl+/)
     if (mod && e.key === '/') {
       e.preventDefault();
       if (!readOnly && language === 'json') {
         const { text, selStart, selEnd } = toggleJsonLineComment(ta.value, ta.selectionStart, ta.selectionEnd);
-        onChange(text);
-        setTimeout(() => {
-          ta.selectionStart = selStart;
-          ta.selectionEnd = selEnd;
-        }, 0);
+        applyEdit({ text, selStart, selEnd });
       }
       return;
     }
@@ -325,11 +343,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       e.preventDefault();
       if (!readOnly) {
         const r = duplicateSelectedLines(ta.value, ta.selectionStart, ta.selectionEnd);
-        onChange(r.text);
-        setTimeout(() => {
-          ta.selectionStart = r.selStart;
-          ta.selectionEnd = r.selEnd;
-        }, 0);
+        applyEdit({ text: r.text, selStart: r.selStart, selEnd: r.selEnd });
       }
       return;
     }
@@ -339,11 +353,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       e.preventDefault();
       if (!readOnly) {
         const r = deleteSelectedLines(ta.value, ta.selectionStart, ta.selectionEnd);
-        onChange(r.text);
-        setTimeout(() => {
-          ta.selectionStart = r.selStart;
-          ta.selectionEnd = r.selEnd;
-        }, 0);
+        applyEdit({ text: r.text, selStart: r.selStart, selEnd: r.selEnd });
       }
       return;
     }
@@ -371,45 +381,27 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         const r = e.shiftKey
           ? outdentSelectedLines(v, s, end)
           : indentSelectedLines(v, s, end);
-        onChange(r.text);
-        setTimeout(() => {
-          ta.selectionStart = r.selStart;
-          ta.selectionEnd = r.selEnd;
-        }, 0);
+        applyEdit({ text: r.text, selStart: r.selStart, selEnd: r.selEnd });
         return;
       }
 
       if (e.shiftKey) {
         const r = outdentSelectedLines(v, s, end);
-        onChange(r.text);
-        setTimeout(() => {
-          ta.selectionStart = r.selStart;
-          ta.selectionEnd = r.selEnd;
-        }, 0);
+        applyEdit({ text: r.text, selStart: r.selStart, selEnd: r.selEnd });
         return;
       }
 
-      const newVal = v.slice(0, s) + '  ' + v.slice(end);
-      onChange(newVal);
-      setTimeout(() => {
-        ta.selectionStart = ta.selectionEnd = s + 2;
-      }, 0);
+      applyEdit({ text: v.slice(0, s) + '  ' + v.slice(end), selStart: s + 2, selEnd: s + 2 });
       return;
     }
 
-    // Auto-close brackets & quotes (JSON bodies only — avoids breaking XML/HTML raw)
-    const pairs = { '{': '}', '[': ']', '"': '"' };
-    if (language === 'json' && pairs[e.key] && !readOnly) {
-      e.preventDefault();
-      const s = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const v = ta.value;
-      const close = pairs[e.key];
-      const newVal = v.slice(0, s) + e.key + v.slice(s, end) + close + v.slice(end);
-      onChange(newVal);
-      setTimeout(() => {
-        ta.selectionStart = ta.selectionEnd = s + 1;
-      }, 0);
+    // Delete empty auto-paired delimiters (JSON only)
+    if (language === 'json' && e.key === 'Backspace' && handleJsonAutoPairBackspace(e, editOpts)) {
+      return;
+    }
+
+    // Auto-close brackets & double quotes (JSON only — never map ' to ")
+    if (language === 'json' && handleJsonAutoPairKeyDown(e, editOpts)) {
       return;
     }
 
@@ -427,15 +419,18 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       const closing = extraIndent && ['}', ']'].includes(nextChar) ? '\n' + indent : '';
       const v = ta.value;
       const newVal = v.slice(0, s) + newLine + closing + v.slice(s);
-      onChange(newVal);
       const newPos = s + newLine.length;
-      setTimeout(() => {
-        ta.selectionStart = ta.selectionEnd = newPos;
-      }, 0);
+      applyEdit({ text: newVal, selStart: newPos, selEnd: newPos });
     }
-  }, [ac, applyAc, onChange, readOnly, language]);
+  }, [ac, applyAc, applyEdit, readOnly, language]);
 
-  const handleInput = useCallback((e) => {
+  const handleChange = useCallback((e) => {
+    if (suppressInputRef.current) {
+      suppressInputRef.current = false;
+      syncScroll();
+      computeAc(e.target.value, e.target.selectionStart, e.target);
+      return;
+    }
     const ta = e.target;
     onChange(ta.value);
     syncScroll();
@@ -601,8 +596,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
-            onInput={handleInput}
-            onChange={handleInput}
+            autoComplete="off"
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}
             onClick={() => setAc(a => ({ ...a, open: false }))}
