@@ -48,6 +48,17 @@
   --grad-primary: linear-gradient(145deg, #e4e7eb, #9ca3af, #d1d5db, #f3f4f6);
   --grad-logo: linear-gradient(145deg, #d6dce8, #888ea0, #b2b7c1, #D4D8E0);
 
+  /* Primary CTA — light chrome metal (dark mode) */
+  --cta-bg: var(--grad-primary);
+  --cta-text: #0f172a;
+  --cta-border: rgba(255, 255, 255, 0.4);
+  --cta-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  --cta-shadow-hover:
+    0 6px 18px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 1);
+
   /* Terminal Colors */
   --term-bg: #05070A;
   --term-close: #FF5F57;
@@ -130,6 +141,28 @@
   --modal-border: var(--border-2);
   --modal-shadow: 0 24px 64px rgba(15, 23, 42, 0.14);
   --modal-highlight: rgba(79, 70, 229, 0.08);
+
+  /* Primary CTA — dark metal on light backgrounds */
+  --grad-primary: linear-gradient(
+    165deg,
+    #525a6b 0%,
+    #323a4a 14%,
+    #1e2430 38%,
+    #252b38 52%,
+    #161a24 72%,
+    #3a4254 100%
+  );
+  --cta-bg: var(--grad-primary);
+  --cta-text: #E8ECF4;
+  --cta-border: rgba(255, 255, 255, 0.14);
+  --cta-shadow:
+    0 4px 14px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  --cta-shadow-hover:
+    0 6px 20px rgba(15, 23, 42, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -289,29 +322,25 @@ textarea,
     border-color: var(--border-1);
   }
 
-  /* Primary button – 3D metallic chrome style */
+  /* Primary button – metallic CTA (chrome in dark mode, dark metal in light mode) */
   .btn-primary {
-    background: var(--grad-primary);
-    color: #0f172a;
+    background: var(--cta-bg);
+    color: var(--cta-text);
     padding: 7px 16px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 
-      0 4px 12px rgba(0, 0, 0, 0.3),
-      inset 0 1px 1px rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--cta-border);
+    box-shadow: var(--cta-shadow);
     @apply transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
     cursor: pointer;
   }
 
   .btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 
-      0 6px 18px rgba(0, 0, 0, 0.4),
-      inset 0 1px 1px rgba(255, 255, 255, 1);
+    box-shadow: var(--cta-shadow-hover);
     filter: brightness(1.05);
   }
 
@@ -2296,13 +2325,16 @@ textarea,
 }
 
 .ws-connect-btn {
-  background: var(--accent);
-  color: #000;
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  border: 1px solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
 }
 
 .ws-connect-btn:hover {
-  opacity: 0.9;
   transform: translateY(-1px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.05);
 }
 
 .ws-disconnect-btn {
@@ -2380,13 +2412,20 @@ textarea,
   gap: 6px;
   padding: 6px 20px;
   border-radius: 8px;
-  background: var(--accent);
-  color: #000;
+  background: var(--cta-bg);
+  color: var(--cta-text);
   font-size: 12px;
   font-weight: 700;
-  border: none;
+  border: 1px solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.ws-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.05);
 }
 
 .ws-send-btn:disabled {
@@ -2529,9 +2568,10 @@ textarea,
   gap: 8px;
   padding: 10px 22px;
   border-radius: 10px;
-  background: var(--accent);
-  border: none;
-  color: #000;
+  background: var(--cta-bg);
+  border: 1px solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
+  color: var(--cta-text);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2539,8 +2579,9 @@ textarea,
 }
 
 .ws-empty-cta:hover {
-  opacity: 0.9;
   transform: translateY(-1px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.05);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -2591,12 +2632,16 @@ textarea,
 }
 
 .dash-cta--primary {
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  border: 1px solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
 }
 
 .dash-cta--primary:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--cta-shadow-hover);
+  filter: brightness(1.05);
 }
 
 .dash-grid {
@@ -2842,4 +2887,154 @@ textarea,
   .dash-lower-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   VARIABLE EDIT POPOVER (URL / headers {{var}} hover)
+   ══════════════════════════════════════════════════════════════════ */
+.variable-edit-popover {
+  pointer-events: auto;
+  animation: fadeInUp 0.12s ease-out both;
+}
+
+.variable-edit-popover-inner {
+  min-width: 220px;
+  max-width: min(300px, calc(100vw - 20px));
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  padding: 6px 8px 5px;
+}
+
+.light .variable-edit-popover-inner {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.variable-edit-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.variable-edit-popover-name {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.variable-edit-popover-name.is-set {
+  color: var(--success);
+}
+
+.variable-edit-popover-name.is-missing {
+  color: var(--warning);
+}
+
+.variable-edit-popover-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: 5px;
+  outline: none;
+}
+
+.variable-edit-popover-input:focus {
+  border-color: var(--accent);
+}
+
+.variable-edit-popover-input::placeholder {
+  color: var(--text-muted);
+}
+
+.variable-edit-popover-icon-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.variable-edit-popover-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.variable-edit-popover-save {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cta-text);
+  background: var(--cta-bg);
+  border: 1px solid var(--cta-border);
+  box-shadow: var(--cta-shadow);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: filter 0.12s, box-shadow 0.12s, transform 0.12s;
+}
+
+.variable-edit-popover-save:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow: var(--cta-shadow-hover);
+}
+
+.variable-edit-popover-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.variable-edit-popover-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 0 1px;
+}
+
+.variable-edit-popover-env {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.variable-edit-popover-foot-hint {
+  font-size: 8px;
+  color: var(--text-muted);
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.variable-edit-popover-arrow {
+  width: 7px;
+  height: 7px;
+  background: var(--modal-bg);
+  border-right: 1px solid var(--modal-border);
+  border-bottom: 1px solid var(--modal-border);
+  transform: rotate(45deg);
+  margin: -4px auto 0;
 }

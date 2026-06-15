@@ -1,10 +1,8 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
 import { toggleJsonLineComment } from '@/utils/jsonLineComment';
-import { handleJsonAutoPairBackspace, handleJsonAutoPairKeyDown } from '@/utils/editorTextEdit';
-import { REST_KEYS, VALUE_SNIPPETS } from './jsonEditorConstants';
 
 // ── Syntax Highlighter (JSONC: faded full-line //, /* */, trailing // outside strings) ──
 function escapeHtml(s) {
@@ -220,33 +218,26 @@ function charsRemovedBeforePos(lines, sl, el, pos) {
   return removed;
 }
 
-function extractKeys(str) {
-  try {
-    const parsed = tryParseJsoncValue(str);
-    if (parsed === undefined || parsed === null || typeof parsed !== 'object') return [];
-    const keys = new Set();
-    const walk = (o, d = 0) => {
-      if (d > 5 || !o || typeof o !== 'object') return;
-      Object.keys(o).forEach(k => { keys.add(k); walk(o[k], d + 1); });
-    };
-    walk(parsed);
-    return [...keys];
-  } catch { return []; }
-}
-
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function JsonEditor({ value, onChange, language = 'json', readOnly = false, className = '', hideHeader = false }) {
   const taRef = useRef(null);
   const preRef = useRef(null);
-  const acRef = useRef(null);
   const pendingSelectionRef = useRef(null);
   const suppressInputRef = useRef(false);
-  const [copied, setCopied] = useState(false);
-  const [ac, setAc] = useState({ open: false, items: [], idx: 0, top: 0, left: 0, mode: 'key' });
+  const isFocusedRef = useRef(false);
+  const [localValue, setLocalValue] = useState(value ?? '');
+
+  // Sync external value when editor is not focused (format, minify, tab switch)
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setLocalValue(value ?? '');
+    }
+  }, [value]);
 
   const applyEdit = useCallback(({ text, selStart, selEnd }) => {
     pendingSelectionRef.current = { start: selStart, end: selEnd };
     suppressInputRef.current = true;
+    setLocalValue(text);
     onChange(text);
   }, [onChange]);
 
@@ -254,12 +245,25 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     const ta = taRef.current;
     const pending = pendingSelectionRef.current;
     if (!ta || !pending) return;
-    ta.selectionStart = pending.start;
-    ta.selectionEnd = pending.end;
-    pendingSelectionRef.current = null;
-  }, [value]);
 
-  // Sync scroll between textarea and highlight layer
+    const len = ta.value.length;
+    const start = Math.min(pending.start, len);
+    const end = Math.min(pending.end, len);
+    ta.selectionStart = start;
+    ta.selectionEnd = end;
+    pendingSelectionRef.current = null;
+
+    // WebView2 (Windows) may reset selection after layout — restore once more next frame
+    requestAnimationFrame(() => {
+      if (document.activeElement !== ta) return;
+      if (ta.selectionStart !== start || ta.selectionEnd !== end) {
+        ta.selectionStart = start;
+        ta.selectionEnd = end;
+      }
+    });
+  }, [localValue]);
+
+  const [copied, setCopied] = useState(false);
   const syncScroll = () => {
     if (preRef.current && taRef.current) {
       preRef.current.scrollTop = taRef.current.scrollTop;
@@ -268,67 +272,17 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   };
 
   const highlighted = useMemo(() => {
-    const v = value || '';
-    if (language === 'json') return highlightJsonc(v) + '\n';
-    return highlightPlain(v) + '\n';
-  }, [value, language]);
+    const v = localValue || '';
+    if (language === 'json') return highlightJsonc(v);
+    return highlightPlain(v);
+  }, [localValue, language]);
 
-  // ── Autocomplete Logic ──────────────────────────────────────────────────────
-  const computeAc = useCallback((val, cursorPos, ta) => {
-    const before = val.slice(0, cursorPos);
-    const lineStart = before.lastIndexOf('\n') + 1;
-    const lineUpTo = before.slice(lineStart);
-
-    const isKey = /^\s*"?(\w*)$/.test(lineUpTo) || /,\s*"?(\w*)$/.test(lineUpTo);
-    const isVal = /:\s*"?(\w*)$/.test(lineUpTo);
-
-    const currentWord = (lineUpTo.match(/"?(\w+)$/) || [])[1] || '';
-    const docKeys = extractKeys(val);
-    const allKeys = [...new Set([...docKeys.map(k => ({ label: k, insert: `"${k}": `, doc: '↑ this doc' })), ...REST_KEYS.filter(k => !docKeys.includes(k)).map(k => ({ label: k, insert: `"${k}": `, doc: 'REST API' }))])];
-
-    let items = [];
-    if (isVal) {
-      items = VALUE_SNIPPETS.filter(i => i.label.startsWith(currentWord));
-    } else if (isKey) {
-      items = allKeys.filter(i => i.label.toLowerCase().startsWith(currentWord.toLowerCase())).slice(0, 12);
-    }
-
-    if (!items.length) { setAc(a => ({ ...a, open: false })); return; }
-
-    // Get caret pixel position
-    const { offsetTop, offsetLeft } = getCaretCoords(ta, cursorPos);
-    const rect = ta.getBoundingClientRect();
-    const parentRect = ta.closest('.editor-wrap')?.getBoundingClientRect() || rect;
-
-    setAc({ open: true, items, idx: 0, top: offsetTop - ta.scrollTop + 22, left: Math.max(4, offsetLeft - ta.scrollLeft), mode: isVal ? 'val' : 'key' });
-  }, []);
-
-  const applyAc = useCallback((item) => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const pos = ta.selectionStart;
-    const val = ta.value;
-    const before = val.slice(0, pos);
-    const wordMatch = before.match(/"?(\w*)$/);
-    const wordLen = wordMatch ? wordMatch[0].length : 0;
-    const insert = typeof item === 'string' ? item : (item.insert || item.label);
-    const newVal = val.slice(0, pos - wordLen) + insert + val.slice(pos);
-    applyEdit({ text: newVal, selStart: pos - wordLen + insert.length, selEnd: pos - wordLen + insert.length });
-    ta.focus();
-    setAc(a => ({ ...a, open: false }));
-  }, [applyEdit]);
-
-  // ── Key Handling ────────────────────────────────────────────────────────────
+  // ── Key Handling (Postman-style: no auto-pair, no smart Enter, no autocomplete) ──
   const handleKeyDown = useCallback((e) => {
     const ta = e.target;
     const mod = e.ctrlKey || e.metaKey;
-    const editOpts = {
-      readOnly,
-      getValue: () => ta.value,
-      applyEdit,
-    };
 
-    // JSON / JSONC: Cmd/Ctrl + / toggles line comments (⌘/ Ctrl+/)
+    // JSON / JSONC: Cmd/Ctrl + / toggles line comments
     if (mod && e.key === '/') {
       e.preventDefault();
       if (!readOnly && language === 'json') {
@@ -358,15 +312,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       return;
     }
 
-    // Autocomplete navigation
-    if (ac.open) {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx + 1) % a.items.length })); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); setAc(a => ({ ...a, idx: (a.idx - 1 + a.items.length) % a.items.length })); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); applyAc(ac.items[ac.idx]); return; }
-      if (e.key === 'Escape') { setAc(a => ({ ...a, open: false })); return; }
-    }
-
-    // Tab / Shift+Tab — multi-line indent outdent, else insert spaces
+    // Tab / Shift+Tab — indent / outdent (Postman-style)
     if (e.key === 'Tab') {
       e.preventDefault();
       if (readOnly) return;
@@ -392,90 +338,75 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       }
 
       applyEdit({ text: v.slice(0, s) + '  ' + v.slice(end), selStart: s + 2, selEnd: s + 2 });
-      return;
     }
-
-    // Delete empty auto-paired delimiters (JSON only)
-    if (language === 'json' && e.key === 'Backspace' && handleJsonAutoPairBackspace(e, editOpts)) {
-      return;
-    }
-
-    // Auto-close brackets & double quotes (JSON only — never map ' to ")
-    if (language === 'json' && handleJsonAutoPairKeyDown(e, editOpts)) {
-      return;
-    }
-
-    // Enter → smart indent (JSON only)
-    if (language === 'json' && e.key === 'Enter' && !readOnly) {
-      const s = ta.selectionStart;
-      const lineStart = ta.value.lastIndexOf('\n', s - 1) + 1;
-      const lineContent = ta.value.slice(lineStart, s);
-      const indent = lineContent.match(/^(\s*)/)[1];
-      const prevChar = ta.value[s - 1];
-      const nextChar = ta.value[s];
-      const extraIndent = ['{', '['].includes(prevChar) ? '  ' : '';
-      e.preventDefault();
-      const newLine = '\n' + indent + extraIndent;
-      const closing = extraIndent && ['}', ']'].includes(nextChar) ? '\n' + indent : '';
-      const v = ta.value;
-      const newVal = v.slice(0, s) + newLine + closing + v.slice(s);
-      const newPos = s + newLine.length;
-      applyEdit({ text: newVal, selStart: newPos, selEnd: newPos });
-    }
-  }, [ac, applyAc, applyEdit, readOnly, language]);
+  }, [applyEdit, readOnly, language]);
 
   const handleChange = useCallback((e) => {
+    const ta = e.target;
     if (suppressInputRef.current) {
       suppressInputRef.current = false;
       syncScroll();
-      computeAc(e.target.value, e.target.selectionStart, e.target);
       return;
     }
-    const ta = e.target;
+    pendingSelectionRef.current = {
+      start: ta.selectionStart,
+      end: ta.selectionEnd,
+    };
+    setLocalValue(ta.value);
     onChange(ta.value);
     syncScroll();
-    computeAc(ta.value, ta.selectionStart, ta);
-  }, [onChange, computeAc]);
+  }, [onChange]);
+
+  const handleSelect = useCallback((e) => {
+    pendingSelectionRef.current = {
+      start: e.target.selectionStart,
+      end: e.target.selectionEnd,
+    };
+  }, []);
 
   // ── Toolbar actions ─────────────────────────────────────────────────────────
   const handleFormat = useCallback(() => {
-    const raw = value || '';
+    const raw = localValue || '';
     if (!raw.trim()) return;
     const v = tryParseJsoncValue(raw);
     if (v === undefined) {
       toast.error('Invalid JSON');
       return;
     }
-    onChange(JSON.stringify(v, null, 2));
+    const formatted = JSON.stringify(v, null, 2);
+    setLocalValue(formatted);
+    onChange(formatted);
     toast.success('JSON formatted');
-  }, [value, onChange]);
+  }, [localValue, onChange]);
 
   const handleMinify = useCallback(() => {
-    const raw = value || '';
+    const raw = localValue || '';
     if (!raw.trim()) return;
     const v = tryParseJsoncValue(raw);
     if (v === undefined) {
       toast.error('Invalid JSON');
       return;
     }
-    onChange(JSON.stringify(v));
+    const minified = JSON.stringify(v);
+    setLocalValue(minified);
+    onChange(minified);
     toast.success('JSON minified');
-  }, [value, onChange]);
+  }, [localValue, onChange]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(value || '');
+    navigator.clipboard.writeText(localValue || '');
     setCopied(true); setTimeout(() => setCopied(false), 2000);
     toast.success('Copied');
-  }, [value]);
+  }, [localValue]);
 
   // ── Validation ──────────────────────────────────────────────────────────────
   const validStatus = useMemo(() => {
-    if (!value?.trim()) return null;
-    const { ok } = validateJsonc(value);
+    if (!localValue?.trim()) return null;
+    const { ok } = validateJsonc(localValue);
     return ok;
-  }, [value]);
+  }, [localValue]);
 
-  const lineCount = useMemo(() => (value || '').split('\n').length, [value]);
+  const lineCount = useMemo(() => (localValue || '').split('\n').length, [localValue]);
 
   const getLangIcon = () => {
     if (language === 'json') return <FileJson size={14} style={{ color: '#F7DF1E' }} />;
@@ -502,11 +433,13 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           font: 12px/1.7 'JetBrains Mono','Fira Code',monospace;
           padding: 12px 12px 12px 0; white-space: pre; overflow: auto;
           tab-size: 2; z-index: 2; -webkit-text-fill-color: transparent;
+          word-break: normal; overflow-wrap: normal;
         }
         .editor-pre {
           position: absolute; inset: 0; margin: 0; overflow: hidden;
           font: 12px/1.7 'JetBrains Mono','Fira Code',monospace;
-          padding: 12px 12px 12px 0; white-space: pre; word-break: break-all;
+          padding: 12px 12px 12px 0; white-space: pre;
+          word-break: normal; overflow-wrap: normal;
           pointer-events: none; z-index: 1;
         }
         .editor-wrap { position: relative; flex: 1; overflow: hidden; }
@@ -516,40 +449,26 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           color: var(--text-muted); border-right: 0.5px solid var(--border-1);
           overflow: hidden; user-select: none; flex-shrink: 0;
         }
-        .ac-drop {
-          position: absolute; z-index: 100; min-width: 220px; max-width: 360px;
-          background: var(--surface-1); border: 1px solid var(--border-1);
-          border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-          overflow: hidden; max-height: 220px; overflow-y: auto;
-        }
-        .ac-item {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 5px 10px; font: 11.5px/1 'JetBrains Mono',monospace;
-          cursor: pointer; gap: 8px; color: var(--text-primary);
-        }
-        .ac-item:hover, .ac-item.active { background: var(--surface-3); }
-        .ac-label { color: #C8CDD8; }
-        .ac-doc   { color: rgba(255,255,255,0.2); font-size: 10px; white-space: nowrap; }
         .tb-btn {
           display: flex; align-items: center; gap: 4px; padding: 4px 8px;
           border-radius: 6px; border: none; background: transparent;
-          color: rgba(255,255,255,0.35); font-size: 10px; font-weight: 700;
+          color: var(--text-muted); font-size: 10px; font-weight: 700;
           letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer;
           transition: color 0.15s, background 0.15s;
         }
-        .tb-btn:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.06); }
+        .tb-btn:hover { color: var(--text-primary); background: var(--surface-3); }
       `}</style>
 
       {/* Toolbar */}
       {!hideHeader && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', borderBottom: '0.5px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', borderBottom: '1px solid var(--border-1)', background: 'var(--surface-2)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ padding: '4px 6px', borderRadius: 6, background: 'rgba(255,255,255,0.06)' }}>{getLangIcon()}</div>
+            <div style={{ padding: '4px 6px', borderRadius: 6, background: 'var(--surface-3)' }}>{getLangIcon()}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.15 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent, #58a6ff)' }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent)' }}>
                 PayloadX
               </span>
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                 {language === 'json' ? 'JSON (JSONC)' : language === 'xml' ? 'XML' : language === 'html' ? 'HTML' : 'Plain text'}
               </span>
             </div>
@@ -579,7 +498,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         </div>
 
         {/* Code area */}
-        <div className="editor-wrap" style={{ flex: 1 }} onClick={() => setAc(a => ({ ...a, open: false }))}>
+        <div className="editor-wrap" style={{ flex: 1 }}>
           {/* Highlight layer */}
           <pre
             ref={preRef}
@@ -591,46 +510,26 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           <textarea
             ref={taRef}
             className="editor-ta"
-            value={value || ''}
+            value={localValue}
             readOnly={readOnly}
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
             autoComplete="off"
             onChange={handleChange}
+            onSelect={handleSelect}
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}
-            onClick={() => setAc(a => ({ ...a, open: false }))}
+            onFocus={() => { isFocusedRef.current = true; }}
+            onBlur={() => { isFocusedRef.current = false; }}
             placeholder={language === 'json' ? '{\n  "key": "value"  // JSONC\n}' : ''}
           />
-
-          {/* Autocomplete dropdown */}
-          {ac.open && ac.items.length > 0 && (
-            <div
-              ref={acRef}
-              className="ac-drop"
-              style={{ top: ac.top, left: ac.left }}
-              onMouseDown={e => e.preventDefault()}
-            >
-              {ac.items.map((item, i) => (
-                <div
-                  key={i}
-                  className={`ac-item ${i === ac.idx ? 'active' : ''}`}
-                  onMouseEnter={() => setAc(a => ({ ...a, idx: i }))}
-                  onMouseDown={() => applyAc(item)}
-                >
-                  <span className="ac-label">{item.label || item}</span>
-                  {item.doc && <span className="ac-doc">{item.doc}</span>}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
       {/* Bottom status bar */}
       {language === 'json' && validStatus !== null && (
-        <div style={{ padding: '3px 12px', borderTop: '0.5px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div style={{ padding: '3px 12px', borderTop: '1px solid var(--border-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: validStatus ? '#4ade80' : '#f87171', boxShadow: validStatus ? '0 0 6px rgba(74,222,128,0.5)' : '0 0 6px rgba(248,113,113,0.5)' }} />
           <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: validStatus ? '#4ade80' : '#f87171' }}>
             {validStatus ? 'Valid JSONC' : 'Syntax error'}
@@ -639,26 +538,10 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             Comments &amp; commented-out keys are dropped when sending (JSONC → JSON wire).
           </span>
           <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>
-            {lineCount} lines · {(value || '').length} chars
+            {lineCount} lines · {(localValue || '').length} chars
           </span>
         </div>
       )}
     </div>
   );
-}
-
-// Helper: get approximate pixel coords of caret in textarea
-function getCaretCoords(ta, pos) {
-  const div = document.createElement('div');
-  const style = window.getComputedStyle(ta);
-  ['fontFamily','fontSize','lineHeight','padding','border','boxSizing','whiteSpace','wordWrap','wordBreak'].forEach(p => { div.style[p] = style[p]; });
-  div.style.position = 'absolute'; div.style.visibility = 'hidden';
-  div.style.width = ta.offsetWidth + 'px';
-  div.textContent = ta.value.slice(0, pos);
-  const span = document.createElement('span'); span.textContent = ta.value[pos] || '.';
-  div.appendChild(span);
-  document.body.appendChild(div);
-  const { offsetTop, offsetLeft } = span;
-  document.body.removeChild(div);
-  return { offsetTop, offsetLeft };
 }
