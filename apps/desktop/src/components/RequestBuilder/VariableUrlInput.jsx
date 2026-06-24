@@ -2,10 +2,17 @@ import { useMemo, useRef } from 'react';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import VariableEditPopover, { useVariablePopoverHover } from './VariableEditPopover';
 
+function replaceVariableTokenInUrl(url, oldName, newKey) {
+  const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`\\{\\{\\s*${escaped}\\s*\\}\\}`, 'g');
+  return url.replace(regex, `{{${newKey}}}`);
+}
+
 export default function VariableUrlInput({ value, onChange, placeholder }) {
   const { activeEnvironment } = useEnvironmentStore();
   const inputRef = useRef(null);
-  const { popover, openPopover, scheduleClose, closePopover, clearCloseTimer } = useVariablePopoverHover();
+  const { popover, openPopover, scheduleClose, closePopover, clearCloseTimer } =
+    useVariablePopoverHover();
 
   const segments = useMemo(() => {
     const parts = [];
@@ -33,13 +40,34 @@ export default function VariableUrlInput({ value, onChange, placeholder }) {
 
   const hasUnresolved = segments.some((s) => s.type === 'var' && !s.found);
 
-  const handleVarEnter = (seg, e) => {
+  const openForSegment = (seg, e, pinned = false) => {
     const rect = e.currentTarget.getBoundingClientRect();
     openPopover({
       varName: seg.varName,
       variable: seg.variable,
+      pinned,
       anchor: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
     });
+  };
+
+  const handleVarEnter = (seg, e) => {
+    if (popover?.pinned) return;
+    openForSegment(seg, e, false);
+  };
+
+  const handleVarClick = (seg, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    clearCloseTimer();
+    if (popover?.varName === seg.varName && popover?.pinned) return;
+    openForSegment(seg, e, true);
+  };
+
+  const handleReplaceInUrl = (oldName, newKey) => {
+    const newUrl = replaceVariableTokenInUrl(value, oldName, newKey);
+    if (newUrl !== value) {
+      onChange({ target: { value: newUrl } });
+    }
   };
 
   return (
@@ -51,11 +79,7 @@ export default function VariableUrlInput({ value, onChange, placeholder }) {
       >
         <div className="w-full overflow-x-auto whitespace-pre custom-scrollbar pb-0.5" style={{ lineHeight: '1.25rem' }}>
           <div className="relative min-w-full w-max">
-            {/* Colored mirror on top — vars capture hover; rest passes through to input */}
-            <div
-              aria-hidden="true"
-              className="relative z-[1] pointer-events-none select-none"
-            >
+            <div aria-hidden="true" className="relative z-[1] pointer-events-none select-none">
               {value === '' ? (
                 <span style={{ color: 'var(--text-muted)' }}>{placeholder}</span>
               ) : (
@@ -65,12 +89,14 @@ export default function VariableUrlInput({ value, onChange, placeholder }) {
                   ) : (
                     <span
                       key={i}
+                      data-var-token
                       className={`pointer-events-auto cursor-pointer transition-opacity hover:opacity-75 ${
                         seg.found ? 'text-green-500' : 'text-orange-400'
                       }`}
                       onMouseEnter={(e) => handleVarEnter(seg, e)}
                       onMouseLeave={scheduleClose}
-                      title={`Edit {{${seg.varName}}}`}
+                      onClick={(e) => handleVarClick(seg, e)}
+                      title={`Hover: edit value · Click: rename {{${seg.varName}}}`}
                     >
                       {seg.text}
                     </span>
@@ -111,9 +137,11 @@ export default function VariableUrlInput({ value, onChange, placeholder }) {
           anchor={popover.anchor}
           varName={popover.varName}
           variable={popover.variable}
+          pinned={popover.pinned}
           onClose={closePopover}
           onHoverEnter={clearCloseTimer}
           onHoverLeave={scheduleClose}
+          onReplaceInUrl={handleReplaceInUrl}
         />
       )}
     </div>

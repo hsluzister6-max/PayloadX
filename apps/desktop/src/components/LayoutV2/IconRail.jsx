@@ -56,7 +56,7 @@ export default function IconRail({ activePanel, setActivePanel }) {
   const { theme, toggleTheme, toggleLayout } = useUIStore();
 
   return (
-    <div className="icon-rail" style={{ background: 'var(--rail-bg)', borderRight: '1px solid var(--border-1)' }}>
+    <div className="icon-rail">
       {/* Logo */}
       <div className="rail-logo">
         <PayloadX className="w-10 h-10" fontSize="14px" />

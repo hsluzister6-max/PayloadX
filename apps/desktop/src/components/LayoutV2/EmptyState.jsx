@@ -16,102 +16,71 @@ export default function EmptyState({ onShowTeamModal, onShowProjectModal }) {
     if (!hasTeams) {
       return {
         title: <>Welcome to <span className="metallic-app-name">PayloadX</span></>,
-        subtitle: "Start by creating your first team to organize your API projects.",
-        buttonText: "Create First Team",
-        onClick: onShowTeamModal
+        subtitle: 'Start by creating your first team to organize your API projects.',
+        buttonText: 'Create First Team',
+        onClick: onShowTeamModal,
       };
     }
     if (!hasProjects) {
       return {
-        title: "Setup Your Project",
-        subtitle: "Projects house your collections. Create one to begin testing.",
-        buttonText: "Create First Project",
-        onClick: onShowProjectModal
+        title: 'Setup Your Project',
+        subtitle: 'Projects house your collections. Create one to begin testing.',
+        buttonText: 'Create First Project',
+        onClick: onShowProjectModal,
       };
     }
     return {
-      title: "Select a Collection",
-      subtitle: "Choose an API collection from the sidebar to start building.",
-      buttonText: "Go to Dashboard",
-      onClick: () => setActiveV2Nav('dashboard')
+      title: 'Select a Collection',
+      subtitle: 'Choose an API collection from the sidebar to start building.',
+      buttonText: 'Go to Dashboard',
+      onClick: () => setActiveV2Nav('dashboard'),
     };
   };
 
   const content = renderContent();
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-bg-primary overflow-hidden p-8 font-sans">
-      {/* Background radial glow */}
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] blur-[100px] rounded-full pointer-events-none ${
-        isLight ? 'bg-black/[0.05]' : 'bg-white/[0.02]'
-      }`} />
+    <div className="flex flex-col h-full min-h-0 bg-bg-primary overflow-hidden p-4 font-sans">
+      <div className="flex flex-1 min-h-0 flex-col items-center justify-center w-full max-w-lg mx-auto">
+        <div className="relative w-full max-w-md flex flex-col items-center text-center">
+          <div className="mb-4">
+            <PayloadX className="w-12 h-12" fontSize="14px" />
+          </div>
 
-      <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
+          <h2 className="text-lg font-bold text-tx-primary tracking-tight mb-1.5">{content.title}</h2>
+          <p className="text-[11px] text-tx-secondary max-w-[280px] leading-relaxed mb-5">
+            {content.subtitle}
+          </p>
 
-        {/* The "Mockup" */}
-        <div className="relative w-full h-[340px] mb-12 animate-fade-up">
-          <div className={`absolute -inset-4 blur-2xl rounded-[30px] ${
-            isLight ? 'bg-black/[0.02]' : 'bg-white/[0.01]'
-          }`} />
+          <button
+            onClick={content.onClick}
+            className="h-9 px-6 bg-[var(--cta-bg)] text-[var(--cta-text)] border border-[var(--cta-border)] rounded-lg text-[10px] font-bold uppercase tracking-widest hover:brightness-105 transition-all active:scale-[0.98] shadow-[var(--cta-shadow)]"
+          >
+            {content.buttonText}
+          </button>
 
-          <div className="relative h-full bg-surface-1 rounded-2xl border border-border-1 shadow-2xl overflow-hidden flex flex-col">
-            {/* Mock Header */}
-            <div className={`h-10 border-b border-border-1 flex items-center px-4 justify-between ${
-              isLight ? 'bg-black/[0.02]' : 'bg-white/[0.01]'
+          <div
+            className={`mt-8 w-full rounded-xl border overflow-hidden flex flex-col ${
+              isLight ? 'border-border-1 bg-surface-1' : 'border-white/10 bg-surface-1/40'
+            }`}
+          >
+            <div className={`h-7 border-b flex items-center px-3 gap-1.5 ${
+              isLight ? 'border-border-1 bg-surface-2/80' : 'border-white/5 bg-white/5'
             }`}>
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-tx-muted/20 border border-border-1"></div>
-                <div className="w-2 h-2 rounded-full bg-tx-muted/20 border border-border-1"></div>
-                <div className="w-2 h-2 rounded-full bg-tx-muted/20 border border-border-1"></div>
-              </div>
-              <div className="h-5 px-3 bg-surface-2 border border-border-1 rounded-full flex items-center">
-                <span className="text-[8px] text-tx-muted font-mono tracking-tighter">payloadx.studio/workspace</span>
-              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-tx-muted/30" />
+              <div className="w-1.5 h-1.5 rounded-full bg-tx-muted/30" />
+              <div className="w-1.5 h-1.5 rounded-full bg-tx-muted/30" />
             </div>
-
-            {/* Mock Content */}
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-              <div className="relative mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-surface-2 border border-border-2 flex items-center justify-center relative overflow-hidden">
-                  <PayloadX className="w-8 h-8" fontSize="12px" />
-                </div>
-                <div className={`absolute -inset-2 rounded-full blur-md -z-10 animate-pulse ${
-                  isLight ? 'bg-black/[0.02]' : 'bg-white/[0.01]'
-                }`} />
-              </div>
-
-              <h3 className="text-lg font-bold text-tx-primary tracking-tight mb-2">{content.title}</h3>
-              <p className="text-[11px] text-tx-secondary max-w-[240px] leading-relaxed mb-8">
-                {content.subtitle}
-              </p>
-
-              {/* Action Button inside Mockup */}
-              <button
-                onClick={content.onClick}
-                className="h-10 px-8 bg-surface-2 border border-border-1 rounded-lg text-tx-primary text-[11px] font-bold uppercase tracking-widest hover:bg-surface-3 transition-all active:scale-95 shadow-lg"
-              >
-                {content.buttonText}
-              </button>
-            </div>
-
-            {/* Mock Footer Status */}
-            <div className={`h-8 border-t border-border-1 flex items-center px-4 justify-between ${
-              isLight ? 'bg-black/5' : 'bg-black/20'
-            }`}>
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-tx-muted/40"></div>
-                <span className="text-[8px] text-tx-muted font-bold uppercase tracking-widest">Ready to initialize</span>
-              </div>
-              <span className="text-[8px] text-tx-muted font-mono">v1.2.0</span>
+            <div className="px-4 py-3 text-[10px] text-tx-muted font-mono truncate">
+              payloadx.studio/workspace
             </div>
           </div>
         </div>
-
-        {/* Minimal Bottom Attribution */}
-        <p className="text-[9px] text-tx-muted font-bold uppercase tracking-[0.4em] opacity-40">
-          Engineered by <span className="text-tx-secondary">Sundan Sharma</span>
-        </p>
       </div>
+
+      <p className="text-[9px] text-tx-muted font-bold uppercase tracking-[0.35em] opacity-40 text-center shrink-0 pb-1">
+        Engineered by <span className="text-tx-secondary">Sundan Sharma</span>
+      </p>
     </div>
   );
 }

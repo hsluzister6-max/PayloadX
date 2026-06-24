@@ -1,15 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useCollectionStore } from '@/store/collectionStore';
 import { useProjectStore } from '@/store/projectStore';
 import { 
   X, Plus, Trash2, Settings2, Code2, Globe, Clock, Layers, 
-  Search, CheckCircle2, AlertCircle, ChevronDown, Database, ArrowRight
+  Search, CheckCircle2, AlertCircle, ChevronDown, Database, ArrowRight,
+  KeyRound, GripVertical, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import VariableUrlInput from '@/components/RequestBuilder/VariableUrlInput';
 import { localStorageService } from '@/services/localStorageService';
+
+function SectionHeader({ icon: Icon, title }) {
+  return (
+    <div className="flex items-center gap-2 mb-3 mt-6">
+      <Icon size={14} className="text-surface-500" />
+      <span className="text-[10px] font-black uppercase tracking-widest text-surface-500">{title}</span>
+    </div>
+  );
+}
 
 export default function NodeConfigPanel() {
   const { 
@@ -25,6 +35,19 @@ export default function NodeConfigPanel() {
   
   const [showApiPicker, setShowApiPicker] = useState(false);
   const [apiSearch, setApiSearch] = useState('');
+  // Controlled string for delay input — avoids || 1000 blocking clear
+  const [delayInputStr, setDelayInputStr] = useState('1000');
+  const prevNodeId = useRef(null);
+
+  // Sync delay input string when switching to a different node
+  useEffect(() => {
+    if (!selectedNode || selectedNode === prevNodeId.current) return;
+    prevNodeId.current = selectedNode;
+    const node = currentWorkflow.nodes.find(n => n.id === selectedNode);
+    if (node?.type === 'delay') {
+      setDelayInputStr(String(node.data.timeout ?? 1000));
+    }
+  }, [selectedNode, currentWorkflow.nodes]);
 
   // ─── API Picker Helpers (Must be before early returns!) ───────
   const groupedRequests = useMemo(() => {
@@ -138,13 +161,6 @@ export default function NodeConfigPanel() {
     }
     setShowApiPicker(false);
   };
-
-  const SectionHeader = ({ icon: Icon, title }) => (
-    <div className="flex items-center gap-2 mb-3 mt-6">
-      <Icon size={14} className="text-surface-500" />
-      <span className="text-[10px] font-black uppercase tracking-widest text-surface-500">{title}</span>
-    </div>
-  );
 
   return (
     <div className="w-96 h-full bg-surface-1 border-l border-[var(--border-2)] flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
@@ -604,6 +620,8 @@ export default function NodeConfigPanel() {
                 <span className="text-[10px] font-bold text-surface-500">sec</span>
               </div>
             </div>
+
+            <ApiManualInputsConfig node={node} handleUpdate={handleUpdate} />
           </>
         )}
 
@@ -620,16 +638,30 @@ export default function NodeConfigPanel() {
               </div>
               <div className="flex items-center gap-3 mt-2">
                 <input
-                  type="number"
-                  value={node.data.timeout || 1000}
-                  onChange={(e) => handleUpdate('timeout', parseInt(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={delayInputStr}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, '');
+                    setDelayInputStr(raw);
+                    if (raw !== '') handleUpdate('timeout', parseInt(raw, 10));
+                  }}
+                  onBlur={() => {
+                    const num = parseInt(delayInputStr, 10);
+                    if (isNaN(num) || delayInputStr === '') {
+                      setDelayInputStr('0');
+                      handleUpdate('timeout', 0);
+                    }
+                  }}
                   className="w-32 px-4 py-2 bg-surface-3 border border-[var(--border-2)] rounded-xl text-[16px] font-mono font-bold text-center text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
+                  placeholder="1000"
                 />
                 <span className="text-[11px] font-black uppercase text-surface-500">ms</span>
               </div>
             </div>
           </>
         )}
+
       </div>
       
       {/* Environment Reference Section */}
@@ -650,6 +682,164 @@ export default function NodeConfigPanel() {
          <p className="text-[9px] font-bold uppercase tracking-widest text-surface-600">PayloadX Node Automation Engine</p>
       </div>
     </div>
+  );
+}
+
+// ─── API node runtime input fields ──────────────────────────────────────────
+
+const INPUT_TARGETS = [
+  { value: 'header', label: 'Header' },
+  { value: 'body', label: 'Body' },
+  { value: 'params', label: 'Query Param' },
+  { value: 'variable', label: 'Variable' },
+];
+
+function ApiManualInputsConfig({ node, handleUpdate }) {
+  const inputs = node.data.manual_inputs || [];
+  const [targetOpen, setTargetOpen] = useState(null);
+
+  const addInput = () => {
+    handleUpdate('manual_inputs', [
+      ...inputs,
+      { id: uuidv4(), fieldName: '', key: '', target: 'variable', preset: '', required: false },
+    ]);
+  };
+
+  const updateInput = (id, field, value) => {
+    handleUpdate('manual_inputs', inputs.map(inp => inp.id === id ? { ...inp, [field]: value } : inp));
+  };
+
+  const removeInput = (id) => {
+    handleUpdate('manual_inputs', inputs.filter(inp => inp.id !== id));
+  };
+
+  return (
+    <>
+      <SectionHeader icon={KeyRound} title="Runtime Input" />
+      <p className="text-[10px] text-surface-600 font-medium mb-3 -mt-2 leading-relaxed">
+        Preset fields shown in a modal when this API node runs. Use preset values as defaults; the user can change them at execution time.
+      </p>
+
+      <div className="space-y-3">
+        {inputs.length === 0 && (
+          <div className="py-6 text-center border border-dashed border-[var(--border-2)] rounded-2xl text-[11px] text-surface-600 font-medium">
+            No runtime inputs. Add fields to prompt during workflow execution.
+          </div>
+        )}
+
+        {inputs.map((inp, idx) => (
+          <div
+            key={inp.id}
+            className="bg-surface-2 border border-[var(--border-2)] rounded-2xl p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-surface-500">
+                Field #{idx + 1}
+              </span>
+              <button
+                onClick={() => removeInput(inp.id)}
+                className="p-1 rounded-lg text-surface-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[9px] font-bold text-surface-500 uppercase mb-1">Label</label>
+                <input
+                  type="text"
+                  value={inp.fieldName}
+                  onChange={(e) => updateInput(inp.id, 'fieldName', e.target.value)}
+                  placeholder="OTP Code"
+                  className="w-full px-2.5 py-1.5 bg-surface-3 border border-[var(--border-2)] rounded-lg text-[11px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-all placeholder:text-surface-600"
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-bold text-surface-500 uppercase mb-1">Key <span className="text-surface-600 normal-case">(&#123;&#123;key&#125;&#125;)</span></label>
+                <input
+                  type="text"
+                  value={inp.key}
+                  onChange={(e) => updateInput(inp.id, 'key', e.target.value.replace(/\s/g, '_'))}
+                  placeholder="otp_code"
+                  className="w-full px-2.5 py-1.5 bg-surface-3 border border-[var(--border-2)] rounded-lg text-[11px] font-mono text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-all placeholder:text-surface-600"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[9px] font-bold text-surface-500 uppercase mb-1">Preset Value</label>
+              <input
+                type="text"
+                value={inp.preset}
+                onChange={(e) => updateInput(inp.id, 'preset', e.target.value)}
+                placeholder="Default value (editable at runtime)"
+                className="w-full px-2.5 py-1.5 bg-surface-3 border border-[var(--border-2)] rounded-lg text-[11px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] transition-all placeholder:text-surface-600"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="block text-[9px] font-bold text-surface-500 uppercase mb-1">Inject Into</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setTargetOpen(v => v === inp.id ? null : inp.id)}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 bg-surface-3 border border-[var(--border-2)] rounded-lg text-[11px] font-bold text-[var(--text-primary)] hover:border-[var(--accent)] transition-all"
+                  >
+                    {INPUT_TARGETS.find(t => t.value === inp.target)?.label || 'Variable'}
+                    <ChevronDown size={10} className={`transition-transform ${targetOpen === inp.id ? 'rotate-180' : ''}`} />
+                  </button>
+                  {targetOpen === inp.id && (
+                    <div className="absolute top-full left-0 mt-1 z-50 bg-surface-1 border border-[var(--border-2)] rounded-xl shadow-glass p-1 w-full">
+                      {INPUT_TARGETS.map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { updateInput(inp.id, 'target', opt.value); setTargetOpen(null); }}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                            inp.target === opt.value ? 'bg-[var(--accent)] text-black' : 'text-[var(--text-primary)] hover:bg-surface-3'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-1 pt-4">
+                <label className="text-[9px] font-bold text-surface-500 uppercase">Required</label>
+                <button
+                  type="button"
+                  onClick={() => updateInput(inp.id, 'required', !inp.required)}
+                  className={`transition-colors ${inp.required ? 'text-[var(--accent)]' : 'text-surface-500'}`}
+                >
+                  {inp.required ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                </button>
+              </div>
+            </div>
+
+            {inp.key && (
+              <div className="px-2.5 py-1.5 bg-surface-3/50 border border-[var(--border-2)] rounded-lg">
+                <p className="text-[9px] text-surface-500 font-mono">
+                  Injected as <span className="text-[var(--accent)] font-bold">{`{{${inp.key}}}`}</span> in URL, headers, params, or body.
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        <button
+          onClick={addInput}
+          className="w-full py-2.5 border border-dashed border-[var(--border-2)] rounded-xl text-[11px] font-bold text-surface-500 hover:text-[var(--accent)] hover:border-[var(--accent)] transition-all flex items-center justify-center gap-2"
+        >
+          <Plus size={13} />
+          Add Input Field
+        </button>
+      </div>
+    </>
   );
 }
 

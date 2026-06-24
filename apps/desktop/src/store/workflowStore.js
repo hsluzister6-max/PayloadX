@@ -8,6 +8,175 @@ import { calculateLayers, deepClone } from '@/utils/perf';
 
 // calculateLayers is imported from @/utils/perf (memoized BFS)
 
+const workflowHasManualInputs = (workflow) =>
+  workflow.nodes.some(
+    (n) => n.type === 'api' && !n.data?.skipped && (n.data?.manual_inputs?.length ?? 0) > 0
+  );
+
+const isNodeSatisfied = (nodeId, edges, nodeResults) => {
+  const incoming = edges.filter((e) => e.target === nodeId);
+  if (incoming.length === 0) return true;
+
+  return incoming.some((edge) => {
+    const parentResult = nodeResults.find((r) => r.node_id === edge.source);
+    if (!parentResult) return false;
+
+    const condition = edge.condition || 'always';
+    if (condition === 'success') return parentResult.status === 'success';
+    if (condition === 'failure') return parentResult.status === 'failed';
+    return parentResult.status !== 'skipped';
+  });
+};
+
+const buildSkippedResult = (node) => ({
+  node_id: node.id,
+  node_name: node.data.name,
+  start_time: new Date().toISOString(),
+  end_time: new Date().toISOString(),
+  duration: 0,
+  status: 'skipped',
+  request: null,
+  response: null,
+  validations: [],
+  error: null,
+  extracted_data: {},
+});
+
+const buildExecutionSummary = (nodeResults, workflow, durationMs, startTime) => {
+  let successCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  for (const r of nodeResults) {
+    if (r.status === 'success') successCount++;
+    else if (r.status === 'failed') failedCount++;
+    else skippedCount++;
+  }
+
+  const status = failedCount === 0 ? 'success' : successCount > 0 ? 'partial' : 'failed';
+
+  return {
+    id: `temp_${uuidv4()}`,
+    workflow_id: workflow.id,
+    workflow_name: workflow.name,
+    start_time: startTime,
+    end_time: new Date().toISOString(),
+    duration: durationMs,
+    status,
+    total_nodes: workflow.nodes.length,
+    success_count: successCount,
+    failed_count: failedCount,
+    skipped_count: skippedCount,
+    node_results: nodeResults,
+  };
+};
+
+const createVariableResolver = (resolveEnvVars, runtimeVariables = {}) => (str) => {
+  if (!str) return str;
+  let resolved = resolveEnvVars(str);
+  Object.entries(runtimeVariables).forEach(([k, { value }]) => {
+    resolved = resolved.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), value);
+  });
+  return resolved;
+};
+
+const buildContextFromResults = (nodeResults) => {
+  const context = {};
+  nodeResults.forEach((res) => {
+    if (!res.extracted_data || res.status === 'skipped') return;
+    // Rust DataMapper expects nodeId.response.body.* paths
+    context[res.node_id] = { response: res.extracted_data };
+  });
+  return context;
+};
+
+const stripNodeForBackend = (node) => {
+  const { manual_inputs, ...restData } = node.data || {};
+  return { ...node, data: restData };
+};
+
+const resolveNodeForExecution = (node, resolveVariables, runtimeVariables = {}) => {
+  const method = (node.data.method || 'GET').toUpperCase();
+  const allowsBody = !['GET', 'HEAD', 'DELETE'].includes(method);
+  const stripped = stripNodeForBackend(node);
+
+  const baseNode = {
+    ...stripped,
+    data: {
+      ...stripped.data,
+      timeout: typeof node.data.timeout === 'string'
+        ? parseInt(resolveVariables(node.data.timeout), 10)
+        : node.data.timeout,
+    },
+  };
+
+  if (node.type !== 'api') return baseNode;
+
+  const runtimeHeaders = [];
+  const runtimeParams = [];
+  const runtimeBodyEntries = [];
+
+  Object.entries(runtimeVariables).forEach(([key, { value, target }]) => {
+    let effectiveTarget = target || 'variable';
+    if (effectiveTarget === 'body' && !allowsBody) effectiveTarget = 'params';
+
+    if (effectiveTarget === 'header') {
+      runtimeHeaders.push({ id: `runtime_${key}`, key, value, enabled: true });
+    } else if (effectiveTarget === 'params') {
+      runtimeParams.push({ id: `runtime_${key}`, key, value, enabled: true });
+    } else if (effectiveTarget === 'body') {
+      runtimeBodyEntries.push([key, { value, target: effectiveTarget }]);
+    }
+  });
+
+  const mergedHeaders = [
+    ...(node.data.headers || [])
+      .filter((h) => h.enabled !== false && h.key?.trim() && !/^cookie$/i.test(h.key.trim()))
+      .map((h) => ({ ...h, value: resolveVariables(h.value) })),
+    ...runtimeHeaders,
+  ];
+  const mergedParams = [
+    ...(node.data.params || [])
+      .filter((p) => p.enabled !== false && p.key?.trim())
+      .map((p) => ({ ...p, value: resolveVariables(p.value) })),
+    ...runtimeParams,
+  ];
+
+  let body = node.data.body;
+  if (runtimeBodyEntries.length > 0) {
+    const bodyObj = body
+      ? (typeof body === 'string'
+        ? (() => { try { return JSON.parse(body); } catch { return {}; } })()
+        : { ...body })
+      : {};
+    runtimeBodyEntries.forEach(([key, { value }]) => { bodyObj[key] = value; });
+    body = bodyObj;
+  }
+
+  let resolvedBody = null;
+  if (body && allowsBody) {
+    if (typeof body === 'string') {
+      resolvedBody = resolveVariables(body);
+    } else {
+      try {
+        resolvedBody = JSON.parse(resolveVariables(JSON.stringify(body)));
+      } catch {
+        resolvedBody = body;
+      }
+    }
+  }
+
+  return {
+    ...baseNode,
+    data: {
+      ...baseNode.data,
+      url: resolveVariables(node.data.url),
+      headers: mergedHeaders,
+      params: mergedParams,
+      body: resolvedBody,
+    },
+  };
+};
+
 const getWorkflowSnapshot = (wf) => {
   if (!wf) return null;
   return JSON.stringify({
@@ -56,6 +225,7 @@ export const useWorkflowStore = create(
       executionProgress: { completed: 0, total: 0, percentage: 0 },
       showConfigPanel: false,
       showResultsLog: false,
+      pendingManualInput: null,
       
       // Workflows list
       workflows: [],
@@ -247,14 +417,11 @@ export const useWorkflowStore = create(
       // ─── Node Management ───────────────────────────────────────
 
       addNode: (nodeType, position) => {
-        const newNode = {
-          id: uuidv4(),
-          type: nodeType,
-          position: position || { x: 100, y: 100 },
-          data: {
-            name: `${nodeType} Node`,
-            method: nodeType === 'api' ? 'GET' : undefined,
-            url: nodeType === 'api' ? '' : undefined,
+        const nodeDefaults = {
+          api: {
+            name: 'API Node',
+            method: 'GET',
+            url: '',
             headers: [],
             params: [],
             body: null,
@@ -263,6 +430,22 @@ export const useWorkflowStore = create(
             timeout: 30,
             retries: 0,
             save_session: false,
+            manual_inputs: [],
+          },
+          delay: {
+            name: 'Delay Node',
+            timeout: 1000,
+            retries: 0,
+          },
+        };
+
+        const newNode = {
+          id: uuidv4(),
+          type: nodeType,
+          position: position || { x: 100, y: 100 },
+          data: nodeDefaults[nodeType] || {
+            name: `${nodeType} Node`,
+            timeout: 30,
           },
         };
 
@@ -445,15 +628,193 @@ export const useWorkflowStore = create(
 
       // ─── Execution ─────────────────────────────────────────────
 
+      submitManualInput: (runtimeValues) => {
+        const pending = get().pendingManualInput;
+        if (!pending) return;
+        pending.resolve(runtimeValues);
+        set({ pendingManualInput: null });
+      },
+
+      cancelManualInput: () => {
+        const pending = get().pendingManualInput;
+        if (pending) pending.reject(new Error('Manual input cancelled'));
+        set({ pendingManualInput: null, isExecuting: false, executingNodeIds: new Set() });
+      },
+
+      waitForManualInput: (node) =>
+        new Promise((resolve, reject) => {
+          set({ pendingManualInput: { node, resolve, reject } });
+          // Ensure React paints the modal before the async loop continues waiting
+          requestAnimationFrame(() => {});
+        }),
+
+      executeWorkflowInteractive: async () => {
+        const workflow = { ...get().currentWorkflow };
+        if (!workflow.id) workflow.id = `temp_${uuidv4()}`;
+
+        if (workflow.nodes.length === 0) {
+          toast.error('Workflow must contain at least one node');
+          return;
+        }
+
+        const { resolveVariables: resolveEnvVars } = (await import('./environmentStore')).useEnvironmentStore.getState();
+        const executionStart = Date.now();
+        const startTime = new Date().toISOString();
+
+        const clearedNodes = workflow.nodes.map((n) => ({
+          ...n,
+          data: { ...n.data, executionStatus: null, executionDuration: null },
+        }));
+
+        set({
+          isExecuting: true,
+          isPaused: false,
+          executingNodeIds: new Set(),
+          executionResult: null,
+          currentWorkflow: { ...workflow, nodes: clearedNodes },
+          executionProgress: { completed: 0, total: workflow.nodes.length, percentage: 0 },
+        });
+
+        const sortedNodes = [...workflow.nodes].sort(
+          (a, b) => (a.data.step || 0) - (b.data.step || 0)
+        );
+        const nodeResults = [];
+        let context = {};
+
+        try {
+          for (const node of sortedNodes) {
+            if (!isNodeSatisfied(node.id, workflow.edges, nodeResults)) {
+              nodeResults.push(buildSkippedResult(node));
+              continue;
+            }
+
+            if (node.data.skipped) {
+              nodeResults.push(buildSkippedResult(node));
+              continue;
+            }
+
+            set({ executingNodeIds: new Set([node.id]) });
+
+            let runtimeVariables = {};
+            if (node.type === 'api' && (node.data.manual_inputs?.length ?? 0) > 0) {
+              runtimeVariables = await get().waitForManualInput(node);
+            }
+
+            const resolveVariables = createVariableResolver(resolveEnvVars, runtimeVariables);
+            const resolvedNode = resolveNodeForExecution(node, resolveVariables, runtimeVariables);
+
+            const result = await invoke('execute_single_node', {
+              nodeJson: JSON.stringify(resolvedNode),
+              contextJson: JSON.stringify(context),
+            });
+
+            nodeResults.push(result);
+            if (result.extracted_data && result.status !== 'skipped') {
+              context = {
+                ...context,
+                [result.node_id]: { response: result.extracted_data },
+              };
+            }
+
+            const completed = nodeResults.length;
+            set({
+              executionProgress: {
+                completed,
+                total: workflow.nodes.length,
+                percentage: Math.round((completed / workflow.nodes.length) * 100),
+              },
+              executionResult: buildExecutionSummary(
+                nodeResults,
+                workflow,
+                Date.now() - executionStart,
+                startTime
+              ),
+              currentWorkflow: {
+                ...get().currentWorkflow,
+                nodes: get().currentWorkflow.nodes.map((n) => {
+                  const nr = nodeResults.find((r) => r.node_id === n.id);
+                  if (!nr) return n;
+                  return {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      executionStatus: nr.status,
+                      executionDuration: nr.duration,
+                    },
+                  };
+                }),
+              },
+            });
+          }
+
+          const result = buildExecutionSummary(
+            nodeResults,
+            workflow,
+            Date.now() - executionStart,
+            startTime
+          );
+
+          set({ executionResult: result, isExecuting: false, executingNodeIds: new Set() });
+
+          if (result.status === 'success') {
+            toast.success(`Workflow completed successfully! ${result.success_count}/${result.total_nodes} nodes passed`);
+          } else if (result.status === 'partial') {
+            toast.error(`Workflow partially completed. ${result.failed_count} nodes failed`);
+          } else {
+            toast.error('Workflow execution failed');
+          }
+
+          queueMicrotask(async () => {
+            try {
+              const { writeWorkflowTestSheet } = await import('@/utils/workflowTestReport');
+              const exported = writeWorkflowTestSheet(result, workflow.name);
+              if (exported.ok) {
+                toast.success(`Test sheet generated: ${exported.fileName}`);
+              } else if (exported.reason === 'no_api_nodes') {
+                toast('This run had no API nodes to include in the Excel test sheet.', { icon: 'ℹ️' });
+              } else if (exported.reason === 'error') {
+                toast.error(exported.message || 'Could not generate test sheet');
+              }
+            } catch (e) {
+              console.error('[executeWorkflowInteractive] test sheet:', e);
+            }
+          });
+
+          if (navigator.onLine && workflow.id) {
+            await get().saveExecution(result);
+          }
+
+          return result;
+        } catch (error) {
+          const msg = error?.message || String(error);
+          if (msg === 'Manual input cancelled') {
+            toast.error('Workflow cancelled');
+          } else {
+            console.error('Interactive workflow execution error:', error);
+            toast.error(`Execution failed: ${msg}`);
+          }
+          set({ isExecuting: false, executingNodeIds: new Set(), pendingManualInput: null });
+          throw error;
+        }
+      },
+
       executeWorkflow: async () => {
         const workflow = { ...get().currentWorkflow };
+
+        if (workflowHasManualInputs(workflow)) {
+          return get().executeWorkflowInteractive();
+        }
         
         // Backend expects id to be a string, not null
         if (!workflow.id) {
           workflow.id = `temp_${uuidv4()}`;
         }
         
-        const { resolveVariables } = (await import('./environmentStore')).useEnvironmentStore.getState();
+        const { resolveVariables: resolveEnvVars } = (await import('./environmentStore')).useEnvironmentStore.getState();
+        const resolveVariables = (str) => {
+          if (!str) return str;
+          return resolveEnvVars(str);
+        };
 
         if (workflow.nodes.length === 0) {
           toast.error('Workflow must contain at least one node');
@@ -476,7 +837,6 @@ export const useWorkflowStore = create(
         });
 
         try {
-          // Pre-resolve environment variables and map to snake_case for Rust
           const resolvedNodes = workflow.nodes.map(node => {
             const baseNode = {
               ...node,
@@ -494,15 +854,13 @@ export const useWorkflowStore = create(
                 data: {
                   ...baseNode.data,
                   url: resolveVariables(node.data.url),
-                  headers: (node.data.headers || []).map(h => ({
-                    ...h,
-                    value: resolveVariables(h.value)
-                  })),
+                  headers: (node.data.headers || []).map(h => ({ ...h, value: resolveVariables(h.value) })),
+                  params: (node.data.params || []).map(p => ({ ...p, value: resolveVariables(p.value) })),
                   body: node.data.body ? (
-                    typeof node.data.body === 'string' 
-                      ? resolveVariables(node.data.body) 
+                    typeof node.data.body === 'string'
+                      ? resolveVariables(node.data.body)
                       : JSON.parse(resolveVariables(JSON.stringify(node.data.body)))
-                  ) : null
+                  ) : null,
                 }
               };
             }
@@ -574,48 +932,20 @@ export const useWorkflowStore = create(
         const node = workflow.nodes.find(n => n.id === nodeId);
         if (!node) return;
 
-        const { resolveVariables } = (await import('./environmentStore')).useEnvironmentStore.getState();
+        const { resolveVariables: resolveEnvVars } = (await import('./environmentStore')).useEnvironmentStore.getState();
 
         set({ executingNodeIds: new Set([nodeId]) });
 
         try {
-          // Pre-resolve environment variables just for this node
-          const resolvedNode = {
-            ...node,
-            data: {
-              ...node.data,
-              timeout: typeof node.data.timeout === 'string' 
-                ? parseInt(resolveVariables(node.data.timeout)) 
-                : node.data.timeout
-            }
-          };
-
-          if (node.type === 'api') {
-            resolvedNode.data = {
-              ...resolvedNode.data,
-              url: resolveVariables(node.data.url),
-              headers: (node.data.headers || []).map(h => ({
-                ...h,
-                value: resolveVariables(h.value)
-              })),
-              body: node.data.body ? (
-                typeof node.data.body === 'string' 
-                  ? resolveVariables(node.data.body) 
-                  : JSON.parse(resolveVariables(JSON.stringify(node.data.body)))
-              ) : null
-            };
+          let runtimeVariables = {};
+          if (node.type === 'api' && (node.data.manual_inputs?.length ?? 0) > 0) {
+            runtimeVariables = await get().waitForManualInput(node);
           }
 
-          // Build context from current executionResult (if any)
-          const context = {};
-          const currentExecResult = get().executionResult;
-          if (currentExecResult && currentExecResult.node_results) {
-             currentExecResult.node_results.forEach(res => {
-               if (res.extracted_data) {
-                 context[res.node_id] = res.extracted_data;
-               }
-             });
-          }
+          const resolveVariables = createVariableResolver(resolveEnvVars, runtimeVariables);
+          const resolvedNode = resolveNodeForExecution(node, resolveVariables, runtimeVariables);
+
+          const context = buildContextFromResults(get().executionResult?.node_results || []);
 
           const result = await invoke('execute_single_node', {
             nodeJson: JSON.stringify(resolvedNode),
@@ -666,9 +996,14 @@ export const useWorkflowStore = create(
 
           return result;
         } catch (error) {
-          console.error('Node execution error:', error);
-          toast.error(`Execution failed: ${error}`);
-          set({ executingNodeIds: new Set() });
+          const msg = error?.message || String(error);
+          if (msg === 'Manual input cancelled') {
+            toast.error('Execution cancelled');
+          } else {
+            console.error('Node execution error:', error);
+            toast.error(`Execution failed: ${msg}`);
+          }
+          set({ executingNodeIds: new Set(), pendingManualInput: null });
           throw error;
         }
       },

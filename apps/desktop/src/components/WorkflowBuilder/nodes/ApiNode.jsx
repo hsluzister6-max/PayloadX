@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { useWorkflowStore } from '@/store/workflowStore';
-import { Globe, CheckCircle, XCircle, Clock, Zap, Loader2, ShieldCheck, Play, ShieldOff } from 'lucide-react';
+import { Globe, CheckCircle, XCircle, Clock, Zap, Loader2, ShieldCheck, Play, ShieldOff, KeyRound } from 'lucide-react';
 
 function ApiNode({ id, data, selected }) {
   const executingNodeIds = useWorkflowStore(state => state.executingNodeIds);
@@ -79,6 +79,12 @@ function ApiNode({ id, data, selected }) {
                 <span className="flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter bg-green-500/10 text-green-500 border border-green-500/20">
                   <ShieldCheck size={10} />
                   Session
+                </span>
+              )}
+              {(data.manual_inputs?.length ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <KeyRound size={10} />
+                  Input
                 </span>
               )}
               <span className="text-[10px] text-surface-500 font-mono truncate">{data.url || 'No endpoint'}</span>

@@ -335,10 +335,11 @@ async fn start_oauth_flow(window: tauri::Window) -> Result<u16, String> {
 fn main() {
     // Persistent HTTP client with proper configuration for Linux
     let http_client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(120))
         .connect_timeout(std::time::Duration::from_secs(10))
         .pool_max_idle_per_host(10)
         .user_agent("PayloadX-API-Studio/1.3.7")
+        .http1_only()
         .build()
         .expect("Failed to build HTTP client");
 

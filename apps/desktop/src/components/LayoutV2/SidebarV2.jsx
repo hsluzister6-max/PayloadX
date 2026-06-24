@@ -20,7 +20,7 @@ const NAV_ITEMS = [
         id: 'collections',
         label: 'Collections',
         icon: (
-            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
             </svg>
         ),
@@ -29,7 +29,7 @@ const NAV_ITEMS = [
         id: 'workflow',
         label: 'Workflow',
         icon: (
-            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
         ),
@@ -38,7 +38,7 @@ const NAV_ITEMS = [
         id: 'environments',
         label: 'Environments',
         icon: (
-            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 9h.01M9 12h.01M9 15h.01M12 9h3M12 12h3M12 15h3" />
             </svg>
@@ -48,7 +48,7 @@ const NAV_ITEMS = [
         id: 'docs',
         label: 'Docs',
         icon: (
-            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
             </svg>
         ),
@@ -1023,14 +1023,12 @@ export default function SidebarV2({
                 {/* Logo & App Name */}
                 <div className="sdbv2-header">
                     <div className="sdbv2-logo-row">
-                        <PayloadX className="w-5 h-5" fontSize="8px" />
+                        <PayloadX className="w-4 h-4" fontSize="7px" />
                         <div className="sdbv2-logo-text">
-                            <span className="sdbv2-app-name"><span className="metallic-app-name">PayloadX</span> <span className="ml-1 px-1.5 py-0.5 text-[8px] font-bold bg-white/5 border border-white/10 rounded text-gray-500 uppercase tracking-wider">Beta</span></span>
-                            {currentTeam && (
-                                <span className="sdbv2-team-tag">
-                                    {currentTeam.name}
-                                </span>
-                            )}
+                            <span className="sdbv2-app-name">
+                                <span className="sdbv2-brand-name">PayloadX</span>
+                                <span className="sdbv2-beta-badge">Beta</span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1042,7 +1040,7 @@ export default function SidebarV2({
                     </svg>
                     <input
                         className="sdbv2-search-input"
-                        placeholder="Search requests..."
+                        placeholder="Search…"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -1161,7 +1159,7 @@ export default function SidebarV2({
                             </div>
 
                             {/* APIs List (for drag and drop) */}
-                            <div className="sdbv2-section flex-1 flex flex-col min-h-0 border-t border-[var(--border-1)] mt-2 pt-2">
+                            <div className="sdbv2-section sdbv2-section-divider flex-1 flex flex-col min-h-0">
                                 <div className="sdbv2-section-head">
                                     <span className="sdbv2-section-label">Drag APIs to Canvas</span>
                                 </div>
@@ -1387,11 +1385,10 @@ export default function SidebarV2({
                     )}
                 </div>
 
-                {/* Creator attribution */}
-                <div style={{ padding: '12px', borderTop: '1px solid var(--border-1)', opacity: 0.3, marginTop: 'auto' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)' }}>
-                        Project by <span style={{ color: 'var(--text-primary)' }}>Sundan Sharma</span>
-                    </p>
+                <div className="sdbv2-attribution">
+                    <span>PayloadX</span>
+                    <span className="sdbv2-attribution-sep">·</span>
+                    <strong>Sundan Sharma</strong>
                 </div>
             </aside>
         </div>

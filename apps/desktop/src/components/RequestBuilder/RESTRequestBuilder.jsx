@@ -147,7 +147,7 @@ export default function RESTRequestBuilder() {
   return (
     <div className="flex flex-col h-full">
       {/* URL bar */}
-      <div className="flex items-center gap-2 px-3 pb-2 pt-1">
+      <div className="flex items-center gap-2 px-3 pb-1.5 pt-0.5">
         <div className="flex-1 min-w-0 flex items-center bg-[color:var(--surface-1)] border border-[color:var(--border-1)] rounded-md focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent)] hover:border-[color:var(--border-2)] transition-all overflow-visible h-8">
           <div className="relative h-full flex-shrink-0">
             <button

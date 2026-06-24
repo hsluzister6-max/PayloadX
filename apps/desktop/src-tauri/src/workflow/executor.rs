@@ -242,145 +242,83 @@ impl WorkflowExecutor {
         let url = mapped_node.data.url.as_ref()
             .context("API node missing URL")?;
 
-        // 3. HTTP method and URL
         let url_obj = ::url::Url::parse(url).context("Invalid URL format")?;
         let host = url_obj.host_str().unwrap_or("").to_string();
+        let timeout_secs = mapped_node.data.timeout.unwrap_or(60);
+        let allows_body = Self::method_allows_body(method);
 
-        let mut request = self.client.request(
-            method.parse().context("Invalid HTTP method")?,
-            url,
-        );
+        let mut last_error: Option<anyhow::Error> = None;
+        let mut api_result = None;
 
-        // Add headers
-        let mut header_map = HeaderMap::new();
-        if let Some(headers) = &mapped_node.data.headers {
-            for header in headers {
-                if header.enabled {
-                    if let (Ok(name), Ok(val)) = (
-                        HeaderName::from_str(&header.key),
-                        HeaderValue::from_str(&header.value),
-                    ) {
-                        header_map.insert(name, val);
+        for attempt in 0..2 {
+            match self
+                .send_api_request(
+                    &mapped_node,
+                    method,
+                    url,
+                    &host,
+                    allows_body,
+                    timeout_secs,
+                    mapped_node.data.save_session.unwrap_or(false),
+                )
+                .await
+            {
+                Ok(result) => {
+                    api_result = Some(result);
+                    break;
+                }
+                Err(e) => {
+                    println!(
+                        "DEBUG: API request attempt {} failed for {}: {}",
+                        attempt + 1,
+                        mapped_node.data.name,
+                        e
+                    );
+                    last_error = Some(e);
+                    if attempt == 0 {
+                        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
                     }
                 }
             }
         }
 
-        // Attach cookies from jar
-        if !host.is_empty() {
-            if let Some(jar_wrapper) = &self.cookie_jar {
-                if let Ok(jar) = jar_wrapper.0.lock() {
-                    if let Some(cookies) = jar.get(&host) {
-                        if !cookies.is_empty() {
-                            println!("DEBUG: Attaching {} cookies from jar for host {}", cookies.len(), host);
-                            let mut cookie_components = Vec::new();
-                            for (k, v) in cookies.iter() {
-                                if v.is_empty() {
-                                    cookie_components.push(k.clone());
-                                } else {
-                                    cookie_components.push(format!("{}={}", k, v));
-                                }
-                            }
-                            if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
-                                header_map.insert(reqwest::header::COOKIE, val);
-                            }
-                        }
-                    }
-                }
+        let (status, status_text, headers, body_bytes) = match api_result {
+            Some(result) => result,
+            None => {
+                let msg = last_error
+                    .map(|e| e.to_string())
+                    .unwrap_or_else(|| "Failed to read response body".to_string());
+                let duration = node_start.elapsed().as_millis() as u64;
+                return Ok(NodeExecutionResult {
+                    node_id: node.id.clone(),
+                    node_name: node.data.name.clone(),
+                    start_time: start_time.clone(),
+                    end_time: Utc::now().to_rfc3339(),
+                    duration,
+                    status: NodeStatus::Failed,
+                    request: Some(RequestDetails {
+                        method: method.clone(),
+                        url: url.clone(),
+                        headers: mapped_node.data.headers.as_ref()
+                            .map(|h| h.iter()
+                                .filter(|kv| kv.enabled && !kv.key.is_empty())
+                                .map(|kv| (kv.key.clone(), kv.value.clone()))
+                                .collect())
+                            .unwrap_or_default(),
+                        body: if allows_body { mapped_node.data.body.clone() } else { None },
+                    }),
+                    response: None,
+                    validations: vec![],
+                    error: Some(ErrorDetails {
+                        message: msg,
+                        error_type: "network".to_string(),
+                        stack: None,
+                    }),
+                    extracted_data: HashMap::new(),
+                });
             }
-        }
+        };
 
-        // Add query parameters
-        if let Some(params) = &mapped_node.data.params {
-            let mut query_params = Vec::new();
-            for param in params {
-                if param.enabled {
-                    query_params.push((&param.key, &param.value));
-                }
-            }
-            if !query_params.is_empty() {
-                request = request.query(&query_params);
-            }
-        }
-
-        request = request.headers(header_map.clone());
-
-        // Logging Request
-        println!("--- WORKFLOW API REQUEST ---");
-        println!("Node: {} ({})", mapped_node.data.name, mapped_node.id);
-        println!("Method: {}", method);
-        println!("URL: {}", url);
-        println!("Headers: {:?}", header_map);
-        if let Some(params) = &mapped_node.data.params {
-            let enabled: Vec<_> = params.iter().filter(|p| p.enabled).collect();
-            if !enabled.is_empty() {
-                println!("Query Params: {:?}", enabled);
-            }
-        }
-        if let Some(body) = &mapped_node.data.body {
-            println!("Body: {}", serde_json::to_string_pretty(body).unwrap_or_else(|_| "Invalid JSON".to_string()));
-        }
-        println!("---------------------------");
-
-        // Emit to frontend for console.log
-        if let Some(window) = &self.window {
-            let _ = window.emit("workflow_log", serde_json::json!({
-                "type": "request",
-                "node_name": mapped_node.data.name,
-                "node_id": mapped_node.id,
-                "method": method,
-                "url": url,
-                "headers": header_map.iter().map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string())).collect::<HashMap<String, String>>(),
-                "params": mapped_node.data.params.as_ref().map(|p| p.iter().filter(|i| i.enabled).collect::<Vec<_>>()),
-                "body": mapped_node.data.body
-            }));
-        }
-
-        // Set body
-        if let Some(body) = &mapped_node.data.body {
-            request = request.json(body);
-        }
-
-        // Set timeout
-        let timeout = mapped_node.data.timeout.unwrap_or(30);
-        request = request.timeout(std::time::Duration::from_secs(timeout));
-
-        // Execute request
-        let response = request.send().await
-            .context("Failed to execute request")?;
-
-        // Handle saving session
-        if mapped_node.data.save_session.unwrap_or(false) && !host.is_empty() {
-            if let Some(jar_wrapper) = &self.cookie_jar {
-                let set_cookies = response.headers().get_all(reqwest::header::SET_COOKIE);
-                for cookie in set_cookies.iter() {
-                    if let Ok(c_str) = cookie.to_str() {
-                        // Parse key=value
-                        let parts: Vec<&str> = c_str.split(';').collect();
-                        if let Some(first_part) = parts.first() {
-                            let kv: Vec<&str> = first_part.splitn(2, '=').collect();
-                            if let Ok(mut jar) = jar_wrapper.0.lock() {
-                                let host_jar = jar.entry(host.clone()).or_insert_with(HashMap::new);
-                                let key = kv[0].trim().to_string();
-                                let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
-                                println!("DEBUG: Saving cookie {}={} for host {}", key, val, host);
-                                host_jar.insert(key, val);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Extract response details
-        let status = response.status().as_u16();
-        let status_text = response.status().to_string();
-        let headers: HashMap<String, String> = response.headers()
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
-            .collect();
-
-        let body_bytes = response.bytes().await?;
         let body_size = body_bytes.len();
         let body: serde_json::Value = serde_json::from_slice(&body_bytes)
             .unwrap_or_else(|_| serde_json::Value::String(
@@ -465,6 +403,199 @@ impl WorkflowExecutor {
             error: None,
             extracted_data,
         })
+    }
+
+    fn method_allows_body(method: &str) -> bool {
+        matches!(
+            method.to_uppercase().as_str(),
+            "POST" | "PUT" | "PATCH"
+        )
+    }
+
+    fn build_header_map(
+        &self,
+        mapped_node: &WorkflowNode,
+        host: &str,
+    ) -> HeaderMap {
+        let mut header_map = HeaderMap::new();
+        let mut jar_has_cookies = false;
+
+        if !host.is_empty() {
+            if let Some(jar_wrapper) = &self.cookie_jar {
+                if let Ok(jar) = jar_wrapper.0.lock() {
+                    jar_has_cookies = jar.get(host).map(|c| !c.is_empty()).unwrap_or(false);
+                }
+            }
+        }
+
+        if let Some(headers) = &mapped_node.data.headers {
+            for header in headers {
+                if !header.enabled || header.key.trim().is_empty() {
+                    continue;
+                }
+                if jar_has_cookies && header.key.eq_ignore_ascii_case("cookie") {
+                    continue;
+                }
+                if let (Ok(name), Ok(val)) = (
+                    HeaderName::from_str(header.key.trim()),
+                    HeaderValue::from_str(&header.value),
+                ) {
+                    header_map.insert(name, val);
+                }
+            }
+        }
+
+        if jar_has_cookies {
+            if let Some(jar_wrapper) = &self.cookie_jar {
+                if let Ok(jar) = jar_wrapper.0.lock() {
+                    if let Some(cookies) = jar.get(host) {
+                        println!("DEBUG: Attaching {} cookies from jar for host {}", cookies.len(), host);
+                        let mut cookie_components = Vec::new();
+                        for (k, v) in cookies.iter() {
+                            if v.is_empty() {
+                                cookie_components.push(k.clone());
+                            } else {
+                                cookie_components.push(format!("{}={}", k, v));
+                            }
+                        }
+                        if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
+                            header_map.insert(reqwest::header::COOKIE, val);
+                        }
+                    }
+                }
+            }
+        }
+
+        header_map
+    }
+
+    fn save_session_cookies(&self, response: &reqwest::Response, host: &str) {
+        if host.is_empty() {
+            return;
+        }
+        if let Some(jar_wrapper) = &self.cookie_jar {
+            let set_cookies = response.headers().get_all(reqwest::header::SET_COOKIE);
+            for cookie in set_cookies.iter() {
+                if let Ok(c_str) = cookie.to_str() {
+                    let parts: Vec<&str> = c_str.split(';').collect();
+                    if let Some(first_part) = parts.first() {
+                        let kv: Vec<&str> = first_part.splitn(2, '=').collect();
+                        if let Ok(mut jar) = jar_wrapper.0.lock() {
+                            let host_jar = jar.entry(host.to_string()).or_insert_with(HashMap::new);
+                            let key = kv[0].trim().to_string();
+                            let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
+                            println!("DEBUG: Saving cookie {}={} for host {}", key, val, host);
+                            host_jar.insert(key, val);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    async fn send_api_request(
+        &self,
+        mapped_node: &WorkflowNode,
+        method: &str,
+        url: &str,
+        host: &str,
+        allows_body: bool,
+        timeout_secs: u64,
+        save_session: bool,
+    ) -> Result<(u16, String, HashMap<String, String>, Vec<u8>)> {
+        let header_map = self.build_header_map(mapped_node, host);
+
+        let mut request = self.client.request(
+            method.parse().context("Invalid HTTP method")?,
+            url,
+        );
+
+        if let Some(params) = &mapped_node.data.params {
+            let query_params: Vec<(&str, &str)> = params
+                .iter()
+                .filter(|p| p.enabled && !p.key.trim().is_empty())
+                .map(|p| (p.key.as_str(), p.value.as_str()))
+                .collect();
+            if !query_params.is_empty() {
+                request = request.query(&query_params);
+            }
+        }
+
+        request = request.headers(header_map.clone());
+
+        println!("--- WORKFLOW API REQUEST ---");
+        println!("Node: {} ({})", mapped_node.data.name, mapped_node.id);
+        println!("Method: {}", method);
+        println!("URL: {}", url);
+        println!("Headers: {:?}", header_map);
+        if let Some(params) = &mapped_node.data.params {
+            let enabled: Vec<_> = params
+                .iter()
+                .filter(|p| p.enabled && !p.key.trim().is_empty())
+                .collect();
+            if !enabled.is_empty() {
+                println!("Query Params: {:?}", enabled);
+            }
+        }
+        if allows_body {
+            if let Some(body) = &mapped_node.data.body {
+                println!(
+                    "Body: {}",
+                    serde_json::to_string_pretty(body)
+                        .unwrap_or_else(|_| "Invalid JSON".to_string())
+                );
+            }
+        }
+        println!("---------------------------");
+
+        if let Some(window) = &self.window {
+            let _ = window.emit("workflow_log", serde_json::json!({
+                "type": "request",
+                "node_name": mapped_node.data.name,
+                "node_id": mapped_node.id,
+                "method": method,
+                "url": url,
+                "headers": header_map.iter().map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string())).collect::<HashMap<String, String>>(),
+                "params": mapped_node.data.params.as_ref().map(|p| p.iter().filter(|i| i.enabled && !i.key.trim().is_empty()).collect::<Vec<_>>()),
+                "body": if allows_body { mapped_node.data.body.clone() } else { None }
+            }));
+        }
+
+        if allows_body {
+            if let Some(body) = &mapped_node.data.body {
+                request = request.json(body);
+            }
+        }
+
+        request = request.timeout(std::time::Duration::from_secs(timeout_secs));
+
+        let response = request
+            .send()
+            .await
+            .context("Failed to execute request")?;
+
+        if save_session {
+            self.save_session_cookies(&response, host);
+        }
+
+        let status = response.status().as_u16();
+        let status_text = response.status().to_string();
+        let headers: HashMap<String, String> = response
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_str().unwrap_or("").to_string()))
+            .collect();
+
+        let body_bytes = tokio::time::timeout(
+            std::time::Duration::from_secs(timeout_secs),
+            response.bytes(),
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("Body read timed out after {}s", timeout_secs))?
+        .context("Failed to read response body")?
+        .to_vec();
+
+        Ok((status, status_text, headers, body_bytes))
     }
 
     /// Execute a delay node

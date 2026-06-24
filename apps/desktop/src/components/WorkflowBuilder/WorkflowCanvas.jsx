@@ -18,9 +18,10 @@ import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
 import ApiNode from './nodes/ApiNode';
 import DelayNode from './nodes/DelayNode';
+import ManualInputModal from './ManualInputModal';
 import { 
   Plus, Play, Save, Loader2, Trash2, ShieldCheck, 
-  ShieldOff, MoreVertical, RefreshCw, Square, Pause 
+  ShieldOff, MoreVertical, RefreshCw, Square, Pause
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -59,6 +60,9 @@ function WorkflowCanvasInner() {
     pauseExecution,
     resumeExecution,
     hasUnsavedChanges,
+    pendingManualInput,
+    submitManualInput,
+    cancelManualInput,
   } = useWorkflowStore();
 
   const [nodes, setNodes] = useNodesState(currentWorkflow.nodes);
@@ -394,6 +398,7 @@ function WorkflowCanvasInner() {
                 timeout: 30,
                 retries: 0,
                 save_session: false,
+                manual_inputs: [],
               },
             };
 
@@ -724,6 +729,15 @@ function WorkflowCanvasInner() {
             Delete Node
           </button>
         </div>
+      )}
+
+      {/* Manual Input Modal */}
+      {pendingManualInput && (
+        <ManualInputModal
+          node={pendingManualInput.node}
+          onProceed={submitManualInput}
+          onCancel={cancelManualInput}
+        />
       )}
 
       {/* Edge Context Menu */}

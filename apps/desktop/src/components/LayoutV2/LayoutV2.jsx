@@ -253,7 +253,7 @@ export default function LayoutV2({
           ) : (
             <>
               {/* Tab Bar Map */}
-              <div className="flex bg-[color:var(--surface-1)] border-b border-[color:var(--surface-3)] overflow-x-auto scrollbar-hide h-[40px] shrink-0">
+              <div className="flex bg-[color:var(--surface-1)] border-b border-[color:var(--surface-3)] overflow-x-auto scrollbar-hide h-[34px] shrink-0">
                 {openTabs?.length > 0 ? (
                   openTabs.map((tab) => {
                     const isActive = activeTabId === tab.id;
@@ -378,12 +378,6 @@ export default function LayoutV2({
                     <>
                       {/* Request card */}
                       <div className="v2-card" style={{ width: `${splitPercent}%`, flexShrink: 0 }}>
-                        <div className="v2-card-title">
-                          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--text-muted)' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                          </svg>
-                          Request URL
-                        </div>
                         <div className="v2-card-body">
                           <RequestBuilder />
                         </div>
@@ -413,7 +407,7 @@ export default function LayoutV2({
 
                       {/* Response / Docs card */}
                       <div className="v2-card" style={{ flex: 1, minWidth: 0 }}>
-                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, height: 35 }}>
+                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 32 }}>
                           <div className="flex h-full">
                             <button
                               onClick={() => setRightPanelTab('Response')}
@@ -457,12 +451,6 @@ export default function LayoutV2({
                     <>
                       {/* Request card */}
                       <div className="v2-card v2-card-h-request">
-                        <div className="v2-card-title">
-                          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--text-muted)' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                          </svg>
-                          Request URL
-                        </div>
                         <div className="v2-card-body">
                           <RequestBuilder />
                         </div>
@@ -488,7 +476,7 @@ export default function LayoutV2({
 
                       {/* Response / Docs card */}
                       <div className="v2-card" style={{ height: responseHeight, flexShrink: 0 }}>
-                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, height: 35 }}>
+                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 32 }}>
                           <div className="flex h-full">
                             <button
                               onClick={() => setRightPanelTab('Response')}

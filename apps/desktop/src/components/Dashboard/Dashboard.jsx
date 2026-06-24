@@ -41,7 +41,7 @@ export default function Dashboard() {
     return 'Good Evening';
   }, []);
 
-  const { setActiveV2Nav } = useUIStore();
+  const { setActiveV2Nav, setShowImportModal } = useUIStore();
 
   const handleRecentClick = (entry) => {
     // Set request
@@ -64,7 +64,7 @@ export default function Dashboard() {
       {/* ── Header ── */}
       <header className="dash-header">
         <div className="dash-welcome">
-          <h1 className="text-3xl font-extrabold text-tx-primary tracking-tight mb-1.5">
+          <h1 className="text-xl font-extrabold text-tx-primary tracking-tight mb-1">
             {greeting}, {user?.email?.split('@')[0] || 'User'}
           </h1>
           <p className="text-[13px] text-surface-500 font-medium uppercase tracking-[0.15em]">
@@ -74,7 +74,7 @@ export default function Dashboard() {
       </header>
 
       {/* ── Stats Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <StatCard
           label="Collections"
           value={stats.collections}
@@ -93,22 +93,21 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="dash-lower-grid gap-8">
+      <div className="dash-lower-grid">
         {/* ── Recent Activity ── */}
-        <div className="dash-panel bg-[#0b0d13]/40 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
-          <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <h2 className="text-[11px] font-bold bg-gradient-to-r from-surface-400 to-surface-600 bg-clip-text text-transparent uppercase tracking-[0.2em]">Recent Activity</h2>
-            <div className="w-1.5 h-1.5 rounded-full bg-surface-500"></div>
+        <div className="dash-panel overflow-hidden">
+          <div className="dash-panel-header">
+            <h2 className="text-[10px] font-bold text-tx-muted uppercase tracking-[0.15em]">Recent Activity</h2>
           </div>
-          <div className="dash-list p-2">
+          <div className="dash-list p-1">
             {history.length === 0 ? (
-              <div className="py-20 text-center">
-                <p className="text-[11px] text-surface-500 font-medium uppercase tracking-widest">No recent history</p>
+              <div className="py-10 text-center">
+                <p className="text-[10px] text-surface-500 font-medium uppercase tracking-widest">No recent history</p>
               </div>
             ) : (
               history.slice(0, 5).map((entry, i) => (
-                <button key={entry.id || i} onClick={() => handleRecentClick(entry)} className="w-full flex items-center gap-4 p-4 rounded-lg hover:bg-[var(--surface-2)] transition-all group border-b border-[var(--border-1)] last:border-0">
-                  <div className="w-10 h-10 rounded border border-[var(--border-2)] bg-[var(--surface-3)] flex items-center justify-center text-[9px] font-bold text-surface-400 group-hover:text-tx-primary transition-colors">
+                <button key={entry.id || i} onClick={() => handleRecentClick(entry)} className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-[var(--surface-2)] transition-all group border-b border-[var(--border-1)] last:border-0">
+                  <div className="w-8 h-8 rounded border border-[var(--border-2)] bg-[var(--surface-3)] flex items-center justify-center text-[9px] font-bold text-surface-400 group-hover:text-tx-primary transition-colors shrink-0">
                     {entry.request.protocol === 'ws' ? 'WS' : entry.request.method}
                   </div>
                   <div className="flex-1 text-left min-w-0">
@@ -125,11 +124,11 @@ export default function Dashboard() {
         </div>
 
         {/* ── Getting Started ── */}
-        <div className="dash-panel bg-[#0b0d13]/40 border border-white/5 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-          <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <h2 className="text-[11px] font-bold bg-gradient-to-r from-surface-400 to-surface-600 bg-clip-text text-transparent uppercase tracking-[0.2em]">Getting Started</h2>
+        <div className="dash-panel overflow-hidden flex flex-col">
+          <div className="dash-panel-header">
+            <h2 className="text-[10px] font-bold text-tx-muted uppercase tracking-[0.15em]">Getting Started</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 gap-4">
+          <div className="p-3 grid grid-cols-1 gap-2">
             <QuickLink
               title="New Collection"
               desc="Group related APIs into workspaces"
@@ -150,7 +149,7 @@ export default function Dashboard() {
       </div>
 
       {/* Attribution Footer */}
-      <div className="mt-auto py-8 text-center opacity-40">
+      <div className="mt-auto py-3 text-center opacity-40 shrink-0">
         <p className="text-[10px] text-surface-500 uppercase tracking-[0.3em] font-medium">
           PayloadX Engine &copy; 2026 &nbsp;·&nbsp; Created by <span className="text-tx-secondary">Sundan Sharma</span>
         </p>
@@ -161,25 +160,22 @@ export default function Dashboard() {
 
 function StatCard({ label, value, subValue, icon }) {
   return (
-    <div className="bg-[#0b0d13]/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6 flex items-center gap-5 group hover:bg-[#0b0d13]/80 transition-all shadow-2xl relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      <div className="relative z-10 w-14 h-14 rounded-xl border border-white/5 bg-gradient-to-br from-surface-800 to-surface-950 flex items-center justify-center text-surface-500 group-hover:text-gray-300 transition-all duration-300 shadow-inner group-hover:scale-105">
-        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="bg-[var(--surface-1)] border border-[var(--border-1)] rounded-lg p-4 flex items-center gap-3 group hover:border-[var(--border-2)] transition-colors">
+      <div className="w-10 h-10 rounded-lg border border-[var(--border-1)] bg-[var(--surface-2)] flex items-center justify-center text-tx-muted group-hover:text-tx-secondary transition-colors shrink-0">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           {icon}
         </svg>
       </div>
-      <div className="relative z-10">
+      <div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-black bg-gradient-to-r from-gray-100 via-gray-300 to-gray-500 bg-clip-text text-transparent tracking-tighter">{value}</span>
+          <span className="text-2xl font-black text-tx-primary tracking-tight">{value}</span>
           {subValue && (
-            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-400/5 px-2 py-0.5 rounded border border-emerald-400/10">
+            <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
               {subValue}
             </span>
           )}
         </div>
-        <p className="text-[10px] text-surface-500 font-bold uppercase tracking-[0.2em] mt-2 group-hover:text-surface-400 transition-colors">{label}</p>
+        <p className="text-[9px] text-tx-muted font-bold uppercase tracking-[0.15em] mt-0.5">{label}</p>
       </div>
     </div>
   );
@@ -187,14 +183,14 @@ function StatCard({ label, value, subValue, icon }) {
 
 function QuickLink({ title, desc, onClick }) {
   return (
-    <button onClick={onClick} className="flex flex-col gap-1 p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group text-left shadow-inner">
+    <button onClick={onClick} className="flex flex-col gap-0.5 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-1)] hover:bg-[var(--surface-3)] hover:border-[var(--border-2)] transition-all group text-left">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-bold bg-gradient-to-r from-surface-300 to-surface-500 bg-clip-text text-transparent group-hover:from-gray-100 group-hover:to-gray-300 transition-all uppercase tracking-wide">{title}</span>
-        <svg className="w-3.5 h-3.5 text-surface-500 group-hover:text-gray-200 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <span className="text-[11px] font-bold text-tx-secondary group-hover:text-tx-primary transition-colors uppercase tracking-wide">{title}</span>
+        <svg className="w-3 h-3 text-tx-muted group-hover:text-tx-secondary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
         </svg>
       </div>
-      <p className="text-[10px] text-surface-500 leading-relaxed font-medium mt-1">{desc}</p>
+      <p className="text-[10px] text-tx-muted leading-snug">{desc}</p>
     </button>
   );
 }
