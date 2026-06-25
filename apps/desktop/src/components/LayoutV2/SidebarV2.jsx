@@ -61,7 +61,7 @@ const METHOD_COLORS = {
     PUT: '#E3B341',
     PATCH: '#A8A8A8',
     DELETE: '#F85149',
-    HEAD: '#5A5A5A',
+    HEAD: '#8B949E',
     OPTIONS: '#39C5CF',
 };
 

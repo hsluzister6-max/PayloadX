@@ -21,6 +21,18 @@ import toast from 'react-hot-toast';
 import SyncSidebar from '@/components/Sync/SyncSidebar';
 import api from '@/lib/api';
 
+const TAB_METHOD_STYLES = {
+  GET:     { color: '#22C55E', bg: 'rgba(34,197,94,0.09)' },
+  POST:    { color: '#58A6FF', bg: 'rgba(88,166,255,0.09)' },
+  PUT:     { color: '#E3B341', bg: 'rgba(227,179,65,0.09)' },
+  DELETE:  { color: '#F85149', bg: 'rgba(248,81,73,0.09)' },
+  PATCH:   { color: '#A8A8A8', bg: 'rgba(168,168,168,0.07)' },
+  HEAD:    { color: '#8B949E', bg: 'rgba(139,148,158,0.07)' },
+  OPTIONS: { color: '#39C5CF', bg: 'rgba(57,197,207,0.09)' },
+  WS:      { color: '#A78BFA', bg: 'rgba(167,139,250,0.09)' },
+  SIO:     { color: '#FB923C', bg: 'rgba(251,146,60,0.09)' },
+};
+
 export default function LayoutV2({
   onShowTeamModal,
   onShowProjectModal,
@@ -252,22 +264,17 @@ export default function LayoutV2({
             <Dashboard />
           ) : (
             <>
-              {/* Tab Bar Map */}
-              <div className="flex bg-[color:var(--surface-1)] border-b border-[color:var(--surface-3)] overflow-x-auto scrollbar-hide h-[34px] shrink-0">
+              {/* Tab Bar */}
+              <div
+                className="flex bg-[color:var(--bg-primary)] border-b border-[color:var(--border-1)] overflow-x-auto overflow-y-hidden shrink-0 h-9"
+                style={{ scrollbarWidth: 'none' }}
+              >
                 {openTabs?.length > 0 ? (
                   openTabs.map((tab) => {
                     const isActive = activeTabId === tab.id;
-
-                    // Method styling
-                    let methodColor = 'text-[color:var(--text-muted)]';
-                    let methodText = tab.request.protocol === 'ws' ? 'WS' : tab.request.protocol === 'socketio' ? 'SIO' : tab.request.method;
-                    if (tab.request.protocol === 'http') {
-                      if (methodText === 'GET') methodColor = 'text-green-500';
-                      else if (methodText === 'POST') methodColor = 'text-blue-500';
-                      else if (methodText === 'PUT') methodColor = 'text-yellow-500';
-                      else if (methodText === 'DELETE') methodColor = 'text-red-500';
-                      else if (methodText === 'PATCH') methodColor = 'text-gray-400';
-                    }
+                    const proto = tab.request.protocol;
+                    const methodText = proto === 'ws' ? 'WS' : proto === 'socketio' ? 'SIO' : tab.request.method;
+                    const mStyle = TAB_METHOD_STYLES[methodText] || { color: 'var(--text-muted)', bg: 'transparent' };
 
                     return (
                       <div
@@ -310,35 +317,50 @@ export default function LayoutV2({
                           });
                         }}
                         onClick={(e) => {
-                          if (e.button === 1) { // Middle click to close
+                          if (e.button === 1) {
                             e.preventDefault();
                             handleCloseTab(tab.id);
                           } else {
                             setActiveTabId(tab.id);
                           }
                         }}
-                        className={`group/tab flex items-center gap-2 h-full min-w-[120px] max-w-[200px] px-3 border-r border-[color:var(--surface-3)] cursor-pointer select-none transition-all ${isActive
-                          ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)] relative after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-[color:var(--accent)]'
-                          : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-2)]'
-                          }`}
+                        className={`group/tab relative flex items-center gap-2 h-full px-3 border-r border-[color:var(--border-1)] cursor-pointer select-none transition-colors duration-100 min-w-[130px] max-w-[200px] ${
+                          isActive
+                            ? 'bg-[color:var(--surface-1)] text-[color:var(--text-primary)]'
+                            : 'bg-transparent text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-1)] hover:text-[color:var(--text-primary)]'
+                        }`}
                       >
-                        <span className={`text-[10px] font-bold tracking-wider ${methodColor} shrink-0`}>
+                        {/* Top accent line — active only */}
+                        {isActive && (
+                          <span className="absolute top-0 left-0 right-0 h-[1.5px] rounded-b" style={{ background: mStyle.color }} />
+                        )}
+
+                        {/* Method badge */}
+                        <span
+                          className="text-[9px] font-bold tracking-wider shrink-0 px-[5px] py-[2px] rounded font-mono"
+                          style={{ color: mStyle.color, background: mStyle.bg }}
+                        >
                           {methodText}
                         </span>
-                        <span className="text-xs truncate flex-1 leading-none mr-2">
+
+                        {/* Tab name */}
+                        <span className="text-[11px] truncate flex-1 leading-none font-mono">
                           {tab.request.name || 'Untitled'}
                         </span>
 
-                        {/* Postman-style: dirty → dot only; hover tab → X only (same for active + inactive). Named group avoids parent group-hover conflicts. */}
+                        {/* Dirty indicator / close button */}
                         <div className="relative h-[14px] w-[14px] shrink-0">
-                          {tab.isDirty ? (
+                          {tab.isDirty && (
                             <span
                               aria-hidden
                               className="pointer-events-none absolute inset-0 flex items-center justify-center group-hover/tab:hidden"
                             >
-                              <span className="h-[6px] w-[6px] rounded-full bg-[color:var(--accent)] shadow-[0_0_0_1px_rgba(0,0,0,0.15)]" />
+                              <span
+                                className="h-[5px] w-[5px] rounded-full"
+                                style={{ background: mStyle.color }}
+                              />
                             </span>
-                          ) : null}
+                          )}
                           <button
                             type="button"
                             title="Close tab"
@@ -348,7 +370,7 @@ export default function LayoutV2({
                             }}
                             className="absolute inset-0 hidden items-center justify-center rounded text-[color:var(--text-muted)] group-hover/tab:flex hover:bg-[color:var(--surface-3)] hover:text-[color:var(--text-primary)]"
                           >
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -357,8 +379,8 @@ export default function LayoutV2({
                     );
                   })
                 ) : (
-                  <div className="flex items-center h-full px-4 text-xs text-[color:var(--text-muted)] font-medium italic">
-                    No APIs open
+                  <div className="flex items-center h-full px-4 text-[11px] text-[color:var(--text-muted)] font-mono tracking-wide">
+                    No open requests
                   </div>
                 )}
               </div>
