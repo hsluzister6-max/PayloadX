@@ -87,3 +87,8 @@ If the user ever needs to stop the server, they can run:
 ```bash
 docker compose down
 ```
+
+
+export APPLE_ID="prabh@psquarecompany.com"
+export APPLE_PASSWORD="rrfs-eedk-caww-uxxo"
+export APPLE_TEAM_ID="KZKUS3ASDC"

@@ -12,15 +12,93 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;');
 }
 
-function highlightJsonTokens(escapedLine) {
-  if (!escapedLine) return '';
-  return escapedLine
-    .replace(/"((?:[^"\\]|\\.)*)"\s*:/g, '<span class="jk">"$1"</span>:')
-    .replace(/:\s*"((?:[^"\\]|\\.)*)"/g, ': <span class="js">"$1"</span>')
-    .replace(/:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g, ': <span class="jn">$1</span>')
-    .replace(/:\s*(true|false)/g, ': <span class="jb">$1</span>')
-    .replace(/:\s*(null)/g, ': <span class="jnu">$1</span>')
-    .replace(/([{}\[\]])/g, '<span class="jbk">$1</span>');
+/**
+ * Tokenizes ONE raw (unescaped) JSON/JSONC code line into colored HTML.
+ *
+ * A single left-to-right character scan (not chained regex .replace calls) so:
+ *  - Strings are consumed as one atomic token — a `{`/`}`/`[`/`]` INSIDE a string
+ *    value (e.g. `{"key": "some {braced} text"}`) is never mis-colored as a
+ *    structural bracket, since we never re-scan inside an already-consumed string.
+ *  - No characters are ever inserted/removed — only <span> markup is added around
+ *    existing text — so the highlight layer always stays 1:1 with the textarea
+ *    and the caret never drifts from what's visually under it.
+ */
+function highlightJsonTokens(code) {
+  if (!code) return '';
+  const n = code.length;
+  const isWs = (c) => c === ' ' || c === '\t';
+  const isWordChar = (c) => c != null && /[A-Za-z0-9_]/.test(c);
+
+  let out = '';
+  let i = 0;
+  let lastSignificant = ''; // last non-whitespace char emitted — used to detect `: "value"` vs bare/array strings
+
+  while (i < n) {
+    const c = code[i];
+
+    // String literal — scan to the matching unescaped closing quote as one token.
+    if (c === '"') {
+      let j = i + 1;
+      while (j < n) {
+        if (code[j] === '\\') { j += 2; continue; }
+        if (code[j] === '"') { j += 1; break; }
+        j += 1;
+      }
+      const strRaw = code.slice(i, j);
+      let k = j;
+      while (k < n && isWs(code[k])) k += 1;
+      const isKey = code[k] === ':';
+      const isValue = lastSignificant === ':';
+
+      if (isKey) out += `<span class="jk">${escapeHtml(strRaw)}</span>`;
+      else if (isValue) out += `<span class="js">${escapeHtml(strRaw)}</span>`;
+      else out += escapeHtml(strRaw);
+
+      i = j;
+      lastSignificant = '"';
+      continue;
+    }
+
+    // Structural brackets — reached here, so guaranteed to be outside any string.
+    if (c === '{' || c === '}' || c === '[' || c === ']') {
+      out += `<span class="jbk">${c}</span>`;
+      i += 1;
+      lastSignificant = c;
+      continue;
+    }
+
+    if (!isWs(c)) {
+      // Number
+      if (c === '-' || (c >= '0' && c <= '9')) {
+        const m = /^-?\d+\.?\d*(?:[eE][+-]?\d+)?/.exec(code.slice(i));
+        if (m && m[0]) {
+          out += `<span class="jn">${escapeHtml(m[0])}</span>`;
+          i += m[0].length;
+          lastSignificant = m[0].slice(-1);
+          continue;
+        }
+      }
+      // true / false / null — word-boundary checked so identifiers like `trueValue` aren't matched.
+      if (code.startsWith('true', i) && !isWordChar(code[i + 4])) {
+        out += '<span class="jb">true</span>';
+        i += 4; lastSignificant = 'e'; continue;
+      }
+      if (code.startsWith('false', i) && !isWordChar(code[i + 5])) {
+        out += '<span class="jb">false</span>';
+        i += 5; lastSignificant = 'e'; continue;
+      }
+      if (code.startsWith('null', i) && !isWordChar(code[i + 4])) {
+        out += '<span class="jnu">null</span>';
+        i += 4; lastSignificant = 'l'; continue;
+      }
+    }
+
+    out += escapeHtml(c);
+    if (!isWs(c)) lastSignificant = c;
+    i += 1;
+  }
+
+  return out;
 }
 
 /** `//` comment start outside double-quoted strings */
@@ -86,7 +164,9 @@ function highlightJsonc(raw) {
     }
 
     const { code, comment } = splitTrailingLineComment(line);
-    let html = highlightJsonTokens(escapeHtml(code));
+    // highlightJsonTokens takes RAW code and escapes each token itself —
+    // it needs to see literal quotes/brackets to tokenize correctly.
+    let html = highlightJsonTokens(code);
     if (comment) {
       html += `<span class="jc-comment">${escapeHtml(comment)}</span>`;
     }
@@ -222,6 +302,7 @@ function charsRemovedBeforePos(lines, sl, el, pos) {
 export default function JsonEditor({ value, onChange, language = 'json', readOnly = false, className = '', hideHeader = false }) {
   const taRef = useRef(null);
   const preRef = useRef(null);
+  const lnRef = useRef(null);
   const pendingSelectionRef = useRef(null);
   const suppressInputRef = useRef(false);
   const isFocusedRef = useRef(false);
@@ -265,9 +346,14 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
 
   const [copied, setCopied] = useState(false);
   const syncScroll = () => {
-    if (preRef.current && taRef.current) {
-      preRef.current.scrollTop = taRef.current.scrollTop;
-      preRef.current.scrollLeft = taRef.current.scrollLeft;
+    const ta = taRef.current;
+    if (!ta) return;
+    if (preRef.current) {
+      preRef.current.scrollTop = ta.scrollTop;
+      preRef.current.scrollLeft = ta.scrollLeft;
+    }
+    if (lnRef.current) {
+      lnRef.current.scrollTop = ta.scrollTop;
     }
   };
 
@@ -281,6 +367,12 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   const handleKeyDown = useCallback((e) => {
     const ta = e.target;
     const mod = e.ctrlKey || e.metaKey;
+
+    // Block Insert key — prevents browser from toggling overwrite mode
+    if (e.key === 'Insert') {
+      e.preventDefault();
+      return;
+    }
 
     // JSON / JSONC: Cmd/Ctrl + / toggles line comments
     if (mod && e.key === '/') {
@@ -374,10 +466,9 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       return;
     }
     const formatted = JSON.stringify(v, null, 2);
-    setLocalValue(formatted);
-    onChange(formatted);
+    applyEdit({ text: formatted, selStart: 0, selEnd: 0 });
     toast.success('JSON formatted');
-  }, [localValue, onChange]);
+  }, [localValue, applyEdit]);
 
   const handleMinify = useCallback(() => {
     const raw = localValue || '';
@@ -388,10 +479,9 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       return;
     }
     const minified = JSON.stringify(v);
-    setLocalValue(minified);
-    onChange(minified);
+    applyEdit({ text: minified, selStart: 0, selEnd: 0 });
     toast.success('JSON minified');
-  }, [localValue, onChange]);
+  }, [localValue, applyEdit]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(localValue || '');
@@ -434,13 +524,17 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           padding: 12px 12px 12px 0; white-space: pre; overflow: auto;
           tab-size: 2; z-index: 2; -webkit-text-fill-color: transparent;
           word-break: normal; overflow-wrap: normal;
+          direction: ltr; unicode-bidi: plaintext;
+          letter-spacing: normal; font-variant-ligatures: none;
         }
         .editor-pre {
           position: absolute; inset: 0; margin: 0; overflow: hidden;
           font: 12px/1.7 'JetBrains Mono','Fira Code',monospace;
           padding: 12px 12px 12px 0; white-space: pre;
           word-break: normal; overflow-wrap: normal;
+          direction: ltr; unicode-bidi: plaintext;
           pointer-events: none; z-index: 1;
+          letter-spacing: normal; font-variant-ligatures: none;
         }
         .editor-wrap { position: relative; flex: 1; overflow: hidden; }
         .ln-col {
@@ -448,6 +542,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           text-align: right; font: 11px/1.7 'JetBrains Mono',monospace;
           color: var(--text-muted); border-right: 0.5px solid var(--border-1);
           overflow: hidden; user-select: none; flex-shrink: 0;
+          height: 100%; box-sizing: border-box;
         }
         .tb-btn {
           display: flex; align-items: center; gap: 4px; padding: 4px 8px;
@@ -491,7 +586,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       {/* Editor Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
         {/* Line numbers */}
-        <div className="ln-col">
+        <div ref={lnRef} className="ln-col">
           {Array.from({ length: lineCount }, (_, i) => (
             <div key={i}>{i + 1}</div>
           ))}
@@ -504,7 +599,11 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             ref={preRef}
             className="editor-pre"
             aria-hidden="true"
-            dangerouslySetInnerHTML={{ __html: highlighted }}
+            dir="ltr"
+            dangerouslySetInnerHTML={{
+              // Trailing newline keeps highlight layer height in sync with textarea
+              __html: highlighted + ((localValue || '').endsWith('\n') ? '\n' : '') || ' ',
+            }}
           />
           {/* Input layer */}
           <textarea
@@ -516,6 +615,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             autoCorrect="off"
             autoCapitalize="off"
             autoComplete="off"
+            dir="ltr"
+            inputMode="text"
             onChange={handleChange}
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}

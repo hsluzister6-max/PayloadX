@@ -3,6 +3,10 @@ apps/desktop/certs/
 .env
 .env.local
 .env.apple
+*.p12
+*.cer
+*.pem
+*.mobileprovision
 .next/
 dist/
 target/

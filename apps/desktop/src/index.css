@@ -3425,3 +3425,12 @@ textarea,
   transform: rotate(45deg);
   margin: -4px auto 0;
 }
+
+/* Arrow sits above the popover and points up toward the URL bar */
+.variable-edit-popover-arrow--above {
+  margin: 0 auto -4px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid var(--modal-border);
+  border-top: 1px solid var(--modal-border);
+}

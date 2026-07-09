@@ -73,17 +73,11 @@ export default function LayoutV2({
         tabId: id,
         requestName: tab.request.name,
         onSave: async () => {
-          // If the tab to close is not the active one, we need to switch to it to save
-          // but saveRequest in store uses currentRequest.
-          // This is a limitation of the current store.
-          // For now, let's just save if it's the active one.
-          if (activeTabId === id) {
-            const result = await saveRequest();
-            if (result.success) closeTab(id);
-          } else {
-            // Logic to save a non-active tab would go here
-            closeTab(id);
-          }
+          // saveRequest accepts a tabId so background (non-active) dirty tabs
+          // can be saved directly without switching to them first.
+          const result = await saveRequest(id);
+          if (result.success) closeTab(id);
+          return result;
         },
         onDontSave: () => {
           closeTab(id);
@@ -94,33 +88,97 @@ export default function LayoutV2({
     }
   };
 
+  // Shared guard for bulk-close actions (Close All / Others / Left / Right):
+  // if any tab about to be closed is dirty, prompt once before proceeding.
+  const closeWithUnsavedGuard = (dirtyTabs, performClose) => {
+    if (dirtyTabs.length === 0) {
+      performClose();
+      return;
+    }
+    setShowUnsavedModal(true, {
+      requestName: dirtyTabs.length === 1
+        ? (dirtyTabs[0].request.name || 'Untitled')
+        : `${dirtyTabs.length} requests`,
+      onSave: async () => {
+        for (const t of dirtyTabs) {
+          const result = await saveRequest(t.id);
+          if (!result.success) return result;
+        }
+        performClose();
+        return { success: true };
+      },
+      onDontSave: () => {
+        performClose();
+      }
+    });
+  };
+
+  const handleCloseAllTabs = () => {
+    closeWithUnsavedGuard(openTabs.filter(t => t.isDirty), closeAllTabs);
+  };
+
+  const handleCloseOtherTabs = (id) => {
+    closeWithUnsavedGuard(
+      openTabs.filter(t => t.id !== id && t.isDirty),
+      () => closeOtherTabs(id)
+    );
+  };
+
+  const handleCloseTabsToRight = (id) => {
+    const index = openTabs.findIndex(t => t.id === id);
+    const dirtyTabs = index >= 0 ? openTabs.slice(index + 1).filter(t => t.isDirty) : [];
+    closeWithUnsavedGuard(dirtyTabs, () => closeTabsToRight(id));
+  };
+
+  const handleCloseTabsToLeft = (id) => {
+    const index = openTabs.findIndex(t => t.id === id);
+    const dirtyTabs = index > 0 ? openTabs.slice(0, index).filter(t => t.isDirty) : [];
+    closeWithUnsavedGuard(dirtyTabs, () => closeTabsToLeft(id));
+  };
+
   // Check if user needs onboarding (no teams or projects)
   const needsOnboarding = teams.length === 0 || projects.length === 0 || !currentProject;
 
-
-
-  // AST CLI WebSocket Listener
+  // Cmd/Ctrl+W (useKeyboardShortcuts.js) dispatches this instead of closing directly,
+  // so the unsaved-changes guard above still applies to the keyboard shortcut.
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:4040');
-    
+    const onCloseTabShortcut = (e) => {
+      const tabId = e.detail?.tabId;
+      if (tabId) handleCloseTab(tabId);
+    };
+    window.addEventListener('close-tab-shortcut', onCloseTabShortcut);
+    return () => window.removeEventListener('close-tab-shortcut', onCloseTabShortcut);
+  }, [openTabs]);
+
+  // AST CLI WebSocket Listener — optional local tooling; failing to connect
+  // (CLI not running) must stay silent instead of spamming the console.
+  useEffect(() => {
+    let ws;
+    try {
+      ws = new WebSocket('ws://localhost:4040');
+    } catch {
+      return;
+    }
+
     ws.onopen = () => {
-      console.log('[PayloadX] Connected to local AST CLI Sync Server');
+      if (import.meta.env.DEV) console.log('[PayloadX] Connected to local AST CLI Sync Server');
     };
 
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
         if (payload.type === 'SYNC_ROUTES') {
-          console.log('[PayloadX] Received route sync payload:', payload.data);
           setSyncDiff(payload.data);
           if (payload.data.newRoutes.length > 0 || payload.data.updatedRoutes.length > 0) {
             setHasNewSync(true);
           }
         }
       } catch (e) {
-        console.error('Failed to parse WS message', e);
+        if (import.meta.env.DEV) console.error('Failed to parse WS message', e);
       }
     };
+
+    ws.onerror = () => {};
 
     return () => {
       ws.close();
@@ -294,33 +352,38 @@ export default function LayoutV2({
                               {
                                 id: 'close-others',
                                 label: 'Close Other Tabs',
-                                onClick: () => closeOtherTabs(tab.id)
+                                onClick: () => handleCloseOtherTabs(tab.id)
                               },
                               {
                                 id: 'close-right',
                                 label: 'Close Tabs to Right',
-                                onClick: () => closeTabsToRight(tab.id)
+                                onClick: () => handleCloseTabsToRight(tab.id)
                               },
                               {
                                 id: 'close-left',
                                 label: 'Close Tabs to Left',
-                                onClick: () => closeTabsToLeft(tab.id)
+                                onClick: () => handleCloseTabsToLeft(tab.id)
                               },
                               { id: 'divider1', divider: true },
                               {
                                 id: 'close-all',
                                 label: 'Close All Tabs',
                                 danger: true,
-                                onClick: () => closeAllTabs()
+                                onClick: () => handleCloseAllTabs()
                               }
                             ]
                           });
                         }}
-                        onClick={(e) => {
+                        onMouseDown={(e) => {
+                          // Middle-click closes the tab — must be onMouseDown,
+                          // browsers don't fire a middle-button click event.
                           if (e.button === 1) {
                             e.preventDefault();
                             handleCloseTab(tab.id);
-                          } else {
+                          }
+                        }}
+                        onClick={(e) => {
+                          if (e.button !== 1) {
                             setActiveTabId(tab.id);
                           }
                         }}

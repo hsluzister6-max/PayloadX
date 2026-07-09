@@ -85,8 +85,12 @@ export function useKeyboardShortcuts() {
       // ── 4. Close Active Tab (Cmd/Ctrl + W) ──
       if (mod && e.key === 'w') {
         e.preventDefault();
-        const { activeTabId, closeTab } = useRequestStore.getState();
-        if (activeTabId) closeTab(activeTabId);
+        const { activeTabId } = useRequestStore.getState();
+        // Routed through LayoutV2's unsaved-changes guard instead of closing
+        // directly — closeTab() alone would silently drop dirty edits.
+        if (activeTabId) {
+          window.dispatchEvent(new CustomEvent('close-tab-shortcut', { detail: { tabId: activeTabId } }));
+        }
         return;
       }
 

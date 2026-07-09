@@ -150,9 +150,13 @@ export default function InlineDocViewer() {
                     return { type: 'string', example: currentRequest.body.raw };
                   }
                 })() :
-                  (currentRequest.body?.mode === 'formdata' || currentRequest.body?.mode === 'urlencoded') ? {
+                  (currentRequest.body?.mode === 'form-data' || currentRequest.body?.mode === 'urlencoded') ? {
                     type: 'object',
-                    properties: (currentRequest.body[currentRequest.body.mode] || []).filter(i => i.enabled && i.key).reduce((acc, i) => ({
+                    properties: (
+                      currentRequest.body.mode === 'form-data'
+                        ? (currentRequest.body.formData || [])
+                        : (currentRequest.body.urlencoded || [])
+                    ).filter(i => i.enabled && i.key).reduce((acc, i) => ({
                       ...acc, [i.key]: { type: 'string', example: i.value }
                     }), {})
                   } : {}

@@ -7,6 +7,7 @@ import CreateDocModal from './CreateDocModal';
 import EndpointEditor from './EndpointEditor';
 import { formatTime } from '@/utils/helpers';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
 
 const METHOD_COLORS = {
   GET: '#3FB950', POST: '#58A6FF', PUT: '#E3B341', PATCH: '#A8A8A8',
@@ -119,9 +120,25 @@ export default function ApiDocsPanel() {
     setCurrentEndpoint(newEp);
   };
 
-  const handleExport = (e, doc) => {
+  const handleExport = async (e, doc) => {
     e.stopPropagation();
-    window.open(`http://localhost:4000/api/apidoc/${doc._id}/export`, '_blank');
+    try {
+      // Use the authenticated api client (attaches Bearer token + correct
+      // configured host) instead of window.open, which can't send auth
+      // headers and was hardcoded to a fixed localhost port.
+      const { data } = await api.get(`/api/apidoc/${doc._id}/export`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(doc.name || 'api-doc').replace(/\s+/g, '_')}_swagger.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to export documentation');
+    }
   };
 
   const handleDeleteDoc = (e, doc) => {

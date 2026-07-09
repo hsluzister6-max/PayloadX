@@ -149,13 +149,36 @@ export const useRequestStore = create(
           // O(1) lookup via Map
           if (tabId && state._tabsById.has(tabId)) {
             const existingTab = state._tabsById.get(tabId);
+
+            // Guard against clobbering unsaved local edits: re-opening the same
+            // request (sidebar click) or a server push (socket update / collection
+            // refresh) must never silently discard a dirty tab's in-progress changes.
+            if (existingTab.isDirty) {
+              localStorageService.saveCurrentRequest(existingTab.request);
+              return {
+                currentRequest: existingTab.request,
+                noActiveRequest: false,
+                activeTabId: tabId,
+                activeTab: existingTab.activeTab || 'params',
+                response: existingTab.response ?? null,
+              };
+            }
+
+            // Not dirty — safe to refresh with the incoming (fresher) data,
+            // and keep the tab entry itself in sync so tab bar / re-selects match.
+            const updatedTab = { ...existingTab, request: newReq, originalRequest: deepClone(newReq) };
+            const newTabsById = new Map(state._tabsById);
+            newTabsById.set(tabId, updatedTab);
+            const openTabs = state.openTabs.map((t) => (t.id === tabId ? updatedTab : t));
             localStorageService.saveCurrentRequest(newReq);
             return {
               currentRequest: newReq,
               noActiveRequest: false,
               activeTabId: tabId,
               activeTab: existingTab.activeTab || 'params',
-              response: existingTab.response ?? null, // Restore this tab's response
+              response: existingTab.response ?? null,
+              openTabs,
+              _tabsById: newTabsById,
             };
           }
 
@@ -474,7 +497,9 @@ export const useRequestStore = create(
         let targetProjId = projStore.currentProject?._id;
         let targetTeamId = teamStore.currentTeam?._id;
 
-        console.log('New Request Logic:', { targetColId, targetFolderId, targetProjId, targetTeamId });
+        if (import.meta.env.DEV) {
+          console.log('New Request Logic:', { targetColId, targetFolderId, targetProjId, targetTeamId });
+        }
 
         // 1. If no collection selected, use the first available one in the current project
         if (!targetColId && targetProjId) {
@@ -520,14 +545,23 @@ export const useRequestStore = create(
         get().setCurrentRequest(newReq);
       },
 
-      saveRequest: async () => {
+      // `tabId` is optional — defaults to the active tab, but callers (e.g. closing a
+      // background dirty tab) can pass a specific id to save without switching to it.
+      saveRequest: async (tabId) => {
         const start = get();
-        const savingTabId = start.activeTabId;
-        const req = start.currentRequest;
+        const savingTabId = tabId || start.activeTabId;
 
         if (!savingTabId) {
           set({ isSaving: false });
           return { success: false, error: 'No active tab' };
+        }
+
+        const isActiveTab = savingTabId === start.activeTabId;
+        const req = isActiveTab ? start.currentRequest : start._tabsById.get(savingTabId)?.request;
+
+        if (!req) {
+          set({ isSaving: false });
+          return { success: false, error: 'Tab not found' };
         }
 
         set({ isSaving: true });
@@ -538,7 +572,10 @@ export const useRequestStore = create(
             const newTabs = state.openTabs.map((t) => ({ ...t }));
             const idx = newTabs.findIndex((t) => t.id === savingTabId);
             if (idx >= 0) {
-              newTabs[idx] = { ...newTabs[idx], request: { ...req }, isDirty: true };
+              // The save DID succeed (queued locally) — isDirty must go false or the
+              // tab's dirty dot stays lit forever. `syncPending` tracks the distinct
+              // "saved locally, waiting to reach the server" state for UI that wants it.
+              newTabs[idx] = { ...newTabs[idx], request: { ...req }, isDirty: false, syncPending: true };
             }
             return {
               openTabs: newTabs,
@@ -1012,7 +1049,10 @@ export const useRequestStore = create(
           persistedState.openTabs.forEach(tab => {
             tabsById.set(tab.id, tab);
           });
-          return { ...currentState, ...persistedState, _tabsById: tabsById };
+          // Top-level `activeTab` (Params/Body/Auth sub-tab) isn't persisted directly —
+          // restore it from the active tab's own `activeTab` so reload doesn't reset to Params.
+          const restoredActiveTab = tabsById.get(persistedState.activeTabId)?.activeTab || 'params';
+          return { ...currentState, ...persistedState, activeTab: restoredActiveTab, _tabsById: tabsById };
         }
         return { ...currentState, ...persistedState };
       },

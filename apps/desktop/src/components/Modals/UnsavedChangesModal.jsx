@@ -13,14 +13,12 @@ export default function UnsavedChangesModal() {
 
   const handleSave = async () => {
     try {
-      if (onSave) {
-        await onSave();
-      } else {
-        const result = await saveRequest();
-        if (!result.success) {
-          toast.error(result.error || 'Failed to save changes');
-          return;
-        }
+      const result = onSave ? await onSave() : await saveRequest();
+      // Custom onSave handlers (single/bulk tab close) return { success, error } —
+      // keep the modal open on failure so the user can retry instead of losing edits.
+      if (result && result.success === false) {
+        toast.error(result.error || 'Failed to save changes');
+        return;
       }
       setShowUnsavedModal(false);
     } catch (err) {
