@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import styles from "./App.module.css";
 import { FaApple, FaWindows, FaLinux } from "react-icons/fa6";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import PixelHero from "./components/PixelHero";
+import SplashScreen from "./components/SplashScreen";
 import Docs from "./Docs";
 import { useTheme } from "./context/ThemeContext";
 
@@ -25,14 +26,22 @@ export default function App() {
     link: `${STATIC_DL}/PayloadX_x64-setup.exe`,
     icon: <FaWindows />,
   });
+  const [showSplash, setShowSplash] = useState(true);
   const { setTheme } = useTheme();
   const location = useLocation();
   const isDocs = location.pathname.startsWith("/docs");
+
+  const handleSplashDone = useCallback(() => setShowSplash(false), []);
 
   // Landing home always runs in dark mode for the pixel hero
   useEffect(() => {
     if (!isDocs) setTheme("dark");
   }, [isDocs, setTheme]);
+
+  // Skip splash on docs routes
+  useEffect(() => {
+    if (isDocs) setShowSplash(false);
+  }, [isDocs]);
 
   useEffect(() => {
     const ua = window.navigator.userAgent;
@@ -50,6 +59,7 @@ export default function App() {
 
   return (
     <div className={`${styles.root} ${isDocs ? styles.rootDocs : styles.rootHome}`}>
+      {!isDocs && showSplash && <SplashScreen onDone={handleSplashDone} />}
       <Header />
       <div
         style={{
