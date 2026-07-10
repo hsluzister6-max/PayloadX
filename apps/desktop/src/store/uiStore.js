@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+/**
+ * Themes:
+ *   dark | light   — classic solid themes
+ *   nebula-dark    — video + glass morphism (dark only)
+ */
 export const useUIStore = create(
   persist(
     (set) => ({
@@ -12,10 +17,10 @@ export const useUIStore = create(
       showProjectModal: false,
       showCollectionModal: false,
       showFolderModal: false,
-      folderModalData: null, // { collectionId, folderId (for edit), name (for edit) }
+      folderModalData: null,
       showEnvironmentPanel: false,
       rightSidebarOpen: false,
-      rightSidebarActiveTab: 'environment', // 'environment' | 'cookies'
+      rightSidebarActiveTab: 'environment',
       rightSidebarWidth: 420,
       showInviteModal: false,
       showConfirmDialog: false,
@@ -27,12 +32,12 @@ export const useUIStore = create(
       unsavedModalConfig: null,
       contextMenu: null,
       isLoading: false,
-      activeMainTab: 'request',         // 'request' | 'history'
-      theme: 'dark',                    // 'dark' | 'light'
-      layoutVersion: 'v2',              // 'v1' | 'v2'
-      sidebarV2Open: true,              // V2 left sidebar open/closed
-      workspaceOrientation: 'vertical', // 'vertical' | 'horizontal'
-      activeV2Nav: 'collections',       // 'collections', 'docs', 'environments', etc.
+      activeMainTab: 'request',
+      theme: 'nebula-dark', // 'dark' | 'light' | 'nebula-dark'
+      layoutVersion: 'v2',
+      sidebarV2Open: true,
+      workspaceOrientation: 'vertical',
+      activeV2Nav: 'collections',
 
       setSidebarWidth: (w) => set({ sidebarWidth: Math.max(200, Math.min(400, w)) }),
       setResponseHeight: (h) => set({ responseHeight: Math.max(150, Math.min(600, h)) }),
@@ -44,7 +49,6 @@ export const useUIStore = create(
       setShowFolderModal: (v, data = null) => set({ showFolderModal: v, folderModalData: data }),
       setShowEnvironmentPanel: (v) => set({ showEnvironmentPanel: v }),
 
-      // Right sidebar actions
       setRightSidebarOpen: (v) => set({ rightSidebarOpen: v }),
       setRightSidebarActiveTab: (v) => set({ rightSidebarActiveTab: v }),
       setRightSidebarWidth: (w) => set({ rightSidebarWidth: Math.max(300, Math.min(800, w)) }),
@@ -63,8 +67,30 @@ export const useUIStore = create(
       setActiveV2Nav: (v) => set({ activeV2Nav: v }),
       setLayoutVersion: (v) => set({ layoutVersion: v }),
 
+      setTheme: (theme) => {
+        // Nebula is dark-only — coerce any legacy light nebula value
+        if (theme === 'nebula-light' || theme === 'nebula') {
+          set({ theme: 'nebula-dark' });
+          return;
+        }
+        set({ theme });
+      },
+
+      /** Toggle light ↔ dark for classic themes only. Nebula stays dark. */
       toggleTheme: () =>
-        set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+        set((s) => {
+          if (isNebulaTheme(s.theme)) return { theme: 'nebula-dark' };
+          return { theme: s.theme === 'dark' ? 'light' : 'dark' };
+        }),
+
+      /** Nebula on/off — Nebula is always dark. */
+      toggleNebula: () =>
+        set((s) => {
+          if (isNebulaTheme(s.theme)) {
+            return { theme: 'dark' };
+          }
+          return { theme: 'nebula-dark' };
+        }),
 
       toggleLayout: () =>
         set((s) => ({ layoutVersion: s.layoutVersion === 'v1' ? 'v2' : 'v1' })),
@@ -95,12 +121,35 @@ export const useUIStore = create(
           contextMenu: null,
           isLoading: false,
           activeMainTab: 'request',
-          activeV2Nav: 'dashboard' // Default starting point after fresh login
+          activeV2Nav: 'dashboard',
         });
-      }
+      },
     }),
     {
       name: 'syncnest-ui',
+      version: 5,
+      migrate: (persistedState, version) => {
+        const state = persistedState && typeof persistedState === 'object' ? { ...persistedState } : {};
+        if (version < 2) {
+          state.theme = 'nebula-dark';
+        }
+        if (version < 3) {
+          if (state.theme === 'nebula') state.theme = 'nebula-dark';
+        }
+        if (version < 4) {
+          if (state.theme === 'dark' || state.theme === 'light' || !state.theme) {
+            state.theme = 'nebula-dark';
+          }
+          if (state.theme === 'nebula') state.theme = 'nebula-dark';
+        }
+        if (version < 5) {
+          // Drop Nebula Light — Nebula is dark-only
+          if (state.theme === 'nebula-light' || state.theme === 'nebula') {
+            state.theme = 'nebula-dark';
+          }
+        }
+        return state;
+      },
       partialize: (state) => ({
         theme: state.theme,
         layoutVersion: state.layoutVersion,
@@ -111,3 +160,22 @@ export const useUIStore = create(
     }
   )
 );
+
+export function isNebulaTheme(theme) {
+  return theme === 'nebula' || theme === 'nebula-dark' || theme === 'nebula-light';
+}
+
+export function isLightTheme(theme) {
+  return theme === 'light';
+}
+
+export function isDarkTheme(theme) {
+  return theme === 'dark' || theme === 'nebula-dark' || theme === 'nebula' || theme === 'nebula-light';
+}
+
+export const THEME_LABELS = {
+  dark: 'Dark',
+  light: 'Light',
+  'nebula-dark': 'Nebula',
+  nebula: 'Nebula',
+};

@@ -1,188 +1,173 @@
-/* PayloadX Landing — Light & Dark theme tokens
-   Mirrors apps/desktop/src/index.css exactly (same #060606 dark base /
-   #E8ECF2 chrome-silver light base) so the marketing site and the app
-   share one identical visual language. */
+/* PayloadX Landing — Warm nebula theme
+   Cream text + ember accents aligned with the hero video. */
 
 :root,
 [data-theme="light"] {
   color-scheme: light;
 
-  --bg-base: #E8ECF2;
-  --bg-elevated: rgba(244, 246, 249, 0.92);
-  --bg-surface: #F4F6F9;
-  --bg-muted: #ECEFF4;
-  --bg-card: rgba(244, 246, 249, 0.82);
-  --bg-card-solid: #F4F6F9;
-  --bg-terminal: #020202;
-  --bg-terminal-header: #0B0B0B;
-  --bg-mockup: #ECEFF4;
-  --bg-mockup-header: #DDE2EA;
-  --bg-mockup-sidebar: #E8ECF2;
+  --bg-base: #F3EDE7;
+  --bg-elevated: rgba(250, 245, 240, 0.94);
+  --bg-surface: #FAF6F2;
+  --bg-muted: #EFE7E0;
+  --bg-card: rgba(250, 245, 240, 0.88);
+  --bg-card-solid: #FAF6F2;
+  --bg-terminal: #120a08;
+  --bg-terminal-header: #1a100c;
+  --bg-mockup: #EFE7E0;
+  --bg-mockup-header: #E5DBD2;
+  --bg-mockup-sidebar: #F3EDE7;
   --bg-mockup-input: #FFFFFF;
-  --bg-mockup-response: #F4F6F9;
-  --bg-code: #ECEFF4;
-  --bg-code-header: #DDE2EA;
-  --bg-pill: #F4F6F9;
-  --bg-pill-hover: #ECEFF4;
+  --bg-mockup-response: #FAF6F2;
+  --bg-code: #EFE7E0;
+  --bg-code-header: #E5DBD2;
+  --bg-pill: #FAF6F2;
+  --bg-pill-hover: #EFE7E0;
 
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
-  --text-faint: #94A3B8;
-  --text-inverse: #F8FAFC;
+  --text-primary: #1A100C;
+  --text-secondary: #5C4A40;
+  --text-muted: #7A6558;
+  --text-faint: #A08B7C;
+  --text-inverse: #F6EFE8;
 
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-default: rgba(15, 23, 42, 0.14);
-  --border-strong: rgba(15, 23, 42, 0.2);
+  --border-subtle: rgba(26, 16, 12, 0.07);
+  --border-default: rgba(26, 16, 12, 0.12);
+  --border-strong: rgba(26, 16, 12, 0.18);
 
-  --accent: #5C6574;
-  --accent-soft: rgba(92, 101, 116, 0.14);
-  --accent-glow: rgba(92, 101, 116, 0.22);
+  --accent: #C45C3A;
+  --accent-soft: rgba(196, 92, 58, 0.12);
+  --accent-glow: rgba(196, 92, 58, 0.22);
 
   --success: #15803D;
   --success-muted: #16A34A;
   --error: #B91C1C;
   --error-muted: #DC2626;
 
-  /* Same brushed-chrome page background as the desktop app's --metal-base */
   --gradient-page:
-    radial-gradient(ellipse 120% 80% at 18% 0%, rgba(255, 255, 255, 0.95) 0%, transparent 55%),
-    radial-gradient(ellipse 100% 65% at 82% 100%, rgba(180, 188, 200, 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse 120% 80% at 18% 0%, rgba(255, 252, 248, 0.95) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 65% at 82% 100%, rgba(232, 180, 150, 0.28) 0%, transparent 50%),
     linear-gradient(
       175deg,
-      #f8fafc 0%,
-      #e8ecf2 12%,
-      #d4dae4 28%,
-      #b8c0cc 42%,
-      #e2e6ec 58%,
-      #c5ccd8 74%,
-      #eef1f5 88%,
-      #dfe4eb 100%
+      #fffaf6 0%,
+      #f3ede7 18%,
+      #e8ddd4 40%,
+      #f6efe8 65%,
+      #ebe2da 100%
     );
-  /* Neutral chrome-tinted blobs (no color splashes) instead of the old blue/purple/green mesh */
-  --gradient-mesh-1: rgba(92, 101, 116, 0.12);
-  --gradient-mesh-2: rgba(92, 101, 116, 0.08);
-  --gradient-mesh-3: rgba(15, 23, 42, 0.06);
-  --gradient-mesh-4: rgba(15, 23, 42, 0.04);
+  --gradient-mesh-1: rgba(196, 92, 58, 0.1);
+  --gradient-mesh-2: rgba(232, 140, 90, 0.08);
+  --gradient-mesh-3: rgba(26, 16, 12, 0.05);
+  --gradient-mesh-4: rgba(26, 16, 12, 0.03);
 
-  --scanline-color: rgba(15, 23, 42, 0.03);
-  --shadow-sm: 0 4px 16px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 12px 36px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.16);
-  --shadow-terminal: 0 16px 40px rgba(15, 23, 42, 0.18);
+  --scanline-color: rgba(26, 16, 12, 0.03);
+  --shadow-sm: 0 4px 16px rgba(26, 16, 12, 0.08);
+  --shadow-md: 0 12px 36px rgba(26, 16, 12, 0.1);
+  --shadow-lg: 0 20px 50px rgba(26, 16, 12, 0.14);
+  --shadow-terminal: 0 16px 40px rgba(26, 16, 12, 0.18);
 
-  --title-x: #5C6574;
-  --metallic-title: linear-gradient(160deg, #0F172A 0%, #475569 45%, #0F172A 100%);
-  --metallic-footer: linear-gradient(175deg, #1E293B 0%, #475569 40%, #334155 70%, #1E293B 100%);
+  --title-x: #C45C3A;
+  --metallic-title: linear-gradient(160deg, #1A100C 0%, #5C4A40 45%, #1A100C 100%);
+  --metallic-footer: linear-gradient(175deg, #2A1810 0%, #5C4A40 40%, #3A2820 70%, #2A1810 100%);
 
-  /* Same CTA treatment as the desktop app's --cta-* (dark metal button on light bg) */
   --btn-primary-bg: linear-gradient(
     165deg,
-    #525a6b 0%,
-    #323a4a 14%,
-    #1e2430 38%,
-    #252b38 52%,
-    #161a24 72%,
-    #3a4254 100%
+    #c45c3a 0%,
+    #a04830 35%,
+    #8b3a28 70%,
+    #b05038 100%
   );
-  --btn-primary-color: #E8ECF4;
-  --btn-primary-border: rgba(255, 255, 255, 0.14);
-  --btn-primary-shadow: 0 4px 14px rgba(15, 23, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --btn-primary-color: #FFF8F2;
+  --btn-primary-border: rgba(255, 255, 255, 0.2);
+  --btn-primary-shadow: 0 4px 14px rgba(140, 50, 30, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
-  /* Terminal mockup always stays dark, exactly like the desktop app's own console panel */
-  --term-prompt: #6B7280;
-  --term-cmd: #9CA3B8;
-  --term-muted: #6B7280;
+  --term-prompt: #A08B7C;
+  --term-cmd: #E8D4C4;
+  --term-muted: #A08B7C;
   --term-ok: #22C55E;
   --term-err: #EF4444;
   --term-status: #4ADE80;
   --term-status-err: #F87171;
-  --term-time: #6B7280;
+  --term-time: #A08B7C;
 
-  --overlay: rgba(15, 23, 42, 0.38);
+  --overlay: rgba(26, 16, 12, 0.4);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --bg-base: #060606;
-  --bg-elevated: rgba(17, 17, 17, 0.92);
-  --bg-surface: #111111;
-  --bg-muted: #161616;
-  --bg-card: rgba(17, 17, 17, 0.82);
-  --bg-card-solid: #111111;
-  --bg-terminal: #020202;
-  --bg-terminal-header: #0B0B0B;
-  --bg-mockup: #0B0B0B;
-  --bg-mockup-header: #111111;
-  --bg-mockup-sidebar: #060606;
-  --bg-mockup-input: #030303;
-  --bg-mockup-response: #0B0B0B;
-  --bg-code: #0B0B0B;
-  --bg-code-header: #111111;
-  --bg-pill: #111111;
-  --bg-pill-hover: #161616;
+  --bg-base: #0A0605;
+  --bg-elevated: rgba(18, 10, 8, 0.92);
+  --bg-surface: #140C0A;
+  --bg-muted: #1A100C;
+  --bg-card: rgba(20, 12, 10, 0.85);
+  --bg-card-solid: #140C0A;
+  --bg-terminal: #080403;
+  --bg-terminal-header: #120A08;
+  --bg-mockup: #120A08;
+  --bg-mockup-header: #1A100C;
+  --bg-mockup-sidebar: #0A0605;
+  --bg-mockup-input: #080403;
+  --bg-mockup-response: #120A08;
+  --bg-code: #120A08;
+  --bg-code-header: #1A100C;
+  --bg-pill: #1A100C;
+  --bg-pill-hover: #221510;
 
-  --text-primary: #E8ECF4;
-  --text-secondary: #9CA3B8;
-  --text-muted: #8B93A8;
-  --text-faint: #6B7280;
-  --text-inverse: #060606;
+  --text-primary: #F6EFE8;
+  --text-secondary: #D4C0B0;
+  --text-muted: #B89A88;
+  --text-faint: #8A7060;
+  --text-inverse: #0A0605;
 
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-default: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(232, 160, 122, 0.06);
+  --border-default: rgba(232, 160, 122, 0.12);
+  --border-strong: rgba(232, 160, 122, 0.2);
 
-  --accent: #C8CDD8;
-  --accent-soft: rgba(200, 205, 216, 0.14);
-  --accent-glow: rgba(200, 205, 216, 0.25);
+  --accent: #E88C5A;
+  --accent-soft: rgba(232, 140, 90, 0.14);
+  --accent-glow: rgba(232, 140, 90, 0.28);
 
   --success: #22C55E;
   --success-muted: #4ADE80;
   --error: #EF4444;
   --error-muted: #F87171;
 
-  /* Same flat near-black page background as the desktop app's --metal-base */
-  --gradient-page: linear-gradient(180deg, #030303 0%, #060606 50%, #0B0B0B 100%);
-  /* Neutral chrome-tinted blobs (no color splashes) instead of the old blue/purple/green mesh */
-  --gradient-mesh-1: rgba(200, 205, 216, 0.06);
-  --gradient-mesh-2: rgba(200, 205, 216, 0.04);
-  --gradient-mesh-3: rgba(255, 255, 255, 0.03);
-  --gradient-mesh-4: rgba(255, 255, 255, 0.02);
+  --gradient-page: linear-gradient(180deg, #080403 0%, #0A0605 45%, #120A08 100%);
+  --gradient-mesh-1: rgba(232, 140, 90, 0.08);
+  --gradient-mesh-2: rgba(196, 92, 58, 0.06);
+  --gradient-mesh-3: rgba(232, 180, 150, 0.04);
+  --gradient-mesh-4: rgba(255, 248, 242, 0.02);
 
   --scanline-color: rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
-  --shadow-terminal: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+  --shadow-terminal: 0 16px 40px rgba(0, 0, 0, 0.65);
 
-  --title-x: #C8CDD8;
-  --metallic-title: linear-gradient(160deg, #E8ECF4 0%, #9CA3B8 45%, #E8ECF4 100%);
-  --metallic-footer: linear-gradient(175deg, #F0F2F5 0%, #C4C8D4 40%, #9CA3B0 100%);
+  --title-x: #E88C5A;
+  --metallic-title: linear-gradient(160deg, #F6EFE8 0%, #E8C4A8 45%, #F6EFE8 100%);
+  --metallic-footer: linear-gradient(175deg, #FFF8F2 0%, #E8C4A8 40%, #D4A888 100%);
 
-  /* Same CTA treatment as the desktop app's --cta-* (light chrome button on dark bg) */
-  --btn-primary-bg: linear-gradient(145deg, #e4e7eb, #9ca3af, #d1d5db, #f3f4f6);
-  --btn-primary-color: #0F172A;
-  --btn-primary-border: rgba(255, 255, 255, 0.4);
-  --btn-primary-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  --btn-primary-bg: linear-gradient(145deg, #fff8f2, #e8d4c4, #f0e0d4, #fffaf6);
+  --btn-primary-color: #1A100C;
+  --btn-primary-border: rgba(255, 248, 242, 0.35);
+  --btn-primary-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.7);
 
-  /* Terminal mockup always stays dark, exactly like the desktop app's own console panel */
-  --term-prompt: #6B7280;
-  --term-cmd: #9CA3B8;
-  --term-muted: #6B7280;
+  --term-prompt: #8A7060;
+  --term-cmd: #E8D4C4;
+  --term-muted: #8A7060;
   --term-ok: #22C55E;
   --term-err: #EF4444;
   --term-status: #4ADE80;
   --term-status-err: #F87171;
-  --term-time: #6B7280;
+  --term-time: #8A7060;
 
-  --overlay: rgba(0, 0, 0, 0.65);
+  --overlay: rgba(8, 4, 3, 0.7);
 }
 
 [data-theme="light"] .metallic-app-name {
-  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.15));
+  filter: drop-shadow(0 2px 4px rgba(26, 16, 12, 0.12));
 }
 
 [data-theme="dark"] .metallic-app-name {
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.45));
 }

@@ -3,7 +3,8 @@ import { isTauri } from '@/lib/executor';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
-import { useUIStore } from '@/store/uiStore';
+import { useUIStore, isLightTheme, isNebulaTheme } from '@/store/uiStore';
+
 import { useCollectionStore } from '@/store/collectionStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useRequestStore } from '@/store/requestStore';
@@ -148,13 +149,15 @@ export default function App() {
   }, [user, currentTeam, workflows.length]);
 
 
-  // Apply theme class to <html> so CSS variables switch correctly
+  // Apply theme class to <html> so CSS variables switch correctly.
+  // Nebula is dark-only — legacy nebula-light maps to nebula-dark.
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'light') {
+    root.classList.remove('light', 'nebula', 'nebula-dark', 'nebula-light');
+    if (theme === 'nebula-dark' || theme === 'nebula' || theme === 'nebula-light') {
+      root.classList.add('nebula', 'nebula-dark');
+    } else if (theme === 'light') {
       root.classList.add('light');
-    } else {
-      root.classList.remove('light');
     }
   }, [theme]);
 
@@ -297,9 +300,9 @@ export default function App() {
           position="bottom-right"
           toastOptions={{
             style: {
-              background: theme === 'light' ? '#FFFFFF' : '#1A1F2B',
-              color: theme === 'light' ? '#111111' : '#D8DEE9',
-              border: `1px solid ${theme === 'light' ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
+              background: isLightTheme(theme) ? '#FFFFFF' : '#1A1F2B',
+              color: isLightTheme(theme) ? '#111111' : '#D8DEE9',
+              border: `1px solid ${isLightTheme(theme) ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
               borderRadius: '12px',
               fontSize: '13px',
               fontFamily: 'Poppins, sans-serif',
@@ -342,9 +345,9 @@ export default function App() {
           position="bottom-right"
           toastOptions={{
             style: {
-              background: theme === 'light' ? '#FFFFFF' : '#1A1F2B',
-              color: theme === 'light' ? '#111111' : '#D8DEE9',
-              border: `1px solid ${theme === 'light' ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
+              background: isLightTheme(theme) ? '#FFFFFF' : '#1A1F2B',
+              color: isLightTheme(theme) ? '#111111' : '#D8DEE9',
+              border: `1px solid ${isLightTheme(theme) ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
               borderRadius: '12px',
               fontSize: '13px',
               fontFamily: 'Poppins, sans-serif',
@@ -472,9 +475,9 @@ export default function App() {
           position="bottom-right"
           toastOptions={{
             style: {
-              background: theme === 'light' ? '#FFFFFF' : '#1A1F2B',
-              color: theme === 'light' ? '#111111' : '#D8DEE9',
-              border: `1px solid ${theme === 'light' ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
+              background: isLightTheme(theme) ? '#FFFFFF' : '#1A1F2B',
+              color: isLightTheme(theme) ? '#111111' : '#D8DEE9',
+              border: `1px solid ${isLightTheme(theme) ? '#E1E4E8' : 'rgba(216, 222, 233, 0.1)'}`,
               borderRadius: '12px',
               fontSize: '13px',
               fontFamily: 'Poppins, sans-serif',

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useUIStore } from '@/store/uiStore';
+import { useUIStore, isLightTheme } from '@/store/uiStore';
 import '@/lib/monacoEnvironment';
 import Editor from '@monaco-editor/react';
 
@@ -22,7 +22,7 @@ export default function ResponseMonacoViewer({
   heavyTokenizationThresholdChars = 2_000_000,
 }) {
   const { theme } = useUIStore();
-  const monacoTheme = theme === 'light' ? 'vs' : 'vs-dark';
+  const monacoTheme = isLightTheme(theme) ? 'vs' : 'vs-dark';
 
   const effectiveLang = useMemo(() => {
     if (!value || value.length >= heavyTokenizationThresholdChars) return 'plaintext';

@@ -150,21 +150,21 @@
   font-weight: 800;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--accent);
   margin-bottom: 0.25rem;
 }
 
 .metallicTitle {
   font-family: 'Syne', sans-serif;
   font-size: clamp(2rem, 5vw, 3.5rem);
-  font-weight: 900;
-  background: var(--metallic-title);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: var(--text-primary);
+  background: none;
+  -webkit-text-fill-color: var(--text-primary);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   margin: 0 0 0.5rem;
+  text-shadow: 0 2px 20px rgba(232, 140, 90, 0.08);
 }
 
 .lead {

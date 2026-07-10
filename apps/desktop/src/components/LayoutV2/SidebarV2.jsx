@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useCollectionStore } from '@/store/collectionStore';
@@ -184,7 +185,9 @@ export default function SidebarV2({
     const [searchResults, setSearchResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [showLogout, setShowLogout] = useState(false);
+    const [logoutPos, setLogoutPos] = useState(null);
     const logoutMenuRef = useRef(null);
+    const logoutTriggerRef = useRef(null);
     const [initializedCollections, setInitializedCollections] = useState(new Set());
 
     const [expandedProjects, setExpandedProjects] = useState(() => {
@@ -343,13 +346,37 @@ export default function SidebarV2({
         if (!showLogout) return;
 
         const handleClickOutside = (e) => {
-            if (logoutMenuRef.current && !logoutMenuRef.current.contains(e.target)) {
+            if (
+                logoutMenuRef.current && !logoutMenuRef.current.contains(e.target) &&
+                logoutTriggerRef.current && !logoutTriggerRef.current.contains(e.target)
+            ) {
                 setShowLogout(false);
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showLogout]);
+
+    useEffect(() => {
+        if (!showLogout || !logoutTriggerRef.current) {
+            setLogoutPos(null);
+            return;
+        }
+        const update = () => {
+            const r = logoutTriggerRef.current.getBoundingClientRect();
+            setLogoutPos({
+                left: r.left,
+                bottom: window.innerHeight - r.top + 8,
+            });
+        };
+        update();
+        window.addEventListener('resize', update);
+        window.addEventListener('scroll', update, true);
+        return () => {
+            window.removeEventListener('resize', update);
+            window.removeEventListener('scroll', update, true);
+        };
     }, [showLogout]);
 
     // ── Load cached requests for expanded collections on mount ──────────────────
@@ -997,6 +1024,7 @@ export default function SidebarV2({
                         </svg>
                     </button>
                     <button
+                        ref={logoutTriggerRef}
                         className="sdbv2-activity-avatar"
                         onClick={() => setShowLogout(!showLogout)}
                         title={user?.email || 'Profile'}
@@ -1004,8 +1032,12 @@ export default function SidebarV2({
                         {user?.email?.[0]?.toUpperCase() || 'U'}
                     </button>
 
-                    {showLogout && (
-                        <div ref={logoutMenuRef} className="sdbv2-logout-menu">
+                    {showLogout && logoutPos && createPortal(
+                        <div
+                            ref={logoutMenuRef}
+                            className="sdbv2-logout-menu"
+                            style={{ left: logoutPos.left, bottom: logoutPos.bottom }}
+                        >
                             <div className="sdbv2-logout-email">{user?.email}</div>
                             <button className="sdbv2-logout-btn" onClick={handleLogout}>
                                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1013,7 +1045,8 @@ export default function SidebarV2({
                                 </svg>
                                 Sign Out
                             </button>
-                        </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
             </nav>

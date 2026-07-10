@@ -1,13 +1,13 @@
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
-import { useUIStore } from '@/store/uiStore';
+import { useUIStore, isLightTheme } from '@/store/uiStore';
 import PayloadX from '@/components/core/logo';
 
 export default function EmptyState({ onShowTeamModal, onShowProjectModal }) {
   const { teams } = useTeamStore();
   const { projects } = useProjectStore();
   const { setActiveV2Nav, theme } = useUIStore();
-  const isLight = theme === 'light';
+  const isLight = isLightTheme(theme);
 
   const hasTeams = teams.length > 0;
   const hasProjects = projects.length > 0;
@@ -42,7 +42,7 @@ export default function EmptyState({ onShowTeamModal, onShowProjectModal }) {
   return (
     <div className="flex flex-col h-full min-h-0 bg-bg-primary overflow-hidden p-4 font-sans">
       <div className="flex flex-1 min-h-0 flex-col items-center justify-center w-full max-w-lg mx-auto">
-        <div className="relative w-full max-w-md flex flex-col items-center text-center">
+        <div className="relative w-full max-w-md flex flex-col items-center text-center empty-state-card rounded-2xl p-8 border border-border-1 bg-surface-1/80">
           <div className="mb-4">
             <PayloadX className="w-12 h-12" fontSize="14px" />
           </div>

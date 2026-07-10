@@ -13,7 +13,7 @@ export default function Header() {
   const VERSION = "1.0.0";
 
   return (
-    <nav className={styles.nav}>
+    <nav className={`${styles.nav} ${isDocs ? styles.navSolid : styles.navTransparent}`}>
       <div className={styles.logoContainer} onClick={() => navigate("/")}>
         <PayloadX size={isDocs ? "22px" : "28px"} fontSize={isDocs ? "9px" : "10px"} />
         <div className={styles.logoTextGroup}>
@@ -25,15 +25,17 @@ export default function Header() {
 
       <div className={styles.navSpacer} />
 
-      <button
-        type="button"
-        className={styles.themeToggle}
-        onClick={toggleTheme}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        title={theme === "dark" ? "Light mode" : "Dark mode"}
-      >
-        {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-      </button>
+      {isDocs && (
+        <button
+          type="button"
+          className={styles.themeToggle}
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Light mode" : "Dark mode"}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+      )}
 
       {isDocs ? (
         <div className={styles.docsBadge}>

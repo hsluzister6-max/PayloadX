@@ -91,23 +91,31 @@ function DocsPanel() {
 }
 
 function SettingsPanel() {
-  const { theme, toggleTheme, toggleLayout } = useUIStore();
+  const { theme, toggleTheme, toggleNebula, toggleLayout } = useUIStore();
+  const nebulaOn = theme === 'nebula-dark' || theme === 'nebula-light' || theme === 'nebula';
   return (
     <div className="p-4 animate-in">
       <span className="panel-section-label" style={{ display: 'block', marginBottom: 12 }}>Settings</span>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <button
-          onClick={toggleTheme}
-          className="panel-settings-row"
-        >
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {theme === 'dark'
-              ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        {!nebulaOn && (
+          <button onClick={toggleTheme} className="panel-settings-row">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {theme === 'light' ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 3v1m0 16v1m8.66-10h-1M4.34 12H3m15.07-6.07l-.71.71M6.64 17.36l-.71.71M17.36 17.36l.71.71M6.64 6.64l.71-.71M12 8a4 4 0 100 8 4 4 0 000-8z" />
-              : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            }
+              )}
+            </svg>
+            <span>{theme === 'light' ? 'Switch to Dark' : 'Switch to Light'}</span>
+          </button>
+        )}
+        <button onClick={toggleNebula} className="panel-settings-row">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
           </svg>
-          <span>{theme === 'dark' ? 'Switch to Light mode' : 'Switch to Dark mode'}</span>
+          <span>{nebulaOn ? 'Disable Nebula theme' : 'Enable Nebula theme'}</span>
         </button>
         <button onClick={toggleLayout} className="panel-settings-row">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -221,7 +221,7 @@ export default function ResponseViewer() {
   const responseCookies = parseCookies(response.headers?.['set-cookie'] || response.headers?.['Set-Cookie'] || '');
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
+    <div className="flex flex-col h-full bg-transparent">
       {/* ── Compact single-row header ─────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -469,7 +469,7 @@ export default function ResponseViewer() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8 bg-[var(--bg-primary)]">
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8 bg-transparent">
       <div className="w-16 h-16 rounded-3xl bg-[var(--surface-2)] flex items-center justify-center border border-[var(--border-1)] shadow-sm">
         <svg className="w-8 h-8 text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -485,7 +485,7 @@ function EmptyState() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 bg-[var(--bg-primary)] px-6">
+    <div className="flex flex-col items-center justify-center h-full gap-6 bg-transparent px-6">
       <div
         className="h-9 w-9 rounded-full border-2 border-[var(--border-1)] border-t-[var(--accent)] motion-safe:animate-spin motion-reduce:animate-none"
         role="status"
@@ -511,7 +511,7 @@ function TransportErrorView({ response }) {
   const isCancelled = parsed.code === 'CANCELLED';
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-primary)]">
+    <div className="flex flex-col h-full bg-transparent">
       <div
         style={{
           display: 'flex',

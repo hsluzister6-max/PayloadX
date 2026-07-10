@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useServerConfigStore } from '@/store/serverConfigStore';
+import { useUIStore, isNebulaTheme, THEME_LABELS } from '@/store/uiStore';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/api/shell';
 import toast from 'react-hot-toast';
 import PayloadX from '../core/logo';
 import ForgotPassword from './ForgotPassword';
+import NebulaVideoBackground from '@/components/NebulaVideoBackground';
 
 export default function AuthPage() {
   const { serverMode, customUrl, setServerMode, setCustomUrl } = useServerConfigStore();
+  const { theme, setTheme, toggleNebula } = useUIStore();
+  const isNebula = isNebulaTheme(theme);
   // Default to 'login' to avoid showing the server selection screen to existing users
   const [mode, setMode] = useState('login');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -19,6 +23,28 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, signup, loginWithGoogle, isLoading } = useAuthStore();
+
+  // Keep shell transparent so the portaled video is visible behind login
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const appRoot = document.getElementById('root');
+    root.classList.add('auth-video');
+    const prevHtml = root.style.background;
+    const prevBody = body.style.background;
+    const prevRoot = appRoot?.style.background;
+    root.style.background = '#0a0605';
+    body.style.background = 'transparent';
+    if (appRoot) appRoot.style.background = 'transparent';
+    return () => {
+      root.classList.remove('auth-video');
+      root.style.background = prevHtml;
+      body.style.background = prevBody;
+      if (appRoot) appRoot.style.background = prevRoot || '';
+    };
+  }, []);
+
+  // video play handled by NebulaVideoBackground
 
   const handleSelectServer = async (selectedMode) => {
     if (selectedMode === 'payloadx') {
@@ -242,13 +268,86 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="flex h-screen bg-[#060606] overflow-hidden font-mono text-slate-400">
+    <div
+      className={`flex h-screen overflow-hidden font-mono relative ${
+        isNebula ? 'text-[#7A6558]' : 'text-slate-400'
+      }`}
+      style={{
+        background: 'transparent',
+        color: isNebula ? 'var(--text-muted)' : undefined,
+      }}
+    >
+      {/* Always play hero video behind the login shell */}
+      <NebulaVideoBackground overlay="auth" />
+
+      {/* Theme controls: classic Dark/Light (hidden on Nebula) + Nebula toggle */}
+      <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
+        {!isNebula && (
+          <div
+            className="flex items-center gap-1 p-1 rounded-full border backdrop-blur-md"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            {['dark', 'light'].map((modeId) => {
+              const active = theme === modeId;
+              return (
+                <button
+                  key={modeId}
+                  type="button"
+                  onClick={() => setTheme(modeId)}
+                  className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
+                  style={{
+                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    color: active ? '#E8ECF4' : 'rgba(156,163,184,0.7)',
+                    border: active
+                      ? '1px solid rgba(255,255,255,0.15)'
+                      : '1px solid transparent',
+                  }}
+                >
+                  {THEME_LABELS[modeId]}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={toggleNebula}
+          className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border backdrop-blur-md"
+          style={{
+            background: isNebula ? 'rgba(232,140,90,0.3)' : 'rgba(255,255,255,0.04)',
+            borderColor: isNebula ? 'rgba(232,160,122,0.5)' : 'rgba(255,255,255,0.08)',
+            color: isNebula ? '#F6EFE8' : 'rgba(156,163,184,0.85)',
+          }}
+          title={isNebula ? 'Disable Nebula' : 'Enable Nebula'}
+        >
+          ✦ Nebula
+        </button>
+      </div>
+
       {/* ── Left Side: Auth Form ── */}
-      <div className="w-full lg:w-[35%] flex flex-col bg-transparent relative border-r border-white/[0.03]">
+      <div
+        className="w-full lg:w-[35%] flex flex-col relative z-10 border-r"
+        style={{
+          background: isNebula
+            ? 'rgba(10,6,5,0.78)'
+            : 'rgba(6,6,6,0.78)',
+          borderColor: isNebula
+            ? 'rgba(232,160,122,0.12)'
+            : 'rgba(255,255,255,0.06)',
+        }}
+      >
         {/* App Logo */}
         <div className="absolute top-10 left-10 flex items-center gap-3 z-20">
           <PayloadX />
-          <span className="metallic-app-name text-lg">PayloadX</span>
+          <span
+            className={`text-lg font-black tracking-tight ${isNebula ? '' : 'metallic-app-name'}`}
+            style={isNebula ? { fontFamily: 'Syne, sans-serif', color: '#F6EFE8' } : undefined}
+          >
+            PayloadX
+          </span>
         </div>
 
         {/* Form Container */}
@@ -528,114 +627,32 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── Right Side: Detailed Dashboard Mockup ── */}
-      <div className="hidden lg:flex lg:w-[65%] bg-[#060606] relative overflow-hidden items-center justify-center p-12">
-        <div className="absolute inset-0 bg-transparent opacity-[0.03] pointer-events-none" />
-
-        {/* Content Container */}
-        <div className="relative z-10 w-full max-w-5xl flex flex-col gap-10">
-
-          {/* Top Text Content */}
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight mb-4">
-              Everything you need to <br />
-              <span className="text-slate-600 font-normal">build and test</span> robust APIs.
-            </h2>
-
-          </div>
-
-          {/* Mock Container */}
-          <div className="relative w-full h-[540px] bg-[#0d0d0d] rounded-2xl border border-white/5 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col">
-
-            {/* Mock Window Header */}
-            <div className="h-12 border-b border-white/5 bg-white/[0.02] flex items-center px-4 justify-between">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-white/5 border border-white/10"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-white/5 border border-white/10"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-white/5 border border-white/10"></div>
-                <div className="ml-4 h-6 px-3 bg-white/5 rounded-md border border-white/5 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500/50"></div>
-                  <span className="text-[10px] text-slate-400 font-mono">api.v1.payloadx.com/health</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="h-6 w-24 bg-white/5 rounded border border-white/5 flex items-center justify-center">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Production</span>
-                </div>
-                <div className="w-6 h-6 rounded-full bg-white/10 border border-white/10"></div>
-              </div>
-            </div>
-
-            <div className="flex flex-1 overflow-hidden">
-              {/* Activity Bar (Vertical) */}
-              <div className="w-12 border-r border-white/5 bg-white/[0.01] flex flex-col items-center py-4 gap-6">
-                <div className="w-6 h-6 text-white opacity-40"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg></div>
-                <div className="w-6 h-6 text-white opacity-40"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div>
-              </div>
-
-              {/* Sidebar (Collections) */}
-              <div className="w-56 border-r border-white/5 bg-white/[0.005] p-5">
-                <div className="flex items-center justify-between mb-8">
-                  <span className="text-[10px] font-bold text-white uppercase tracking-widest">Collections</span>
-                  <div className="w-4 h-4 bg-white/5 rounded border border-white/10 flex items-center justify-center">+</div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <svg className="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                      <span className="text-xs text-slate-300 font-medium">Payment Gateway</span>
-                    </div>
-                    <div className="ml-5 space-y-2 border-l border-white/5 pl-4 mt-2">
-                      <div className="flex items-center justify-between group">
-                        <span className="text-[11px] text-slate-500 group-hover:text-white transition-colors cursor-pointer">/v1/checkout</span>
-                        <span className="text-[8px] font-bold text-blue-400">POST</span>
-                      </div>
-                      <div className="flex items-center justify-between group">
-                        <span className="text-[11px] text-slate-500 group-hover:text-white transition-colors cursor-pointer">/v1/capture</span>
-                        <span className="text-[8px] font-bold text-amber-400">PUT</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Editor Area */}
-              <div className="flex-1 flex flex-col bg-white/[0.005]">
-                {/* URL Bar Area */}
-                <div className="p-4 border-b border-white/5 flex items-center gap-2">
-                  <div className="h-9 flex-1 bg-black border border-white/5 rounded flex items-center px-3 gap-3">
-                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider border-r border-white/10 pr-3">POST</span>
-                    <span className="text-[10px] text-slate-500 font-mono">https://api.gateway.com/v1/transactions</span>
-                  </div>
-                  <button className="h-9 px-4 bg-white/[0.03] border border-white/10 rounded font-bold text-[10px] text-white hover:bg-white/10 transition-all uppercase tracking-widest">Send</button>
-                </div>
-
-                {/* Response Panel (Split View Mock) */}
-                <div className="flex-1 flex flex-col">
-                  <div className="h-8 border-b border-white/5 flex items-center px-6 justify-between">
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Response</span>
-                    <div className="flex gap-4">
-                      <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div><span className="text-[9px] text-emerald-500 font-bold">200 OK</span></div>
-                      <span className="text-[9px] text-slate-500 font-mono">142ms</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 bg-black/50 p-6 font-mono text-[11px] leading-relaxed">
-                    <div className="text-blue-400">{"{"}</div>
-                    <div className="ml-4 flex gap-2"><span className="text-indigo-400">"id":</span> <span className="text-emerald-500">"tx_842910"</span>,</div>
-                    <div className="ml-4 flex gap-2"><span className="text-indigo-400">"status":</span> <span className="text-emerald-500">"captured"</span>,</div>
-                    <div className="ml-4 flex gap-2"><span className="text-indigo-400">"amount":</span> <span className="text-slate-400">250.00</span></div>
-                    <div className="text-blue-400">{"}"}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Decorative Taglines on Mock Side */}
-        <div className="absolute top-12 right-12 text-right">
-          <p className="text-[10px] text-slate-700 font-bold uppercase tracking-[0.3em]">Engineered for Performance</p>
+      {/* ── Right Side: video stage + copy ── */}
+      <div className="hidden lg:flex lg:w-[65%] relative overflow-hidden items-center justify-center p-12 z-10 bg-transparent">
+        <div className="relative z-10 w-full max-w-2xl flex flex-col gap-6 text-left">
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: isNebula ? '#E88C5A' : '#C8CDD8' }}
+          >
+            Open source · Free forever
+          </p>
+          <h2
+            className="text-4xl font-extrabold tracking-tight leading-tight"
+            style={{
+              fontFamily: isNebula ? 'Syne, sans-serif' : undefined,
+              color: isNebula ? '#F6EFE8' : '#E8ECF4',
+            }}
+          >
+            Everything you need to
+            <br />
+            build and test robust APIs.
+          </h2>
+          <p
+            className="text-[15px] leading-relaxed max-w-md"
+            style={{ color: isNebula ? 'rgba(244,235,227,0.72)' : 'rgba(156,163,184,0.85)' }}
+          >
+            The modern, lightweight alternative to Postman — crafted for developers who move fast.
+          </p>
         </div>
       </div>
     </div>

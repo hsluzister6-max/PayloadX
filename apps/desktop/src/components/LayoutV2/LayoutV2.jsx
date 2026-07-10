@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUIStore } from '@/store/uiStore';
+import { useUIStore, isNebulaTheme } from '@/store/uiStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useCollectionStore } from '@/store/collectionStore';
@@ -20,6 +20,7 @@ import HistoryPanel from '@/components/History/HistoryPanel.jsx';
 import toast from 'react-hot-toast';
 import SyncSidebar from '@/components/Sync/SyncSidebar';
 import api from '@/lib/api';
+import NebulaVideoBackground from '@/components/NebulaVideoBackground';
 
 const TAB_METHOD_STYLES = {
   GET:     { color: '#22C55E', bg: 'rgba(34,197,94,0.09)' },
@@ -229,6 +230,12 @@ export default function LayoutV2({
         e.dataTransfer.dropEffect = 'copy';
       }}
     >
+      {isNebulaTheme(theme) && (
+        <NebulaVideoBackground
+          overlay="dashboard"
+        />
+      )}
+
       {/* ── Top bar ── */}
       <TopBarV2
         sidebarOpen={sidebarV2Open}

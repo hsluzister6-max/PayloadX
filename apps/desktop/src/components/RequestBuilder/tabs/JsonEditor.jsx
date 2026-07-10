@@ -506,7 +506,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: 'var(--bg-primary)', borderRadius: 12, border: '1px solid var(--border-1)' }}>
+    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: 'transparent', borderRadius: 12, border: '1px solid var(--border-1)' }}>
       <style>{`
         .jk  { color: var(--text-primary) }
         .js  { color: var(--success) }

@@ -26,7 +26,7 @@ function PayloadX({ className = "", fontSize = "16px", size = "44px", ...props }
         fontFamily: 'Syne, sans-serif',
         fontWeight: 900,
         fontSize: fontSize,
-        color: '#0D1017',
+        color: '#1A100C',
         letterSpacing: '-1.5px',
         zIndex: 1,
     };

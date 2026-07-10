@@ -219,6 +219,502 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   NEBULA THEMES — sharp video backdrop + clean translucent panels
+   Classes: .nebula + (.nebula-dark | .nebula-light)
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Portaled to body — fixed full-bleed behind transparent #root */
+.nebula-video-bg {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nebula-video-bg__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.nebula-video-bg__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+html.nebula,
+html.nebula body {
+  background: #0a0605 !important;
+  background-image: none !important;
+}
+
+/* #root must be transparent so the body-level video shows through */
+html.nebula #root {
+  background: transparent !important;
+  background-image: none !important;
+  position: relative;
+  z-index: 1;
+  isolation: auto;
+}
+
+html.nebula body::before {
+  opacity: 0 !important;
+}
+
+/* Login always shows video — keep shell clear even without .nebula */
+html.auth-video {
+  background: #0a0605 !important;
+  background-image: none !important;
+}
+
+html.auth-video body,
+html.auth-video #root {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+html.auth-video #root {
+  position: relative;
+  z-index: 1;
+}
+
+/* Shared Nebula surfaces — clean translucent panels, no blur */
+.nebula .v2-app {
+  background: transparent !important;
+  background-color: transparent !important;
+  isolation: auto;
+}
+
+.nebula .v2-app::before {
+  display: none !important;
+}
+
+.v2-app > *:not(.nebula-video-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.nebula .v2-body,
+.nebula .v2-workspace,
+.nebula .v2-split-row,
+.nebula .v2-split-col {
+  background: transparent !important;
+}
+
+.nebula .v2-header,
+.nebula .icon-rail,
+.nebula .sdbv2-container,
+.nebula .sdbv2-main,
+.nebula .sdbv2-activity-bar,
+.nebula .v2-breadcrumb,
+.nebula .v2-card,
+.nebula .v2-card-title,
+.nebula .empty-state-card,
+.nebula .v2-glass-dropdown,
+.nebula .sdbv2-logout-menu {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.nebula .v2-header {
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+  z-index: 40 !important;
+}
+
+.nebula .v2-body {
+  z-index: 1 !important;
+}
+
+.nebula .v2-glass-dropdown {
+  background: var(--glass-bg-strong) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35) !important;
+}
+
+.nebula .v2-glass-dropdown__header {
+  border-color: var(--glass-border) !important;
+}
+
+.nebula .v2-glass-dropdown__item:hover {
+  background: var(--glass-inset) !important;
+}
+
+.nebula .v2-glass-dropdown__item.is-active {
+  background: var(--glass-inset) !important;
+}
+
+.nebula .sdbv2-logout-menu {
+  background: var(--glass-bg-strong) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35) !important;
+}
+
+.nebula .sdbv2-logout-email {
+  border-color: var(--glass-border) !important;
+}
+
+.nebula-light .v2-glass-dropdown,
+.nebula-light .sdbv2-logout-menu {
+  background: var(--glass-bg-strong) !important;
+  box-shadow: 0 12px 28px rgba(26, 16, 12, 0.12) !important;
+}
+
+.nebula .icon-rail {
+  background: var(--glass-bg-strong) !important;
+  border-right: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+.nebula .sdbv2-container {
+  background: transparent !important;
+  border-color: var(--glass-border) !important;
+}
+
+.nebula .sdbv2-activity-bar {
+  background: var(--glass-bg-strong) !important;
+  border-right: 1px solid var(--glass-border) !important;
+}
+
+.nebula .sdbv2-main {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.nebula .v2-breadcrumb {
+  background: var(--glass-bg) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+.nebula .v2-card {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+  margin: 6px !important;
+  overflow: hidden;
+}
+
+.nebula .v2-card::before {
+  display: none !important;
+}
+
+.nebula .v2-card-title {
+  background: var(--glass-inset) !important;
+  border-bottom-color: var(--glass-border) !important;
+}
+
+.nebula .v2-card-body {
+  background: transparent !important;
+}
+
+.nebula .v2-search-box,
+.nebula .sdbv2-search-wrap {
+  background: var(--glass-inset) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.nebula .sdbv2-section {
+  background: var(--glass-inset) !important;
+  border-color: var(--glass-border) !important;
+}
+
+.nebula .empty-state-card {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: none !important;
+}
+
+.nebula .btn-primary,
+.nebula .cta-btn {
+  box-shadow: 0 8px 28px rgba(196, 92, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Labeled nebula chip in header */
+.nebula-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'DM Mono', monospace;
+  border: 1px solid rgba(232, 160, 122, 0.35);
+  background: rgba(232, 140, 90, 0.12);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nebula-chip:hover {
+  background: rgba(232, 140, 90, 0.22);
+  color: var(--text-primary);
+}
+
+.nebula-chip--active {
+  background: linear-gradient(135deg, rgba(196, 92, 58, 0.45), rgba(232, 140, 90, 0.35));
+  border-color: rgba(232, 160, 122, 0.55);
+  color: #fff8f2;
+  box-shadow: 0 0 20px rgba(232, 140, 90, 0.35);
+}
+
+/* ── Nebula Light — solid cream UI, soft video atmosphere ── */
+.nebula-light {
+  --bg-primary: #FAF6F2;
+  --bg-secondary: #F3EDE7;
+  --bg-tertiary: #EBE3DB;
+
+  --surface-1: #FFFCFA;
+  --surface-2: #F7F1EA;
+  --surface-3: #EFE7DF;
+
+  --border-1: rgba(26, 16, 12, 0.08);
+  --border-2: rgba(26, 16, 12, 0.14);
+
+  --text-primary: #1A100C;
+  --text-secondary: #5C4A40;
+  --text-muted: #8A7466;
+
+  --accent: #C45C3A;
+  --accent-hover: #A04830;
+  --accent-text: #FFF8F2;
+
+  --glass-bg: #FAF6F2;
+  --glass-bg-strong: #F3EDE7;
+  --glass-inset: #FFFCFA;
+  --glass-border: rgba(26, 16, 12, 0.08);
+  --glass-shadow: none;
+
+  --metal-base: #FAF6F2;
+  --metal-shine: none;
+  --metal-panel: #FAF6F2;
+  --metal-panel-border: rgba(26, 16, 12, 0.08);
+  --metal-inset: #FFFCFA;
+
+  --success: #15803D;
+  --error: #B91C1C;
+  --warning: #B45309;
+
+  --scrollbar-track: #F3EDE7;
+  --scrollbar-thumb: #D4C0B0;
+  --scrollbar-thumb-hover: #C4B0A0;
+
+  --rail-bg: #F3EDE7;
+  --panel-bg: #FAF6F2;
+  --topbar-bg: #FAF6F2;
+  --rail-icon-color: #8A7466;
+  --rail-icon-active: #1A100C;
+  --rail-active-bar: #C45C3A;
+  --rail-hover-bg: rgba(196, 92, 58, 0.08);
+  --rail-active-bg: rgba(196, 92, 58, 0.12);
+
+  --sidebar-section-bg: #FFFCFA;
+  --sidebar-section-border: rgba(26, 16, 12, 0.08);
+
+  --modal-backdrop: rgba(26, 16, 12, 0.28);
+  --modal-bg: #FFFCFA;
+  --modal-header-bg: #FAF6F2;
+  --modal-border: rgba(26, 16, 12, 0.1);
+  --modal-shadow: 0 24px 64px rgba(26, 16, 12, 0.14);
+  --modal-highlight: rgba(196, 92, 58, 0.08);
+
+  --grad-logo: linear-gradient(145deg, #F6EFE8, #E8C4A8, #D4784E, #F0E0D4);
+  --logo-text: #1A100C;
+
+  --grad-primary: linear-gradient(165deg, #c45c3a 0%, #a04830 35%, #8b3a28 70%, #b05038 100%);
+  --cta-bg: var(--grad-primary);
+  --cta-text: #FFF8F2;
+  --cta-border: rgba(255, 255, 255, 0.25);
+  --cta-shadow: 0 4px 14px rgba(140, 50, 30, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  --cta-shadow-hover: 0 8px 24px rgba(140, 50, 30, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+  --v2-header-bg: #FAF6F2;
+  --v2-header-border: rgba(26, 16, 12, 0.08);
+  --v2-sidebar-border: rgba(26, 16, 12, 0.08);
+  --v2-workspace-bg: transparent;
+  --v2-card-bg: #FFFCFA;
+  --v2-card-border: rgba(26, 16, 12, 0.08);
+  --v2-card-shadow: none;
+  --v2-card-title-bg: #F7F1EA;
+  --v2-breadcrumb-bg: #FAF6F2;
+  --v2-search-bg: #FFFCFA;
+  --v2-search-border: rgba(26, 16, 12, 0.1);
+}
+
+/* Soften video under light mode so cream UI stays clean */
+html.nebula-light .nebula-video-bg__video {
+  filter: brightness(1.25) saturate(0.55) contrast(0.92);
+  opacity: 0.45;
+}
+
+html.nebula-light {
+  background: #F3EDE7 !important;
+}
+
+html.nebula-light #root {
+  background: transparent !important;
+}
+
+/* Light mode shell: solid cream chrome */
+.nebula-light .v2-header,
+.nebula-light .icon-rail,
+.nebula-light .sdbv2-main,
+.nebula-light .sdbv2-activity-bar,
+.nebula-light .v2-breadcrumb,
+.nebula-light .v2-card,
+.nebula-light .empty-state-card,
+.nebula-light .dash-panel {
+  background: var(--glass-bg) !important;
+  border-color: var(--glass-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.nebula-light .v2-workspace,
+.nebula-light .dash-container {
+  background: transparent !important;
+}
+
+.nebula-light .v2-card {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border-1) !important;
+}
+
+.nebula-light .v2-card-title {
+  background: var(--surface-2) !important;
+}
+
+.nebula-light .sdbv2-section,
+.nebula-light .v2-search-box,
+.nebula-light .sdbv2-search-wrap {
+  background: var(--surface-1) !important;
+  border-color: var(--border-1) !important;
+}
+
+.nebula-light .dash-panel {
+  background: var(--surface-1) !important;
+  border: 1px solid var(--border-1) !important;
+  border-radius: 10px;
+}
+
+.nebula-light .nebula-chip {
+  border-color: rgba(196, 92, 58, 0.35);
+  background: rgba(196, 92, 58, 0.1);
+  color: #5C4A40;
+}
+
+.nebula-light .nebula-chip--active {
+  background: linear-gradient(135deg, #c45c3a, #a04830);
+  border-color: #a04830;
+  color: #fff8f2;
+  box-shadow: 0 4px 14px rgba(140, 50, 30, 0.25);
+}
+
+/* ── Nebula Dark — clean ember panels over sharp video ── */
+.nebula-dark {
+  --bg-primary: transparent;
+  --bg-secondary: rgba(14, 8, 6, 0.82);
+  --bg-tertiary: rgba(10, 6, 5, 0.9);
+
+  --surface-1: rgba(22, 12, 10, 0.82);
+  --surface-2: rgba(18, 10, 8, 0.78);
+  --surface-3: rgba(28, 16, 12, 0.88);
+
+  --border-1: rgba(232, 160, 122, 0.12);
+  --border-2: rgba(232, 160, 122, 0.2);
+
+  --text-primary: #F6EFE8;
+  --text-secondary: #D4C0B0;
+  --text-muted: #B89A88;
+
+  --accent: #E88C5A;
+  --accent-hover: #F0A878;
+  --accent-text: #1A100C;
+
+  --glass-bg: rgba(14, 8, 6, 0.78);
+  --glass-bg-strong: rgba(10, 6, 5, 0.88);
+  --glass-inset: rgba(255, 248, 242, 0.06);
+  --glass-border: rgba(232, 160, 122, 0.2);
+  --glass-shadow: none;
+
+  --metal-base: transparent;
+  --metal-shine: none;
+  --metal-panel: var(--glass-bg);
+  --metal-panel-border: var(--glass-border);
+  --metal-inset: var(--glass-inset);
+
+  --success: #22C55E;
+  --error: #EF4444;
+  --warning: #FEBC2E;
+
+  --scrollbar-track: rgba(10, 6, 5, 0.4);
+  --scrollbar-thumb: rgba(232, 160, 122, 0.25);
+  --scrollbar-thumb-hover: rgba(232, 160, 122, 0.4);
+
+  --rail-bg: var(--glass-bg-strong);
+  --panel-bg: var(--glass-bg);
+  --topbar-bg: var(--glass-bg);
+  --rail-icon-color: #B89A88;
+  --rail-icon-active: #F6EFE8;
+  --rail-active-bar: #E88C5A;
+  --rail-hover-bg: rgba(232, 140, 90, 0.12);
+  --rail-active-bg: rgba(232, 140, 90, 0.18);
+
+  --sidebar-section-bg: var(--glass-inset);
+  --sidebar-section-border: var(--glass-border);
+
+  --modal-backdrop: rgba(0, 0, 0, 0.55);
+  --modal-bg: rgba(18, 10, 8, 0.88);
+  --modal-header-bg: rgba(22, 12, 10, 0.92);
+  --modal-border: var(--glass-border);
+  --modal-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --modal-highlight: rgba(232, 140, 90, 0.12);
+
+  --grad-logo: linear-gradient(145deg, #F6EFE8, #E8C4A8, #D4784E, #F0E0D4);
+  --logo-text: #1A100C;
+
+  --grad-primary: linear-gradient(145deg, #fff8f2, #e8d4c4, #f0e0d4, #fffaf6);
+  --cta-bg: var(--grad-primary);
+  --cta-text: #1A100C;
+  --cta-border: rgba(255, 248, 242, 0.35);
+  --cta-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+  --cta-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 24px rgba(232, 140, 90, 0.25);
+
+  --v2-header-bg: var(--glass-bg);
+  --v2-header-border: var(--glass-border);
+  --v2-sidebar-border: var(--glass-border);
+  --v2-workspace-bg: transparent;
+  --v2-card-bg: var(--glass-bg);
+  --v2-card-border: var(--glass-border);
+  --v2-card-shadow: var(--glass-shadow);
+  --v2-card-title-bg: var(--glass-inset);
+  --v2-breadcrumb-bg: var(--glass-bg);
+  --v2-search-bg: var(--glass-inset);
+  --v2-search-border: var(--glass-border);
+}
+
+.nebula-dark .metallic-app-name {
+  animation: none;
+  background: none;
+  -webkit-text-fill-color: #F6EFE8;
+  color: #F6EFE8;
+  filter: drop-shadow(0 2px 12px rgba(232, 140, 90, 0.25));
+}
+
+/* ══════════════════════════════════════════════════════════════════
    BASE
    ══════════════════════════════════════════════════════════════════ */
 * {
@@ -1080,8 +1576,17 @@ textarea,
   z-index: 0;
 }
 
-.v2-app > * {
+.v2-app > *:not(.nebula-video-bg) {
   position: relative;
+  z-index: 1;
+}
+
+/* Header must stack above the body/sidebar so Team/Project menus aren't clipped behind glass panels */
+.v2-app > .v2-header {
+  z-index: 40;
+}
+
+.v2-app > .v2-body {
   z-index: 1;
 }
 
@@ -1243,6 +1748,29 @@ textarea,
   --v2-breadcrumb-bg: var(--metal-panel);
   --v2-search-bg: var(--metal-inset);
   --v2-search-border: var(--metal-panel-border);
+}
+
+/* Re-assert Nebula glass tokens AFTER classic :root/.light v2 overrides */
+.nebula-dark,
+.nebula-light {
+  --v2-header-bg: var(--glass-bg);
+  --v2-header-border: var(--glass-border);
+  --v2-sidebar-border: var(--glass-border);
+  --v2-workspace-bg: transparent;
+  --v2-card-bg: var(--glass-bg);
+  --v2-card-border: var(--glass-border);
+  --v2-card-shadow: var(--glass-shadow);
+  --v2-card-title-bg: var(--glass-inset);
+  --v2-breadcrumb-bg: var(--glass-bg);
+  --v2-search-bg: var(--glass-inset);
+  --v2-search-border: var(--glass-border);
+  --panel-bg: var(--glass-bg);
+  --topbar-bg: var(--glass-bg);
+  --rail-bg: var(--glass-bg-strong);
+  --metal-panel: var(--glass-bg);
+  --metal-inset: var(--glass-inset);
+  --metal-base: transparent;
+  --metal-shine: none;
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2188,18 +2716,110 @@ textarea,
   position: relative;
 }
 
-.sdbv2-logout-menu {
-  position: absolute;
-  bottom: 100%;
-  left: 4px;
-  width: 176px;
-  background: var(--modal-bg);
+/* Portaled Team/Project menus — frosted glass above all shell layers */
+.v2-glass-dropdown {
+  position: fixed;
+  z-index: 10000;
+  width: 224px;
+  padding: 4px 0;
+  border-radius: 12px;
   border: 1px solid var(--border-1);
-  border-radius: 8px;
+  background: rgba(22, 22, 26, 0.88);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  animation: v2-menu-appear 0.14s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.v2-glass-dropdown__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.v2-glass-dropdown__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.v2-glass-dropdown__action {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.v2-glass-dropdown__action:hover {
+  color: var(--text-primary);
+}
+
+.v2-glass-dropdown__list {
+  max-height: 240px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.v2-glass-dropdown__empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px;
+  margin: 0;
+}
+
+.v2-glass-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  text-align: left;
+}
+
+.v2-glass-dropdown__item:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.v2-glass-dropdown__item.is-active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.v2-glass-dropdown__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.sdbv2-logout-menu {
+  position: fixed;
+  width: 200px;
+  background: rgba(22, 22, 26, 0.88);
+  border: 1px solid var(--border-1);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: var(--modal-shadow);
-  z-index: 1000;
-  margin-bottom: 6px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  z-index: 10000;
+  margin: 0;
 }
 
 .light .sdbv2-logout-menu {
