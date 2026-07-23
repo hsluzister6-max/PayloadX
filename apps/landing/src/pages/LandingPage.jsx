@@ -12,15 +12,16 @@ const HeroScene = lazy(() => import("../components/three/HeroScene"));
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
-const STATIC_DL = `${REPO_URL}/releases/download/main`;
-const MAC_DMG = `${REPO_URL}/releases/download/v1.5.0/PayloadX_aarch64.dmg`;
+const RELEASE_TAG = "v1.5.0";
+const RELEASE_DL = `${REPO_URL}/releases/download/${RELEASE_TAG}`;
+const MAC_DMG = `${RELEASE_DL}/PayloadX_aarch64.dmg`;
 
 const PLATFORMS = [
   { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, link: MAC_DMG },
-  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${STATIC_DL}/PayloadX_x64-setup.exe` },
+  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${RELEASE_DL}/PayloadX_x64-setup.exe` },
   { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#", comingSoon: true },
-  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.AppImage` },
-  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${STATIC_DL}/payload-x_amd64.deb` },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${RELEASE_DL}/payload-x_amd64.AppImage` },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${RELEASE_DL}/payload-x_amd64.deb` },
 ];
 
 const PILLARS = [
@@ -121,9 +122,9 @@ function detectUserOS() {
   }
   const ua = window.navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
-  if (ua.includes("Win")) return { name: "Windows", link: `${STATIC_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> };
+  if (ua.includes("Win")) return { name: "Windows", link: `${RELEASE_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> };
   if (ua.includes("Mac")) return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
-  if (ua.includes("Linux")) return { name: "Linux", link: `${STATIC_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> };
+  if (ua.includes("Linux")) return { name: "Linux", link: `${RELEASE_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> };
   return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
 }
 
