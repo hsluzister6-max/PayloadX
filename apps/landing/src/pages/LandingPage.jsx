@@ -13,7 +13,7 @@ gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
 const STATIC_DL = `${REPO_URL}/releases/download/main`;
-const MAC_DMG = `${REPO_URL}/releases/download/v1.4.0/PayloadX_aarch64.dmg`;
+const MAC_DMG = `${REPO_URL}/releases/download/v1.5.0/PayloadX_aarch64.dmg`;
 
 const PLATFORMS = [
   { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, link: MAC_DMG },
