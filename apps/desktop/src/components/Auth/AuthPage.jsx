@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useServerConfigStore } from '@/store/serverConfigStore';
-import { useUIStore, isNebulaTheme, THEME_LABELS } from '@/store/uiStore';
+import { useUIStore, THEME_LABELS } from '@/store/uiStore';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/api/shell';
 import toast from 'react-hot-toast';
 import PayloadX from '../core/logo';
 import ForgotPassword from './ForgotPassword';
-import NebulaVideoBackground from '@/components/NebulaVideoBackground';
 
 export default function AuthPage() {
   const { serverMode, customUrl, setServerMode, setCustomUrl } = useServerConfigStore();
-  const { theme, setTheme, toggleNebula } = useUIStore();
-  const isNebula = isNebulaTheme(theme);
+  const { theme, setTheme } = useUIStore();
   // Default to 'login' to avoid showing the server selection screen to existing users
   const [mode, setMode] = useState('login');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -23,28 +21,6 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, signup, loginWithGoogle, isLoading } = useAuthStore();
-
-  // Keep shell transparent so the portaled video is visible behind login
-  useEffect(() => {
-    const root = document.documentElement;
-    const body = document.body;
-    const appRoot = document.getElementById('root');
-    root.classList.add('auth-video');
-    const prevHtml = root.style.background;
-    const prevBody = body.style.background;
-    const prevRoot = appRoot?.style.background;
-    root.style.background = '#0a0605';
-    body.style.background = 'transparent';
-    if (appRoot) appRoot.style.background = 'transparent';
-    return () => {
-      root.classList.remove('auth-video');
-      root.style.background = prevHtml;
-      body.style.background = prevBody;
-      if (appRoot) appRoot.style.background = prevRoot || '';
-    };
-  }, []);
-
-  // video play handled by NebulaVideoBackground
 
   const handleSelectServer = async (selectedMode) => {
     if (selectedMode === 'payloadx') {
@@ -268,84 +244,51 @@ export default function AuthPage() {
   );
 
   return (
-    <div
-      className={`flex h-screen overflow-hidden font-mono relative ${
-        isNebula ? 'text-[#7A6558]' : 'text-slate-400'
-      }`}
-      style={{
-        background: 'transparent',
-        color: isNebula ? 'var(--text-muted)' : undefined,
-      }}
-    >
-      {/* Always play hero video behind the login shell */}
-      <NebulaVideoBackground overlay="auth" />
-
-      {/* Theme controls: classic Dark/Light (hidden on Nebula) + Nebula toggle */}
+    <div className="flex h-screen overflow-hidden font-mono relative text-slate-400 bg-[color:var(--bg-primary)]">
+      {/* Theme controls: Dark / Light */}
       <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
-        {!isNebula && (
-          <div
-            className="flex items-center gap-1 p-1 rounded-full border backdrop-blur-md"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              borderColor: 'rgba(255,255,255,0.08)',
-            }}
-          >
-            {['dark', 'light'].map((modeId) => {
-              const active = theme === modeId;
-              return (
-                <button
-                  key={modeId}
-                  type="button"
-                  onClick={() => setTheme(modeId)}
-                  className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
-                  style={{
-                    background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                    color: active ? '#E8ECF4' : 'rgba(156,163,184,0.7)',
-                    border: active
-                      ? '1px solid rgba(255,255,255,0.15)'
-                      : '1px solid transparent',
-                  }}
-                >
-                  {THEME_LABELS[modeId]}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={toggleNebula}
-          className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border backdrop-blur-md"
+        <div
+          className="flex items-center gap-1 p-1 rounded-full border backdrop-blur-md"
           style={{
-            background: isNebula ? 'rgba(232,140,90,0.3)' : 'rgba(255,255,255,0.04)',
-            borderColor: isNebula ? 'rgba(232,160,122,0.5)' : 'rgba(255,255,255,0.08)',
-            color: isNebula ? '#F6EFE8' : 'rgba(156,163,184,0.85)',
+            background: 'rgba(255,255,255,0.04)',
+            borderColor: 'rgba(255,255,255,0.08)',
           }}
-          title={isNebula ? 'Disable Nebula' : 'Enable Nebula'}
         >
-          ✦ Nebula
-        </button>
+          {['dark', 'light'].map((modeId) => {
+            const active = theme === modeId;
+            return (
+              <button
+                key={modeId}
+                type="button"
+                onClick={() => setTheme(modeId)}
+                className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
+                style={{
+                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  color: active ? '#E8ECF4' : 'rgba(156,163,184,0.7)',
+                  border: active
+                    ? '1px solid rgba(255,255,255,0.15)'
+                    : '1px solid transparent',
+                }}
+              >
+                {THEME_LABELS[modeId]}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Left Side: Auth Form ── */}
       <div
         className="w-full lg:w-[35%] flex flex-col relative z-10 border-r"
         style={{
-          background: isNebula
-            ? 'rgba(10,6,5,0.78)'
-            : 'rgba(6,6,6,0.78)',
-          borderColor: isNebula
-            ? 'rgba(232,160,122,0.12)'
-            : 'rgba(255,255,255,0.06)',
+          background: 'rgba(6,6,6,0.78)',
+          borderColor: 'rgba(255,255,255,0.06)',
         }}
       >
         {/* App Logo */}
         <div className="absolute top-10 left-10 flex items-center gap-3 z-20">
           <PayloadX />
-          <span
-            className={`text-lg font-black tracking-tight ${isNebula ? '' : 'metallic-app-name'}`}
-            style={isNebula ? { fontFamily: 'Syne, sans-serif', color: '#F6EFE8' } : undefined}
-          >
+          <span className="text-lg font-black tracking-tight metallic-app-name">
             PayloadX
           </span>
         </div>
@@ -627,21 +570,18 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── Right Side: video stage + copy ── */}
+      {/* ── Right Side: stage + copy ── */}
       <div className="hidden lg:flex lg:w-[65%] relative overflow-hidden items-center justify-center p-12 z-10 bg-transparent">
         <div className="relative z-10 w-full max-w-2xl flex flex-col gap-6 text-left">
           <p
             className="text-[11px] font-semibold uppercase tracking-[0.22em]"
-            style={{ color: isNebula ? '#E88C5A' : '#C8CDD8' }}
+            style={{ color: '#C8CDD8' }}
           >
             Open source · Free forever
           </p>
           <h2
             className="text-4xl font-extrabold tracking-tight leading-tight"
-            style={{
-              fontFamily: isNebula ? 'Syne, sans-serif' : undefined,
-              color: isNebula ? '#F6EFE8' : '#E8ECF4',
-            }}
+            style={{ color: '#E8ECF4' }}
           >
             Everything you need to
             <br />
@@ -649,7 +589,7 @@ export default function AuthPage() {
           </h2>
           <p
             className="text-[15px] leading-relaxed max-w-md"
-            style={{ color: isNebula ? 'rgba(244,235,227,0.72)' : 'rgba(156,163,184,0.85)' }}
+            style={{ color: 'rgba(156,163,184,0.85)' }}
           >
             The modern, lightweight alternative to Postman — crafted for developers who move fast.
           </p>

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import PayloadX from '@/components/core/logo';
-import { useUIStore, isNebulaTheme } from '@/store/uiStore';
-import NebulaVideoBackground from '@/components/NebulaVideoBackground';
 
 const steps = [
   { progress: 18, text: 'Initializing…' },
@@ -12,8 +10,6 @@ const steps = [
 ];
 
 export default function SplashScreen({ onComplete }) {
-  const theme = useUIStore((s) => s.theme);
-  const isNebula = isNebulaTheme(theme);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('');
 
@@ -29,98 +25,6 @@ export default function SplashScreen({ onComplete }) {
     };
     setTimeout(tick, 600);
   }, [onComplete]);
-
-  if (isNebula) {
-    return (
-      <div className="fixed inset-0 z-50 overflow-hidden flex flex-col items-center justify-center font-mono">
-        <NebulaVideoBackground overlay="splash" />
-
-        <div className="relative z-10 flex flex-col items-center w-full max-w-md px-6">
-          <div
-            className="relative w-full rounded-2xl overflow-hidden animate-fade-up"
-            style={{
-              background: 'rgba(18, 10, 8, 0.45)',
-              border: '1px solid rgba(232, 160, 122, 0.22)',
-              boxShadow:
-                '0 24px 64px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,248,242,0.08)',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
-            }}
-          >
-            <div
-              className="h-10 flex items-center px-4 gap-1.5"
-              style={{ borderBottom: '1px solid rgba(232, 160, 122, 0.12)' }}
-            >
-              <div className="w-2 h-2 rounded-full" style={{ background: '#FF5F57' }} />
-              <div className="w-2 h-2 rounded-full" style={{ background: '#FEBC2E' }} />
-              <div className="w-2 h-2 rounded-full" style={{ background: '#28C840' }} />
-            </div>
-
-            <div className="flex flex-col items-center justify-center px-8 py-12">
-              <PayloadX className="w-16 h-16" fontSize="24px" />
-
-              <div className="mt-6 text-center">
-                <h1
-                  className="text-4xl font-black tracking-tight"
-                  style={{ fontFamily: 'Syne, sans-serif', color: '#F6EFE8' }}
-                >
-                  PayloadX
-                </h1>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-[0.28em] mt-2"
-                  style={{ color: 'rgba(232, 140, 90, 0.85)' }}
-                >
-                  API Studio
-                </p>
-              </div>
-
-              <p
-                className="mt-5 text-[12px] text-center leading-relaxed max-w-[240px]"
-                style={{ color: 'rgba(244, 235, 227, 0.65)' }}
-              >
-                Open source · Free forever
-              </p>
-            </div>
-
-            <div className="h-1 w-full" style={{ background: 'rgba(232, 160, 122, 0.12)' }}>
-              <div
-                className="h-full transition-all duration-700 ease-in-out"
-                style={{
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, #C45C3A 0%, #E88C5A 50%, #F0C4A0 100%)',
-                  boxShadow: '0 0 12px rgba(232, 140, 90, 0.45)',
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 mt-8 animate-fade-in">
-            <div
-              className="w-3.5 h-3.5 rounded-full animate-spin"
-              style={{
-                border: '1.5px solid rgba(232, 160, 122, 0.2)',
-                borderTopColor: 'rgba(232, 140, 90, 0.9)',
-              }}
-            />
-            <span
-              className="text-[10px] font-medium uppercase tracking-[0.2em]"
-              style={{ color: 'rgba(244, 235, 227, 0.7)' }}
-            >
-              {statusText}
-            </span>
-          </div>
-
-          <p
-            className="mt-14 text-[9px] uppercase tracking-[0.25em] font-medium"
-            style={{ color: 'rgba(232, 160, 122, 0.4)' }}
-          >
-            Project by{' '}
-            <span style={{ color: 'rgba(244, 235, 227, 0.65)' }}>Sundan Sharma</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-[#07090D] flex flex-col items-center justify-center z-50 overflow-hidden font-mono">

@@ -1,16 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@300;400;500&display=swap');
-
 .nav {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 2rem;
-  flex-shrink: 0;
   width: 100%;
-  height: 56px;
   box-sizing: border-box;
   z-index: 1000;
   transition: background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease;
+}
+
+.navInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  height: 64px;
+  padding: 0 4.5rem;
+  box-sizing: border-box;
 }
 
 .navSolid {
@@ -20,91 +25,190 @@
   backdrop-filter: blur(16px);
 }
 
-.navTransparent {
-  position: absolute;
+.navHome {
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  border-bottom: 1px solid rgba(232, 160, 122, 0.1);
-  background: linear-gradient(
-    to bottom,
-    rgba(10, 4, 3, 0.28) 0%,
-    rgba(10, 4, 3, 0.08) 65%,
-    transparent 100%
-  );
-  backdrop-filter: blur(8px) saturate(1.15);
-  -webkit-backdrop-filter: blur(8px) saturate(1.15);
-}
-
-@media (max-width: 600px) {
-  .nav { padding: 0.85rem 1rem; }
+  border-bottom: 1px solid rgba(200, 205, 215, 0.1);
+  background: rgba(14, 14, 16, 0.88);
+  backdrop-filter: blur(18px) saturate(1.1);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
 }
 
 .logoContainer {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  flex-shrink: 0;
 }
 
 .logoTextGroup {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .logoName {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   padding: 0;
 }
 
 .betaBadge {
-  font-size: 0.6rem;
-  font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(232, 140, 90, 0.12);
-  color: rgba(244, 220, 200, 0.9);
-  margin-left: 6px;
-  letter-spacing: 0.05em;
-  vertical-align: middle;
-  border: 1px solid rgba(232, 160, 122, 0.22);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background: rgba(200, 205, 215, 0.08);
+  color: rgba(232, 234, 238, 0.85);
+  letter-spacing: 0.08em;
+  border: 1px solid rgba(200, 205, 215, 0.22);
   text-transform: uppercase;
 }
 
 .navSolid .betaBadge {
   background: var(--accent-soft);
   color: var(--accent);
-  border-color: rgba(232, 140, 90, 0.25);
+  border-color: var(--border-default);
 }
 
-.versionText {
-  font-size: 9px;
-  color: rgba(232, 180, 150, 0.65);
-  font-weight: 600;
-  opacity: 0.9;
-  margin-left: 6px;
+.navLinks {
   display: flex;
   align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  margin-right: 0.75rem;
 }
 
-.navSolid .versionText {
-  color: var(--text-faint);
+.navLinksInner {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
-.navSpacer { flex: 1; }
+.navTextLink {
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 245, 247, 0.58);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  transition: color 0.2s ease, background 0.2s ease;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.navTextLink:hover {
+  color: #f4f5f7;
+  background: rgba(200, 205, 215, 0.06);
+}
+
+.navSolid .navTextLink {
+  color: var(--text-muted);
+}
+
+.navSolid .navTextLink:hover {
+  color: var(--text-primary);
+  background: var(--accent-soft);
+}
+
+.navCta,
+.navCtaDesktop,
+.navCtaCompact {
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0e0e10;
+  text-decoration: none;
+  background: linear-gradient(
+    155deg,
+    #ffffff 0%,
+    #e8eaee 20%,
+    #b8bec8 45%,
+    #d4d8e0 75%,
+    #f2f3f5 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.55rem 1rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  transition: filter 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navCta:hover,
+.navCtaDesktop:hover,
+.navCtaCompact:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* Desktop: GitHub lives in the right cluster; hide duplicate inside navLinks */
+.navLinks .navCta {
+  display: none;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.navHome .navRight {
+  margin-left: 0;
+}
+
+.menuBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(200, 205, 215, 0.2);
+  background: rgba(200, 205, 215, 0.04);
+  color: #f4f5f7;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.menuBtn:hover {
+  background: rgba(200, 205, 215, 0.1);
+  border-color: rgba(200, 205, 215, 0.35);
+}
+
+.navBackdrop {
+  display: none;
+}
 
 .themeToggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 2px;
   border: 1px solid var(--border-default);
   background: var(--bg-card);
   color: var(--text-muted);
@@ -117,57 +221,17 @@
   color: var(--text-primary);
   border-color: var(--border-strong);
   background: var(--bg-pill-hover);
-  transform: translateY(-1px);
-}
-
-.navLink {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(244, 235, 227, 0.78);
-  text-decoration: none;
-  transition: all 0.2s ease;
-  font-family: 'DM Mono', monospace;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid rgba(232, 160, 122, 0.22);
-  background: rgba(20, 8, 6, 0.25);
-  backdrop-filter: blur(8px);
-}
-
-.navLink:hover {
-  color: #fff8f2;
-  background: rgba(232, 140, 90, 0.15);
-  border-color: rgba(232, 160, 122, 0.4);
-}
-
-.navSolid .navLink {
-  color: var(--text-muted);
-  border-color: transparent;
-  background: transparent;
-  border-radius: 6px;
-  backdrop-filter: none;
-}
-
-.navSolid .navLink:hover {
-  color: var(--text-primary);
-  background: var(--accent-soft);
-  border-color: var(--border-default);
 }
 
 .docsBadge {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'DM Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .docsDot {
@@ -176,6 +240,117 @@
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* —— Desktop layout: logo left, links + CTA right —— */
+@media (min-width: 961px) {
+  .navHome .navInner {
+    gap: 1.5rem;
+  }
+
+  .navHome .navLinks {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  .navHome .navRight {
+    margin-left: 0.75rem;
+  }
+
+  .navCtaDesktop {
+    display: inline-flex;
+  }
+}
+
+/* —— Tablet / Mobile —— */
+@media (max-width: 960px) {
+  .navInner {
+    height: 60px;
+    padding: 0 1.5rem;
+  }
+
+  .menuBtn {
+    display: flex;
+  }
+
+  .navCtaDesktop {
+    display: none;
+  }
+
+  .navLinks {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.75rem 1.5rem 1.25rem;
+    background: rgba(14, 14, 16, 0.98);
+    border-bottom: 1px solid rgba(200, 205, 215, 0.12);
+    z-index: 1001;
+    max-height: calc(100dvh - 60px);
+    overflow-y: auto;
+  }
+
+  .navLinksOpen {
+    display: flex;
+  }
+
+  .navLinksInner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+    width: 100%;
+  }
+
+  .navTextLink {
+    width: 100%;
+    text-align: left;
+    padding: 0.9rem 0.85rem;
+    font-size: 0.78rem;
+    border: 1px solid transparent;
+  }
+
+  .navTextLink:hover {
+    border-color: rgba(200, 205, 215, 0.12);
+  }
+
+  .navLinks .navCta {
+    display: flex;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.95rem 1rem;
+  }
+
+  .navBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    top: 60px;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 420px) {
+  .logoName {
+    font-size: 0.92rem;
+  }
+
+  .betaBadge {
+    display: none;
+  }
+
+  .docsBadge {
+    display: none;
+  }
 }
 
 .footer {
@@ -222,11 +397,13 @@
   background-clip: text;
   font-weight: 700;
   display: inline-block;
-  font-family: 'Syne', sans-serif;
+  font-family: "Unbounded", system-ui, sans-serif;
   text-decoration: none;
 }
 
-.metallicText:hover { filter: brightness(1.15); }
+.metallicText:hover {
+  filter: brightness(1.15);
+}
 
 @media (max-width: 600px) {
   .footer {

@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 /**
- * Themes:
- *   dark | light   — classic solid themes
- *   nebula-dark    — video + glass morphism (dark only)
+ * Themes: dark | light
  */
 export const useUIStore = create(
   persist(
@@ -33,7 +31,7 @@ export const useUIStore = create(
       contextMenu: null,
       isLoading: false,
       activeMainTab: 'request',
-      theme: 'nebula-dark', // 'dark' | 'light' | 'nebula-dark'
+      theme: 'dark', // 'dark' | 'light'
       layoutVersion: 'v2',
       sidebarV2Open: true,
       workspaceOrientation: 'vertical',
@@ -67,30 +65,10 @@ export const useUIStore = create(
       setActiveV2Nav: (v) => set({ activeV2Nav: v }),
       setLayoutVersion: (v) => set({ layoutVersion: v }),
 
-      setTheme: (theme) => {
-        // Nebula is dark-only — coerce any legacy light nebula value
-        if (theme === 'nebula-light' || theme === 'nebula') {
-          set({ theme: 'nebula-dark' });
-          return;
-        }
-        set({ theme });
-      },
+      setTheme: (theme) => set({ theme: theme === 'light' ? 'light' : 'dark' }),
 
-      /** Toggle light ↔ dark for classic themes only. Nebula stays dark. */
       toggleTheme: () =>
-        set((s) => {
-          if (isNebulaTheme(s.theme)) return { theme: 'nebula-dark' };
-          return { theme: s.theme === 'dark' ? 'light' : 'dark' };
-        }),
-
-      /** Nebula on/off — Nebula is always dark. */
-      toggleNebula: () =>
-        set((s) => {
-          if (isNebulaTheme(s.theme)) {
-            return { theme: 'dark' };
-          }
-          return { theme: 'nebula-dark' };
-        }),
+        set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
 
       toggleLayout: () =>
         set((s) => ({ layoutVersion: s.layoutVersion === 'v1' ? 'v2' : 'v1' })),
@@ -127,25 +105,24 @@ export const useUIStore = create(
     }),
     {
       name: 'syncnest-ui',
-      version: 5,
+      version: 6,
       migrate: (persistedState, version) => {
         const state = persistedState && typeof persistedState === 'object' ? { ...persistedState } : {};
-        if (version < 2) {
-          state.theme = 'nebula-dark';
-        }
-        if (version < 3) {
-          if (state.theme === 'nebula') state.theme = 'nebula-dark';
-        }
-        if (version < 4) {
-          if (state.theme === 'dark' || state.theme === 'light' || !state.theme) {
-            state.theme = 'nebula-dark';
-          }
-          if (state.theme === 'nebula') state.theme = 'nebula-dark';
-        }
-        if (version < 5) {
-          // Drop Nebula Light — Nebula is dark-only
-          if (state.theme === 'nebula-light' || state.theme === 'nebula') {
-            state.theme = 'nebula-dark';
+        // Drop Nebula themes — coerce any legacy nebula* value to dark
+        if (
+          version < 6 ||
+          state.theme === 'nebula' ||
+          state.theme === 'nebula-dark' ||
+          state.theme === 'nebula-light' ||
+          !state.theme
+        ) {
+          if (
+            state.theme === 'nebula' ||
+            state.theme === 'nebula-dark' ||
+            state.theme === 'nebula-light' ||
+            !state.theme
+          ) {
+            state.theme = 'dark';
           }
         }
         return state;
@@ -161,21 +138,15 @@ export const useUIStore = create(
   )
 );
 
-export function isNebulaTheme(theme) {
-  return theme === 'nebula' || theme === 'nebula-dark' || theme === 'nebula-light';
-}
-
 export function isLightTheme(theme) {
   return theme === 'light';
 }
 
 export function isDarkTheme(theme) {
-  return theme === 'dark' || theme === 'nebula-dark' || theme === 'nebula' || theme === 'nebula-light';
+  return theme !== 'light';
 }
 
 export const THEME_LABELS = {
   dark: 'Dark',
   light: 'Light',
-  'nebula-dark': 'Nebula',
-  nebula: 'Nebula',
 };

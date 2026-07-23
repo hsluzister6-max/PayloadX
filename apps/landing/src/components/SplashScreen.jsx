@@ -1,105 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { AnimatedText } from "./AnimatedText";
+import gsap from "gsap";
 import styles from "./SplashScreen.module.css";
 
-const MIN_MS = 2400;
-const DUST_COUNT = 72;
-const STAR_COUNT = 40;
-
-function StarField() {
-  const stars = useMemo(
-    () =>
-      Array.from({ length: STAR_COUNT }, (_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        size: Math.random() > 0.85 ? 2 : 1,
-        delay: Math.random() * 3,
-        duration: 1.8 + Math.random() * 2.5,
-      })),
-    []
-  );
-
-  return (
-    <div className={styles.stars} aria-hidden="true">
-      {stars.map((s) => (
-        <span
-          key={s.id}
-          className={styles.star}
-          style={{
-            left: s.left,
-            top: s.top,
-            width: s.size,
-            height: s.size,
-            animationDelay: `${s.delay}s`,
-            animationDuration: `${s.duration}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function DustField() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: DUST_COUNT }, (_, i) => {
-        const nearCenter = i < 36;
-        return {
-          id: i,
-          left: nearCenter ? `${28 + Math.random() * 44}%` : `${Math.random() * 100}%`,
-          top: nearCenter ? `${30 + Math.random() * 40}%` : `${Math.random() * 100}%`,
-          size: nearCenter ? 1.5 + Math.random() * 3.5 : 1 + Math.random() * 2,
-          delay: Math.random() * 2.5,
-          duration: 2.8 + Math.random() * 4,
-          driftX: (Math.random() - 0.5) * (nearCenter ? 90 : 50),
-          driftY: -30 - Math.random() * (nearCenter ? 100 : 60),
-          opacity: nearCenter ? 0.45 + Math.random() * 0.5 : 0.2 + Math.random() * 0.35,
-        };
-      }),
-    []
-  );
-
-  return (
-    <div className={styles.dust} aria-hidden="true">
-      {particles.map((p) => (
-        <motion.span
-          key={p.id}
-          className={styles.dustParticle}
-          style={{
-            left: p.left,
-            top: p.top,
-            width: p.size,
-            height: p.size,
-          }}
-          animate={{
-            x: [0, p.driftX * 0.5, p.driftX, p.driftX * 0.3],
-            y: [0, p.driftY * 0.4, p.driftY, p.driftY * 1.1],
-            opacity: [0, p.opacity, p.opacity * 0.7, 0],
-            scale: [0.4, 1.15, 1, 0.3],
-          }}
-          transition={{
-            duration: p.duration,
-            delay: p.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+const MIN_MS = 2200;
+const RING_COUNT = 3;
 
 /**
- * Premium dark splash — ambient glow, stars, ember dust, shimmer title.
- * No photo background. Minimum ~2.4s then fade out.
+ * Cinematic splash — flash rings, title cascade, signal progress.
  */
 export default function SplashScreen({ onDone }) {
   const startedAt = useRef(Date.now());
+  const rootRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [exiting, setExiting] = useState(false);
   const doneRef = useRef(false);
+
+  const rings = useMemo(
+    () => Array.from({ length: RING_COUNT }, (_, i) => i),
+    []
+  );
 
   useEffect(() => {
     const tick = setInterval(() => {
@@ -107,13 +26,55 @@ export default function SplashScreen({ onDone }) {
       const timeRatio = Math.min(elapsed / MIN_MS, 1);
       setProgress((prev) => {
         if (exiting) return 100;
-        const eased = 1 - Math.pow(1 - timeRatio, 2.2);
-        const target = 6 + eased * 90;
-        return prev + (target - prev) * 0.16;
+        const eased = 1 - Math.pow(1 - timeRatio, 2.4);
+        const target = 4 + eased * 94;
+        return prev + (target - prev) * 0.18;
       });
-    }, 32);
+    }, 28);
     return () => clearInterval(tick);
   }, [exiting]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const ctx = gsap.context(() => {
+      if (reduce) {
+        gsap.set([".splash-title .ch", ".splash-eye", ".splash-progress", ".splash-ring"], {
+          autoAlpha: 1,
+          clearProps: "transform",
+        });
+        return;
+      }
+
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      tl.from(".splash-flash", { autoAlpha: 0, scale: 0.6, duration: 0.35 })
+        .to(".splash-flash", { autoAlpha: 0, scale: 1.8, duration: 0.55 }, "-=0.05")
+        .from(
+          ".splash-ring",
+          { scale: 0.4, autoAlpha: 0, stagger: 0.12, duration: 0.7, ease: "power2.out" },
+          "-=0.45"
+        )
+        .from(".splash-eye", { autoAlpha: 0, y: 16, duration: 0.45 }, "-=0.35")
+        .from(
+          ".splash-title .ch",
+          { autoAlpha: 0, y: 48, rotateX: -55, stagger: 0.035, duration: 0.65, ease: "power4.out" },
+          "-=0.2"
+        )
+        .from(".splash-progress", { autoAlpha: 0, y: 12, duration: 0.4 }, "-=0.25");
+
+      gsap.to(".splash-ring", {
+        rotate: 180,
+        duration: 8,
+        repeat: -1,
+        ease: "none",
+        stagger: { each: 0.4, from: "end" },
+      });
+    }, el);
+
+    return () => ctx.revert();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -121,57 +82,63 @@ export default function SplashScreen({ onDone }) {
       doneRef.current = true;
       setExiting(true);
       setProgress(100);
-      setTimeout(() => onDone?.(), 520);
+
+      const el = rootRef.current;
+      if (!el) {
+        onDone?.();
+        return;
+      }
+
+      gsap.to(el, {
+        autoAlpha: 0,
+        scale: 1.04,
+        filter: "blur(8px)",
+        duration: 0.55,
+        ease: "power2.inOut",
+        onComplete: () => onDone?.(),
+      });
     }, MIN_MS);
 
     return () => clearTimeout(timer);
   }, [onDone]);
 
+  const title = "PayloadX";
+
   return (
-    <motion.div
+    <div
+      ref={rootRef}
       className={styles.splash}
-      initial={{ opacity: 1 }}
-      animate={{ opacity: exiting ? 0 : 1 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       aria-busy={!exiting}
       aria-label="Loading PayloadX"
     >
-      <div className={styles.ambience} aria-hidden="true">
-        <div className={styles.glowCore} />
-        <div className={styles.glowRing} />
-        <div className={styles.vignette} />
+      <div className={styles.voidBg} aria-hidden="true" />
+      <div className={`${styles.flash} splash-flash`} aria-hidden="true" />
+
+      <div className={styles.rings} aria-hidden="true">
+        {rings.map((i) => (
+          <div
+            key={i}
+            className={`${styles.ring} splash-ring`}
+            style={{
+              width: `${180 + i * 90}px`,
+              height: `${180 + i * 90}px`,
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
       </div>
 
-      <StarField />
-      <DustField />
-
       <div className={styles.center}>
-        <motion.p
-          className={styles.eyebrow}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          Open source · Free forever
-        </motion.p>
+        <p className={`${styles.eyebrow} splash-eye`}>Open source · Local-first</p>
+        <h1 className={`${styles.title} splash-title`} aria-label={title}>
+          {title.split("").map((ch, i) => (
+            <span key={i} className="ch">
+              {ch}
+            </span>
+          ))}
+        </h1>
 
-        <div className={styles.titleStage}>
-          <div className={styles.titleGlow} aria-hidden="true" />
-          <AnimatedText
-            text="PayloadX"
-            gradientColors="linear-gradient(90deg, #FFF8F2 0%, #F0C4A0 25%, #E88C5A 50%, #C45C3A 75%, #FFF8F2 100%)"
-            gradientAnimationDuration={2}
-            hoverEffect
-            className={styles.titleWrap}
-          />
-        </div>
-
-        <motion.div
-          className={styles.progressBlock}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.25, duration: 0.4 }}
-        >
+        <div className={`${styles.progressBlock} splash-progress`}>
           <div
             className={styles.progressTrack}
             role="progressbar"
@@ -184,9 +151,9 @@ export default function SplashScreen({ onDone }) {
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
-          <span className={styles.progressLabel}>Loading studio</span>
-        </motion.div>
+          <span className={styles.progressLabel}>Initializing studio</span>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

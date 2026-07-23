@@ -734,6 +734,62 @@ export const useRequestStore = create(
         }
       },
 
+      /**
+       * Duplicate an existing request into the same collection/folder.
+       * Strips server ids and appends " Copy" to the name.
+       */
+      duplicateRequest: async (sourceRequest, overrides = {}) => {
+        if (!sourceRequest) {
+          return { success: false, error: 'No request to duplicate' };
+        }
+
+        // Prefer the freshest in-memory copy (open tab / cache) over a stale sidebar row.
+        const cached = sourceRequest._id
+          ? get().getCachedRequest(sourceRequest._id, sourceRequest.collectionId)
+          : null;
+        const src = cached || sourceRequest;
+
+        const {
+          _id,
+          id,
+          createdAt,
+          updatedAt,
+          creatorId,
+          __v,
+          ...rest
+        } = src;
+
+        const baseName = (overrides.name ?? src.name ?? 'Untitled Request').replace(/\s+Copy$/, '');
+        const payload = {
+          ...rest,
+          name: overrides.name ?? `${baseName} Copy`,
+          collectionId: overrides.collectionId ?? src.collectionId,
+          projectId: overrides.projectId ?? src.projectId,
+          teamId: overrides.teamId ?? src.teamId,
+          folderId: overrides.folderId !== undefined ? overrides.folderId : (src.folderId || null),
+          headers: deepClone(src.headers || [{ id: uuidv4(), key: '', value: '', enabled: true }]),
+          params: deepClone(src.params || [{ id: uuidv4(), key: '', value: '', enabled: true }]),
+          body: deepClone(src.body || { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] }),
+          auth: deepClone(src.auth || { type: 'none' }),
+        };
+
+        // Fresh row ids so React keys don't collide with the original
+        if (Array.isArray(payload.headers)) {
+          payload.headers = payload.headers.map((h) => ({ ...h, id: uuidv4() }));
+        }
+        if (Array.isArray(payload.params)) {
+          payload.params = payload.params.map((p) => ({ ...p, id: uuidv4() }));
+        }
+        if (Array.isArray(payload.body?.formData)) {
+          payload.body.formData = payload.body.formData.map((f) => ({ ...f, id: f.id ? uuidv4() : undefined }));
+        }
+        if (Array.isArray(payload.body?.urlencoded)) {
+          payload.body.urlencoded = payload.body.urlencoded.map((f) => ({ ...f, id: f.id ? uuidv4() : undefined }));
+        }
+
+        return get().createRequest(payload);
+      },
+
       updateRequestName: async (id, name) => {
         const currentReq = get().currentRequest;
 

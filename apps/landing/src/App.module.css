@@ -21,12 +21,13 @@
   min-height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #050303;
+  background: #0e0e10;
 }
 
 .rootDocs {
   height: 100vh;
   overflow: hidden;
+  background: var(--bg-base);
 }
 
 /* scanline texture */

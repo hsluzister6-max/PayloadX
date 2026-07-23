@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700;800&display=swap');
 
 .docsWrap {
   position: relative;
@@ -7,6 +7,8 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  background: var(--bg-base);
+  font-family: "Sora", system-ui, sans-serif;
 }
 
 .mesh {
@@ -32,6 +34,7 @@
     transparent 2px,
     var(--scanline-color) 2px,
     var(--scanline-color) 4px);
+  opacity: 0.5;
 }
 
 .layout {
@@ -66,13 +69,14 @@
 }
 
 .sidebarGroupTitle {
-  font-size: 0.58rem;
-  font-weight: 800;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
   color: var(--text-faint);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 0 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .sidebarItem {
@@ -80,18 +84,20 @@
   align-items: center;
   gap: 9px;
   padding: 0.55rem 0.75rem;
-  border-radius: 7px;
+  border-radius: 2px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--text-muted);
   transition: all 0.15s;
   text-decoration: none;
   border: 1px solid transparent;
   position: relative;
+  letter-spacing: 0.01em;
 }
 
 .sidebarItem:hover {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   background: var(--accent-soft);
 }
 
@@ -146,38 +152,44 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 0.25rem;
 }
 
 .metallicTitle {
-  font-family: 'Syne', sans-serif;
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  font-weight: 800;
-  color: var(--text-primary);
-  background: none;
-  -webkit-text-fill-color: var(--text-primary);
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  background: var(--metallic-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
   line-height: 1.15;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  word-spacing: 0.04em;
   margin: 0 0 0.5rem;
-  text-shadow: 0 2px 20px rgba(232, 140, 90, 0.08);
+  filter: drop-shadow(0 2px 16px rgba(200, 205, 215, 0.08));
 }
 
 .lead {
-  font-size: 0.95rem;
-  line-height: 1.8;
+  font-size: 0.98rem;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
   color: var(--text-muted);
   max-width: 680px;
+  font-weight: 300;
 }
 
 .quickStartCard {
   background: var(--bg-card);
   border: 1px solid var(--border-default);
-  border-radius: 16px;
+  border-radius: 4px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
 }
@@ -189,10 +201,11 @@
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-code-header);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-muted);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -214,9 +227,9 @@
 .qsStep:hover { background: var(--accent-soft); }
 
 .qsNum {
-  font-family: 'Syne', sans-serif;
+  font-family: "Unbounded", system-ui, sans-serif;
   font-size: 0.75rem;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--accent);
   width: 28px;
   flex-shrink: 0;
@@ -240,7 +253,7 @@
 }
 
 .qsCode {
-  font-family: 'DM Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.82rem;
   color: var(--text-secondary);
   background: var(--bg-code);
@@ -282,11 +295,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: 'Syne', sans-serif;
+  font-family: "Unbounded", system-ui, sans-serif;
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-primary);
   margin-top: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 .sectionTitle::before {
@@ -316,7 +330,7 @@
 .codeBlock {
   background: var(--bg-code);
   border: 1px solid var(--border-default);
-  border-radius: 12px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -336,7 +350,7 @@
 
 .codeBody {
   padding: 1.25rem;
-  font-family: 'DM Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.82rem;
   line-height: 1.7;
   color: var(--text-secondary);
@@ -349,7 +363,7 @@
   padding: 0.85rem 1rem;
   background: var(--accent-soft);
   border: 1px solid var(--border-default);
-  border-radius: 10px;
+  border-radius: 4px;
   font-size: 0.82rem;
   color: var(--text-muted);
   line-height: 1.5;
@@ -361,7 +375,7 @@
 .firebaseCard {
   background: var(--bg-card);
   border: 1px solid var(--border-default);
-  border-radius: 12px;
+  border-radius: 4px;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -372,7 +386,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Syne', sans-serif;
+  font-family: "Unbounded", system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 800;
   color: var(--text-primary);
@@ -461,7 +475,7 @@
   border-collapse: separate;
   border-spacing: 0;
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--border-default);
 }
@@ -497,7 +511,7 @@
   border: 1px solid var(--border-default);
   border-radius: 4px;
   padding: 0.2rem 0.45rem;
-  font-family: 'DM Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
@@ -508,13 +522,13 @@
   gap: 8px;
   background: var(--bg-card);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.75rem;
   color: var(--text-secondary);
   margin: 1rem 1.5rem;
-  font-family: 'DM Mono', monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
 .sidebarOverlay {

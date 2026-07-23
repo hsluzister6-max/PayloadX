@@ -3,7 +3,7 @@ import { isTauri } from '@/lib/executor';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 import { useSocketStore } from '@/store/socketStore';
-import { useUIStore, isLightTheme, isNebulaTheme } from '@/store/uiStore';
+import { useUIStore, isLightTheme } from '@/store/uiStore';
 
 import { useCollectionStore } from '@/store/collectionStore';
 import { useTeamStore } from '@/store/teamStore';
@@ -150,13 +150,10 @@ export default function App() {
 
 
   // Apply theme class to <html> so CSS variables switch correctly.
-  // Nebula is dark-only — legacy nebula-light maps to nebula-dark.
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('light', 'nebula', 'nebula-dark', 'nebula-light');
-    if (theme === 'nebula-dark' || theme === 'nebula' || theme === 'nebula-light') {
-      root.classList.add('nebula', 'nebula-dark');
-    } else if (theme === 'light') {
+    root.classList.remove('light', 'nebula', 'nebula-dark', 'nebula-light', 'auth-video');
+    if (theme === 'light') {
       root.classList.add('light');
     }
   }, [theme]);

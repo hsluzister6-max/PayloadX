@@ -30,7 +30,6 @@ export default function Sidebar() {
     setShowInviteModal,
     theme,
     toggleTheme,
-    toggleNebula,
     toggleLayout,
     setContextMenu,
   } = useUIStore();
@@ -196,6 +195,16 @@ export default function Sidebar() {
           label: 'Export as Postman',
           icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
           onClick: () => handleExportCollection(null, col)
+        },
+        {
+          id: 'duplicate',
+          label: 'Duplicate Collection',
+          icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+          onClick: async () => {
+            const { duplicateCollection } = useCollectionStore.getState();
+            const result = await duplicateCollection(col);
+            if (!result.success) toast.error(result.error || 'Failed to duplicate collection');
+          }
         }
       ]
     });
@@ -493,48 +502,25 @@ export default function Sidebar() {
           Team Members
         </button>
 
-        {/* Dark / Light — classic themes only (Nebula is dark-only) */}
-        {!theme?.startsWith('nebula') && (
-          <button
-            onClick={toggleTheme}
-            title="Toggle light / dark"
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-3)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}
-          >
-            {theme === 'light' ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m8.66-10h-1M4.34 12H3m15.07-6.07l-.71.71M6.64 17.36l-.71.71M17.36 17.36l.71.71M6.64 6.64l.71-.71M12 8a4 4 0 100 8 4 4 0 000-8z" />
-              </svg>
-            )}
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
-          </button>
-        )}
-
-        {/* Separate Nebula toggle */}
+        {/* Dark / Light */}
         <button
-          onClick={toggleNebula}
-          title="Toggle Nebula theme"
+          onClick={toggleTheme}
+          title="Toggle light / dark"
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all"
-          style={{
-            color: theme?.startsWith('nebula') ? 'var(--accent)' : 'var(--text-secondary)',
-            background: theme?.startsWith('nebula') ? 'var(--rail-active-bg)' : '',
-          }}
+          style={{ color: 'var(--text-secondary)' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-3)'; }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = theme?.startsWith('nebula') ? 'var(--accent)' : 'var(--text-secondary)';
-            e.currentTarget.style.background = theme?.startsWith('nebula') ? 'var(--rail-active-bg)' : '';
-          }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = ''; }}
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
-          {theme?.startsWith('nebula') ? 'Nebula on' : 'Nebula'}
+          {theme === 'light' ? (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m8.66-10h-1M4.34 12H3m15.07-6.07l-.71.71M6.64 17.36l-.71.71M17.36 17.36l.71.71M6.64 6.64l.71-.71M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          )}
+          {theme === 'light' ? 'Dark mode' : 'Light mode'}
         </button>
 
         {/* Layout toggle — switch to V2 */}

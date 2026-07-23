@@ -17,11 +17,26 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation-name: shimmer;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-  will-change: background-position;
+  animation-name: shimmer, titleIn;
+  animation-timing-function: linear, cubic-bezier(0.22, 1, 0.36, 1);
+  animation-iteration-count: infinite, 1;
+  animation-direction: alternate, normal;
+  animation-duration: inherit, 0.7s;
+  will-change: background-position, transform, opacity;
+  opacity: 1;
+}
+
+@keyframes titleIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    letter-spacing: 0.12em;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    letter-spacing: -0.04em;
+  }
 }
 
 @keyframes shimmer {
@@ -30,5 +45,12 @@
   }
   100% {
     background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title {
+    animation: none;
+    background-position: 50% 50%;
   }
 }

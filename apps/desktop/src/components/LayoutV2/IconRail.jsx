@@ -1,4 +1,4 @@
-import { useUIStore, isNebulaTheme, isLightTheme } from '@/store/uiStore';
+import { useUIStore, isLightTheme } from '@/store/uiStore';
 import PayloadX from '@/components/core/logo';
 import { 
   FolderOpen, 
@@ -9,7 +9,6 @@ import {
   Settings, 
   Sun, 
   Moon, 
-  Sparkles,
   Layout, 
   Monitor,
   Workflow
@@ -54,7 +53,7 @@ const NAV_ITEMS = [
 ];
 
 export default function IconRail({ activePanel, setActivePanel }) {
-  const { theme, toggleTheme, toggleNebula, toggleLayout } = useUIStore();
+  const { theme, toggleTheme, toggleLayout } = useUIStore();
 
   return (
     <div className="icon-rail">
@@ -81,20 +80,11 @@ export default function IconRail({ activePanel, setActivePanel }) {
 
       {/* Bottom controls */}
       <div className="rail-footer">
-        {!isNebulaTheme(theme) && (
-          <RailButton
-            label={isLightTheme(theme) ? 'Dark mode' : 'Light mode'}
-            icon={isLightTheme(theme) ? <Moon size={18} /> : <Sun size={18} />}
-            isActive={false}
-            onClick={toggleTheme}
-          />
-        )}
-
         <RailButton
-          label={isNebulaTheme(theme) ? 'Nebula on' : 'Nebula'}
-          icon={<Sparkles size={18} />}
-          isActive={isNebulaTheme(theme)}
-          onClick={toggleNebula}
+          label={isLightTheme(theme) ? 'Dark mode' : 'Light mode'}
+          icon={isLightTheme(theme) ? <Moon size={18} /> : <Sun size={18} />}
+          isActive={false}
+          onClick={toggleTheme}
         />
 
         <RailButton

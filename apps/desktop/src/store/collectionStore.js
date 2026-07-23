@@ -459,6 +459,97 @@ export const useCollectionStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Duplicate a collection (folders + requests) into the same project/team.
+   * Folder ids are remapped so nested structure is preserved.
+   */
+  duplicateCollection: async (sourceCollection) => {
+    if (!sourceCollection?._id) {
+      return { success: false, error: 'No collection to duplicate' };
+    }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error('You are offline. Cannot duplicate collection.');
+      return { success: false, error: 'Offline' };
+    }
+
+    const tid = toast.loading('Duplicating collection…');
+    try {
+      // Ensure we have the latest collection doc (folders) + requests
+      const detail = await get().fetchCollectionRequests(sourceCollection._id, true);
+      const source =
+        detail?.collection ||
+        get().collections.find((c) => c._id === sourceCollection._id) ||
+        sourceCollection;
+      const sourceRequests =
+        (detail?.requests || get().requests.filter((r) => r.collectionId === sourceCollection._id)) || [];
+
+      const baseName = (source.name || 'Collection').replace(/\s+Copy$/, '');
+      const created = await get().createCollection(
+        `${baseName} Copy`,
+        source.projectId,
+        source.teamId,
+        source.description || ''
+      );
+      if (!created.success || !created.collection?._id) {
+        toast.error(created.error || 'Failed to create collection', { id: tid });
+        return created;
+      }
+
+      const newCollectionId = created.collection._id;
+      const folderIdMap = new Map(); // oldFolderId -> newFolderId
+      const folders = Array.isArray(source.folders) ? [...source.folders] : [];
+
+      // Create folders parents-first so parentId remapping works
+      const remaining = [...folders];
+      let guard = remaining.length + 2;
+      while (remaining.length > 0 && guard-- > 0) {
+        const readyIdx = remaining.findIndex(
+          (f) => !f.parentId || folderIdMap.has(f.parentId)
+        );
+        if (readyIdx === -1) break;
+        const [folder] = remaining.splice(readyIdx, 1);
+        const parentId = folder.parentId ? folderIdMap.get(folder.parentId) : null;
+        const { data } = await api.post(`/api/collection/${newCollectionId}/folder`, {
+          name: folder.name,
+          description: folder.description || '',
+          parentId,
+        });
+        if (data?.folder?.id) {
+          folderIdMap.set(folder.id, data.folder.id);
+        }
+        if (data?.collection) {
+          get().updateCollection(data.collection);
+        }
+      }
+
+      const { useRequestStore } = await import('@/store/requestStore');
+      const requestStore = useRequestStore.getState();
+      let cloned = 0;
+      for (const req of sourceRequests) {
+        const mappedFolderId = req.folderId ? (folderIdMap.get(req.folderId) || null) : null;
+        const result = await requestStore.duplicateRequest(req, {
+          name: req.name, // keep original names inside the new collection
+          collectionId: newCollectionId,
+          projectId: source.projectId,
+          teamId: source.teamId,
+          folderId: mappedFolderId,
+        });
+        if (result.success) cloned += 1;
+      }
+
+      toast.success(
+        `Duplicated "${baseName}" (${cloned} request${cloned === 1 ? '' : 's'})`,
+        { id: tid }
+      );
+      get().setCurrentCollection(created.collection);
+      return { success: true, collection: created.collection, requestCount: cloned };
+    } catch (err) {
+      console.error('duplicateCollection failed:', err);
+      toast.error(err.response?.data?.error || err.message || 'Failed to duplicate collection', { id: tid });
+      return { success: false, error: err.message };
+    }
+  },
+
   updateFolder: async (collectionId, folderId, name, description) => {
     try {
       const { data } = await api.put(`/api/collection/${collectionId}/folder/${folderId}`, { name, description });

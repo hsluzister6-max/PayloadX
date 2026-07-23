@@ -109,6 +109,7 @@ export default function SidebarV2({
         requests,
         updateCollectionName,
         deleteCollection,
+        duplicateCollection,
         addRequest,
         isLoading: isLoadingCollections,
         loadingCollections,
@@ -158,6 +159,7 @@ export default function SidebarV2({
         currentRequest,
         setCurrentRequest,
         createRequest,
+        duplicateRequest,
         updateRequestName,
         deleteRequest,
         setNoActiveRequest,
@@ -646,6 +648,17 @@ export default function SidebarV2({
                     icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
                     onClick: () => handleExportCollection(null, collection)
                 },
+                {
+                    id: 'duplicate',
+                    label: 'Duplicate Collection',
+                    icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+                    onClick: async () => {
+                        const result = await duplicateCollection(collection);
+                        if (!result.success) {
+                            toast.error(result.error || 'Failed to duplicate collection');
+                        }
+                    }
+                },
                 { id: 'divider', divider: true },
                 {
                     id: 'delete',
@@ -826,6 +839,20 @@ export default function SidebarV2({
                             }
                         }
                     })
+                },
+                {
+                    id: 'duplicate',
+                    label: 'Duplicate Request',
+                    icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>,
+                    onClick: async () => {
+                        const result = await duplicateRequest(request);
+                        if (result.success) {
+                            setCurrentRequest(result.request);
+                            toast.success('Request duplicated');
+                        } else {
+                            toast.error(result.error || 'Failed to duplicate request');
+                        }
+                    }
                 },
                 { id: 'divider', divider: true },
                 {

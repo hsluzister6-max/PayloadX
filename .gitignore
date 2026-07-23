@@ -7,6 +7,8 @@ apps/desktop/certs/
 *.cer
 *.pem
 *.mobileprovision
+*.dmg
+*.app
 .next/
 dist/
 target/
