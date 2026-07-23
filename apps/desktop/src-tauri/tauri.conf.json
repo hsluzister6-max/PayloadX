@@ -70,7 +70,7 @@
       }
     },
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 http://localhost:4000 https://payloadx-ykjd.onrender.com https://api-test-backend.vercel.app ws: wss: https: http:; img-src 'self' data: https:; media-src 'self' blob: mediastream: data:"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 http://localhost:4000 https://payload-x-884697093779.europe-west1.run.app wss://payload-x-884697093779.europe-west1.run.app ws: wss: https: http:; img-src 'self' data: https:; media-src 'self' blob: mediastream: data:"
     },
     "updater": {
       "active": false

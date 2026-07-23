@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const PAYLOADX_SERVER_URL = 'https://payloadx-ykjd.onrender.com';
+/** Cloud backend + Socket.IO (same host on Cloud Run). */
+export const PAYLOADX_SERVER_URL = 'https://payload-x-884697093779.europe-west1.run.app';
 
 export const useServerConfigStore = create(
   persist(
@@ -29,4 +30,11 @@ export const useServerConfigStore = create(
   )
 );
 
-export { PAYLOADX_SERVER_URL };
+/** Resolve the active API / Socket base URL from current server config. */
+export function getServerBaseUrl() {
+  const { serverMode, customUrl } = useServerConfigStore.getState();
+  if (serverMode === 'local') {
+    return customUrl?.replace(/\/$/, '') || 'http://localhost:3001';
+  }
+  return PAYLOADX_SERVER_URL;
+}

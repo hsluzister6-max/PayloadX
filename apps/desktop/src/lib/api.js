@@ -1,26 +1,15 @@
 import axios from 'axios';
-import { useServerConfigStore } from '@/store/serverConfigStore';
-
-const PAYLOADX_SERVER_URL = 'https://payloadx-884697093779.europe-west1.run.app';
-
-// Dynamically read the base URL from the persisted store each request
-const getBaseUrl = () => {
-  const { serverMode, customUrl } = useServerConfigStore.getState();
-  if (serverMode === 'local') {
-    return customUrl?.replace(/\/$/, '') || 'http://localhost:3001';
-  }
-  return PAYLOADX_SERVER_URL;
-};
+import { getServerBaseUrl } from '@/store/serverConfigStore';
 
 const api = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: getServerBaseUrl(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
 
 // Update baseURL on every request so it reflects the current saved config
 api.interceptors.request.use((config) => {
-  config.baseURL = getBaseUrl();
+  config.baseURL = getServerBaseUrl();
 
   const token = localStorage.getItem('payloadx_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;

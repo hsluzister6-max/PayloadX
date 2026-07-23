@@ -3535,3 +3535,441 @@ textarea,
   border-left: 1px solid var(--modal-border);
   border-top: 1px solid var(--modal-border);
 }
+/* ══════════════════════════════════════════════════════════════════
+   AUTH PAGE — login / signup shell + product mock
+   Left form panel stays dark chrome in both themes.
+   Right stage adapts text for light/dark.
+   ══════════════════════════════════════════════════════════════════ */
+.auth-page {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  position: relative;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+}
+
+.auth-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-2);
+  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.auth-theme-btn {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.auth-theme-btn.is-active {
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  color: var(--text-primary);
+  border-color: var(--border-2);
+}
+
+.auth-form-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  /* Always dark so hardcoded slate/white form styles stay readable */
+  background: #0a0a0a;
+  color: #94a3b8;
+}
+
+@media (min-width: 1024px) {
+  .auth-form-panel {
+    width: 35%;
+  }
+}
+
+.auth-stage {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(92, 101, 116, 0.12), transparent 55%),
+    var(--bg-primary);
+}
+
+@media (min-width: 1024px) {
+  .auth-stage {
+    display: flex;
+    width: 65%;
+  }
+}
+
+.auth-stage-inner {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 52rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.auth-stage-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--text-muted);
+}
+
+.auth-stage-title {
+  font-size: clamp(1.75rem, 3.2vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.auth-stage-lead {
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 28rem;
+  color: var(--text-secondary);
+}
+
+/* Product mock window */
+.auth-mock {
+  margin-top: 0.75rem;
+  width: 100%;
+  max-width: 44rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0b0b0b;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
+  transform-origin: left center;
+  animation: auth-mock-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.light .auth-mock {
+  box-shadow:
+    0 28px 70px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+@keyframes auth-mock-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) rotateY(-8deg) rotateX(4deg) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) rotateY(-4deg) rotateX(2deg) translateY(0);
+  }
+}
+
+.auth-mock-chrome {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  background: #141414;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.auth-mock-traffic {
+  display: flex;
+  gap: 6px;
+}
+
+.auth-mock-traffic span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #3a3a3a;
+}
+
+.auth-mock-traffic span:nth-child(1) { background: #ff5f57; }
+.auth-mock-traffic span:nth-child(2) { background: #febc2e; }
+.auth-mock-traffic span:nth-child(3) { background: #28c840; }
+
+.auth-mock-title {
+  flex: 1;
+  font-size: 11px;
+  color: #8b93a8;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auth-mock-win-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.auth-mock-win-actions span {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.auth-mock-body {
+  display: flex;
+  min-height: 260px;
+  height: min(38vh, 320px);
+}
+
+.auth-mock-sidebar {
+  width: 148px;
+  flex-shrink: 0;
+  background: #080808;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-mock-brand {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #e8ecf4;
+  background: linear-gradient(145deg, #3d4654, #1a1d24);
+  margin: 0 4px 4px;
+}
+
+.auth-mock-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auth-mock-nav-item {
+  font-size: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #64748b;
+}
+
+.auth-mock-nav-item.is-active {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8ecf4;
+}
+
+.auth-mock-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.auth-mock-folder-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  padding: 4px 8px;
+}
+
+.auth-mock-req {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  color: #94a3b8;
+}
+
+.auth-mock-req.is-active {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e8ecf4;
+}
+
+.auth-mock-method {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  min-width: 28px;
+}
+
+.auth-mock-method.get { color: #3fb950; }
+.auth-mock-method.post { color: #58a6ff; }
+.auth-mock-method.del { color: #f85149; }
+
+.auth-mock-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: #0b0b0b;
+}
+
+.auth-mock-urlbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #121212;
+}
+
+.auth-mock-url {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: #c8cdd8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auth-mock-url-dim {
+  color: #64748b;
+}
+
+.auth-mock-send {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #e8ecf4;
+  color: #0f172a;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: default;
+}
+
+.auth-mock-tabs {
+  display: flex;
+  gap: 14px;
+  padding: 0 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.auth-mock-tabs span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  padding-bottom: 8px;
+  border-bottom: 2px solid transparent;
+}
+
+.auth-mock-tabs span.is-active {
+  color: #e8ecf4;
+  border-bottom-color: #e8ecf4;
+}
+
+.auth-mock-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.auth-mock-panel {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #101010;
+  padding: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-mock-panel-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.auth-mock-status {
+  color: #3fb950;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.auth-mock-panel pre {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
+  color: #9ca3b8;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.auth-mock-response pre {
+  color: #a5d6ff;
+}
+
+@media (max-width: 1200px) {
+  .auth-mock {
+    transform: none;
+  }
+
+  @keyframes auth-mock-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Keep brand readable on the always-dark auth form panel in light theme */
+.light .auth-form-panel .metallic-app-name {
+  animation: none;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: #E8ECF4;
+  color: #E8ECF4;
+  filter: none;
+  text-shadow: none;
+}
+
+/* Sign-in CTA stays high-contrast on the dark form panel in light theme */
+.light .auth-form-panel .btn-primary {
+  background: linear-gradient(180deg, #f8fafc 0%, #d1d7e0 100%);
+  color: #0f172a;
+  border-color: rgba(255, 255, 255, 0.35);
+}

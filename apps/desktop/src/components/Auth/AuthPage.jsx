@@ -1,34 +1,44 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useServerConfigStore } from '@/store/serverConfigStore';
+import { useServerConfigStore, PAYLOADX_SERVER_URL } from '@/store/serverConfigStore';
 import { useUIStore, THEME_LABELS } from '@/store/uiStore';
+import { useSocketStore } from '@/store/socketStore';
 import { invoke } from '@tauri-apps/api/tauri';
 import { listen } from '@tauri-apps/api/event';
-import { open } from '@tauri-apps/api/shell';
 import toast from 'react-hot-toast';
 import PayloadX from '../core/logo';
 import ForgotPassword from './ForgotPassword';
+import AuthAppMockup from './AuthAppMockup';
 
 export default function AuthPage() {
   const { serverMode, customUrl, setServerMode, setCustomUrl } = useServerConfigStore();
   const { theme, setTheme } = useUIStore();
+  const disconnectSocket = useSocketStore((s) => s.disconnect);
   // Default to 'login' to avoid showing the server selection screen to existing users
   const [mode, setMode] = useState('login');
   const [isInitialized, setIsInitialized] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', otp: '' });
   const [localUrl, setLocalUrl] = useState(customUrl || 'http://localhost:3001');
   const [isTestingUrl, setIsTestingUrl] = useState(false);
+  const [isTestingCloud, setIsTestingCloud] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, signup, loginWithGoogle, isLoading } = useAuthStore();
 
-  const handleSelectServer = async (selectedMode) => {
-    if (selectedMode === 'payloadx') {
-      setServerMode('payloadx');
-      setMode('login');
-    } else {
-      // For local, show the URL input — handled inline
+  const handleSelectCloud = async () => {
+    setIsTestingCloud(true);
+    try {
+      await fetch(`${PAYLOADX_SERVER_URL}/health`, {
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => null);
+    } finally {
+      setIsTestingCloud(false);
     }
+
+    disconnectSocket();
+    setServerMode('payloadx');
+    setMode('login');
+    toast.success('Using Cloud Build');
   };
 
   const handleConfirmLocalUrl = async () => {
@@ -39,10 +49,11 @@ export default function AuthPage() {
     try {
       const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
       if (response.ok) {
+        disconnectSocket();
         setCustomUrl(url);
         setServerMode('local');
         setMode('login');
-        toast.success('Connected to local server!');
+        toast.success(`Connected to ${url}`);
       } else {
         toast.error(`Server returned ${response.status}. Check your URL.`);
       }
@@ -244,16 +255,10 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden font-mono relative text-slate-400 bg-[color:var(--bg-primary)]">
+    <div className="auth-page">
       {/* Theme controls: Dark / Light */}
       <div className="absolute top-6 right-6 z-30 flex items-center gap-2">
-        <div
-          className="flex items-center gap-1 p-1 rounded-full border backdrop-blur-md"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            borderColor: 'rgba(255,255,255,0.08)',
-          }}
-        >
+        <div className="auth-theme-toggle">
           {['dark', 'light'].map((modeId) => {
             const active = theme === modeId;
             return (
@@ -261,14 +266,7 @@ export default function AuthPage() {
                 key={modeId}
                 type="button"
                 onClick={() => setTheme(modeId)}
-                className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
-                style={{
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  color: active ? '#E8ECF4' : 'rgba(156,163,184,0.7)',
-                  border: active
-                    ? '1px solid rgba(255,255,255,0.15)'
-                    : '1px solid transparent',
-                }}
+                className={`auth-theme-btn${active ? ' is-active' : ''}`}
               >
                 {THEME_LABELS[modeId]}
               </button>
@@ -277,14 +275,8 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── Left Side: Auth Form ── */}
-      <div
-        className="w-full lg:w-[35%] flex flex-col relative z-10 border-r"
-        style={{
-          background: 'rgba(6,6,6,0.78)',
-          borderColor: 'rgba(255,255,255,0.06)',
-        }}
-      >
+      {/* ── Left Side: Auth Form (always dark chrome) ── */}
+      <div className="auth-form-panel">
         {/* App Logo */}
         <div className="absolute top-10 left-10 flex items-center gap-3 z-20">
           <PayloadX />
@@ -303,24 +295,30 @@ export default function AuthPage() {
                 <p className="text-slate-500 text-[13px]">Where is your PayloadX backend running?</p>
               </div>
 
-              {/* PayloadX Cloud Option */}
+              {/* Cloud Build Option */}
               <button
                 id="server-select-payloadx"
-                onClick={() => handleSelectServer('payloadx')}
-                className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 transition-all duration-200 text-left group"
+                onClick={handleSelectCloud}
+                disabled={isTestingCloud}
+                className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 transition-all duration-200 text-left group disabled:opacity-60"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                    </svg>
+                    {isTestingCloud ? (
+                      <div className="w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-5 h-5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+                      </svg>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-semibold text-white">PayloadX Cloud</p>
+                      <p className="text-sm font-semibold text-white">Cloud Build</p>
                       <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">Recommended</span>
                     </div>
-                    <p className="text-[12px] text-slate-500">Use the managed PayloadX server. No setup required.</p>
+                    <p className="text-[12px] text-slate-500">Managed PayloadX Cloud — API &amp; realtime on the same host.</p>
+                    <p className="text-[11px] text-slate-600 font-mono mt-1 truncate">{PAYLOADX_SERVER_URL}</p>
                   </div>
                   <svg className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -328,12 +326,11 @@ export default function AuthPage() {
                 </div>
               </button>
 
-              {/* Self-Hosted Option */}
+              {/* Local Setup Option */}
               <div className="space-y-3">
-                <button
+                <div
                   id="server-select-local"
-                  onClick={() => handleSelectServer('local-input')}
-                  className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/15 transition-all duration-200 text-left group"
+                  className="w-full p-4 rounded-xl border border-white/5 bg-white/[0.02] text-left"
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
@@ -341,18 +338,12 @@ export default function AuthPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                       </svg>
                     </div>
-                    <div onClick={(e) => {
-                      e.stopPropagation();
-                      open("https://payload-x-landing.vercel.app/docs");
-                    }} className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white mb-0.5">Self-Hosted / Local</p>
-                      <p className="text-[12px] text-slate-500">Full data ownership. Connect to your private Docker instance.</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white mb-0.5">Local Setup</p>
+                      <p className="text-[12px] text-slate-500">Connect to your own backend URL for API &amp; socket.</p>
                     </div>
-                    <svg className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
                   </div>
-                </button>
+                </div>
 
                 {/* Inline URL input for local server */}
                 <div className="space-y-2 px-1">
@@ -555,12 +546,12 @@ export default function AuthPage() {
                   onClick={() => setMode('server-select')}
                   className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors font-medium"
                 >
-                  Running on <span className="text-slate-400 font-bold">{serverMode === 'local' ? localUrl : 'PayloadX Cloud'}</span> · <span className="underline decoration-slate-800 underline-offset-2 hover:decoration-slate-400 transition-all">Change Server</span>
+                  Running on <span className="text-slate-400 font-bold">{serverMode === 'local' ? (customUrl || localUrl) : 'Cloud Build'}</span> · <span className="underline decoration-slate-800 underline-offset-2 hover:decoration-slate-400 transition-all">Change Server</span>
                 </button>
               </div>
 
               {/* Creator Attribution */}
-              <div className="absolute bottom-10 left-0 right-0 text-center opacity-30">
+              <div className="absolute bottom-10 left-0 right-0 text-center opacity-40">
                 <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-medium">
                   Created by <span className="text-slate-300">Sundan Sharma</span>
                 </p>
@@ -570,29 +561,19 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── Right Side: stage + copy ── */}
-      <div className="hidden lg:flex lg:w-[65%] relative overflow-hidden items-center justify-center p-12 z-10 bg-transparent">
-        <div className="relative z-10 w-full max-w-2xl flex flex-col gap-6 text-left">
-          <p
-            className="text-[11px] font-semibold uppercase tracking-[0.22em]"
-            style={{ color: '#C8CDD8' }}
-          >
-            Open source · Free forever
-          </p>
-          <h2
-            className="text-4xl font-extrabold tracking-tight leading-tight"
-            style={{ color: '#E8ECF4' }}
-          >
+      {/* ── Right Side: copy + product mock ── */}
+      <div className="auth-stage">
+        <div className="auth-stage-inner">
+          <p className="auth-stage-eyebrow">Open source · Free forever</p>
+          <h2 className="auth-stage-title">
             Everything you need to
             <br />
             build and test robust APIs.
           </h2>
-          <p
-            className="text-[15px] leading-relaxed max-w-md"
-            style={{ color: 'rgba(156,163,184,0.85)' }}
-          >
+          <p className="auth-stage-lead">
             The modern, lightweight alternative to Postman — crafted for developers who move fast.
           </p>
+          <AuthAppMockup />
         </div>
       </div>
     </div>

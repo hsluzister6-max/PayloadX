@@ -149,38 +149,54 @@ export default function LayoutV2({
     return () => window.removeEventListener('close-tab-shortcut', onCloseTabShortcut);
   }, [openTabs]);
 
-  // AST CLI WebSocket Listener — optional local tooling; failing to connect
-  // (CLI not running) must stay silent instead of spamming the console.
+  // Optional AST CLI sync — only connects when VITE_AST_CLI_WS is set
+  // (e.g. ws://localhost:4040). Avoids console noise when the CLI isn't running.
   useEffect(() => {
-    let ws;
-    try {
-      ws = new WebSocket('ws://localhost:4040');
-    } catch {
-      return;
-    }
+    const astUrl = import.meta.env.VITE_AST_CLI_WS;
+    if (!astUrl) return;
 
-    ws.onopen = () => {
-      if (import.meta.env.DEV) console.log('[PayloadX] Connected to local AST CLI Sync Server');
-    };
+    let cancelled = false;
+    let ws = null;
 
-    ws.onmessage = (event) => {
+    // Delay past React Strict Mode remount so we don't open+close mid-handshake.
+    const timer = setTimeout(() => {
+      if (cancelled) return;
       try {
-        const payload = JSON.parse(event.data);
-        if (payload.type === 'SYNC_ROUTES') {
-          setSyncDiff(payload.data);
-          if (payload.data.newRoutes.length > 0 || payload.data.updatedRoutes.length > 0) {
-            setHasNewSync(true);
-          }
-        }
-      } catch (e) {
-        if (import.meta.env.DEV) console.error('Failed to parse WS message', e);
+        ws = new WebSocket(astUrl);
+      } catch {
+        return;
       }
-    };
 
-    ws.onerror = () => {};
+      ws.onopen = () => {
+        if (import.meta.env.DEV) console.log('[PayloadX] Connected to AST CLI Sync Server');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'SYNC_ROUTES') {
+            setSyncDiff(payload.data);
+            if (payload.data.newRoutes.length > 0 || payload.data.updatedRoutes.length > 0) {
+              setHasNewSync(true);
+            }
+          }
+        } catch (e) {
+          if (import.meta.env.DEV) console.error('Failed to parse WS message', e);
+        }
+      };
+
+      ws.onerror = () => {};
+    }, 600);
 
     return () => {
-      ws.close();
+      cancelled = true;
+      clearTimeout(timer);
+      if (!ws) return;
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      if (ws.readyState === WebSocket.OPEN) ws.close();
     };
   }, []);
 

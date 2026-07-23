@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { io } from 'socket.io-client';
 import { localStorageService } from '@/services/localStorageService';
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+import { getServerBaseUrl } from '@/store/serverConfigStore';
 
 export const useSocketStore = create((set, get) => ({
   socket: null,
@@ -13,8 +12,29 @@ export const useSocketStore = create((set, get) => ({
   apiDocViewers: {},  // { [endpointId]: User[] }
 
   connect: () => {
+    // Always follow the active server selection:
+    //   cloud (payloadx) → https://payload-x-884697093779.europe-west1.run.app
+    //   local            → URL the user entered
+    const SOCKET_URL = getServerBaseUrl();
+
     const existing = get().socket;
-    if (existing?.connected) return;
+    if (existing) {
+      const targetHost = (() => {
+        try { return new URL(SOCKET_URL).host; } catch { return SOCKET_URL; }
+      })();
+      // Prefer manager URI (stable even while still connecting)
+      const existingUri = String(existing.io?.uri || existing.io?.opts?.hostname || '');
+      const sameHost = existingUri.includes(targetHost);
+
+      // Same host: keep the in-flight / live socket (avoids Strict Mode
+      // double-mount tearing down a websocket mid-handshake).
+      if (sameHost) return;
+
+      // Different host (cloud ↔ local switch): tear down and reconnect.
+      existing.removeAllListeners();
+      existing.disconnect();
+      set({ socket: null, isConnected: false, roomMembers: [] });
+    }
 
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
@@ -24,7 +44,7 @@ export const useSocketStore = create((set, get) => ({
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket.id);
+      console.log('[Socket] Connected:', socket.id, '→', SOCKET_URL);
       set({ isConnected: true });
     });
 
