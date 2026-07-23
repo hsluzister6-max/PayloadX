@@ -13,6 +13,7 @@
 import express from 'express';
 import Environment, { maskSecrets } from '../../models/Environment.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 
 const router = express.Router();
 
@@ -98,7 +99,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // GET /api/environment/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { revealSecrets } = req.query;
     const env = await Environment.findById(req.params.id);
@@ -112,7 +113,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/environment/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { name, description, color, isGlobal, variables } = req.body;
 
@@ -153,7 +154,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/environment/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const env = await Environment.findByIdAndDelete(req.params.id);
     if (!env) return res.status(404).json({ error: 'Environment not found' });
@@ -170,7 +171,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 // ───────────────────────────────────────────────────────────────────────────────
 
 // GET /api/environment/:id/variables
-router.get('/:id/variables', authenticate, async (req, res) => {
+router.get('/:id/variables', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { revealSecrets } = req.query;
     const env = await Environment.findById(req.params.id);
@@ -194,7 +195,7 @@ router.get('/:id/variables', authenticate, async (req, res) => {
 });
 
 // POST /api/environment/:id/variables (Add a single variable)
-router.post('/:id/variables', authenticate, async (req, res) => {
+router.post('/:id/variables', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { key, value = '', description = '', isSecret = false, enabled = true } = req.body;
 
@@ -224,7 +225,7 @@ router.post('/:id/variables', authenticate, async (req, res) => {
 });
 
 // PUT /api/environment/:id/variables (Bulk replace all variables)
-router.put('/:id/variables', authenticate, async (req, res) => {
+router.put('/:id/variables', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { variables } = req.body;
 

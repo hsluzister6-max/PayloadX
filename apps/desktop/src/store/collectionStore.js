@@ -6,6 +6,7 @@ import { useConnectivityStore } from '@/store/connectivityStore';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { buildIndexMap } from '@/utils/perf';
+import { isTempId, stripTempIds } from '@/utils/tempId';
 
 export const useCollectionStore = create((set, get) => ({
   collections: localStorageService.get(localStorageService.KEYS.COLLECTIONS) || [],
@@ -414,6 +415,21 @@ export const useCollectionStore = create((set, get) => ({
     };
 
     try {
+      if (isTempId(id)) {
+        const local = get().collections.find((c) => c._id === id);
+        const payload = stripTempIds({ ...(local || {}), name });
+        const { data } = await api.post('/api/collection', payload);
+        set((state) => {
+          const updated = state.collections.map((c) => (c._id === id ? data.collection : c));
+          const updatedCurrent = state.currentCollection?._id === id ? data.collection : state.currentCollection;
+          localStorageService.saveCollections(updated);
+          localStorageService.saveCurrentCollection(updatedCurrent);
+          return { collections: updated, currentCollection: updatedCurrent };
+        });
+        if (id && data.collection?._id) syncService.registerIdMapping(id, data.collection._id);
+        return { success: true, collection: data.collection };
+      }
+
       const { data } = await api.put(`/api/collection/${id}`, { name });
 
       set((state) => {
@@ -680,7 +696,9 @@ export const useCollectionStore = create((set, get) => ({
     };
 
     try {
-      await api.delete(`/api/collection/${id}`);
+      if (!isTempId(id)) {
+        await api.delete(`/api/collection/${id}`);
+      }
 
       const { useSocketStore } = await import('@/store/socketStore');
       const { useAuthStore } = await import('@/store/authStore');

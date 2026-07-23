@@ -1,6 +1,7 @@
 import express from 'express';
 import ApiDoc from '../../models/ApiDoc.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 import { generateSpec } from '../../lib/swaggerGen.js';
 
 const router = express.Router();
@@ -142,7 +143,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // GET /api/apidoc/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const doc = await ApiDoc.findById(req.params.id)
       .populate('createdBy', 'name email avatar');
@@ -155,7 +156,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/apidoc/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const updated = await ApiDoc.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updated) return res.status(404).json({ error: 'ApiDoc not found' });
@@ -168,7 +169,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/apidoc/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const doc = await ApiDoc.findByIdAndDelete(req.params.id);
     if (!doc) return res.status(404).json({ error: 'ApiDoc not found' });

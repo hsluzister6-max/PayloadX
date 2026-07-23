@@ -1,5 +1,6 @@
 import { localStorageService } from './localStorageService';
 import api from '@/lib/api';
+import { isMongoObjectId, isTempId, stripTempIds } from '@/utils/tempId';
 
 class SyncService {
   constructor() {
@@ -32,22 +33,30 @@ class SyncService {
   }
 
   notifyListeners(event) {
-    this.listeners.forEach(listener => listener(event));
+    this.listeners.forEach((listener) => listener(event));
   }
 
   getOnlineStatus() {
     return this.isOnline;
   }
 
-  // Register a mapping from temp ID to real ID
   registerIdMapping(tempId, realId) {
     if (!tempId || !realId || tempId === realId) return;
     this.idMap[tempId] = realId;
-    // Persist to localStorage
     localStorageService.set('syncnest_id_map', this.idMap);
   }
 
-  // Resolve any temp IDs in a string or object to real IDs
+  resolveEntityId(id) {
+    if (!id) return id;
+    return this.idMap[id] || id;
+  }
+
+  /** Still a local-only id after idMap resolve — must create, never PUT/DELETE. */
+  stillTemp(id) {
+    const realId = this.resolveEntityId(id);
+    return isTempId(realId) || !isMongoObjectId(realId);
+  }
+
   resolveIds(data) {
     if (typeof data === 'string') {
       let result = data;
@@ -67,7 +76,6 @@ class SyncService {
     return data;
   }
 
-  // Sync all pending changes when coming online
   async syncPendingChanges() {
     if (this.syncInProgress || !this.isOnline) return;
 
@@ -77,7 +85,16 @@ class SyncService {
     const pending = localStorageService.getPendingChanges() || [];
     const results = [];
 
-    for (const change of pending) {
+    // Creates before updates/deletes so temp→real mappings exist.
+    const order = { create: 0, update: 1, delete: 2 };
+    const rank = (type = '') => {
+      if (type.startsWith('create_') || type.startsWith('add_')) return order.create;
+      if (type.startsWith('delete_')) return order.delete;
+      return order.update;
+    };
+    const sorted = [...pending].sort((a, b) => rank(a.type) - rank(b.type) || a.timestamp - b.timestamp);
+
+    for (const change of sorted) {
       try {
         const result = await this.applyChange(change);
         localStorageService.removePendingChange(change.id);
@@ -91,24 +108,18 @@ class SyncService {
     this.syncInProgress = false;
     localStorageService.updateLastSync();
     this.notifyListeners({ type: 'sync-complete', results });
-    
-    // Refresh all stores after sync to get latest data
     this.refreshAllStores();
   }
 
-  // Apply a single pending change
   async applyChange(change) {
     console.log('Applying pending change:', change);
-    
+
     const { type, data } = change;
-    
-    // Resolve any temp IDs in the data
     const resolvedData = this.resolveIds(data);
-    
-    // Create syncApi wrapper - adds isSyncOperation flag to prevent logout on 401
+
     const syncApi = {
-      post: (url, data) => api.post(url, data, { isSyncOperation: true }),
-      put: (url, data) => api.put(url, data, { isSyncOperation: true }),
+      post: (url, body) => api.post(url, body, { isSyncOperation: true }),
+      put: (url, body) => api.put(url, body, { isSyncOperation: true }),
       delete: (url, config = {}) => api.delete(url, { ...config, isSyncOperation: true }),
     };
 
@@ -152,140 +163,197 @@ class SyncService {
     }
   }
 
-  // Sync operations - use syncApi to prevent logout on 401 errors
+  // ── Creates ──────────────────────────────────────────────────────────────
   async syncCreateTeam(data, syncApi) {
-    const { tempId, ...teamData } = data;
+    const { tempId, ...raw } = data;
+    const teamData = stripTempIds(raw);
     const response = await syncApi.post('/api/team', teamData);
-    if (tempId && response.data?.team?._id) {
-      this.registerIdMapping(tempId, response.data.team._id);
+    const realId = response.data?.team?._id;
+    if ((tempId || raw._id) && realId) {
+      this.registerIdMapping(tempId || raw._id, realId);
     }
     return response.data;
   }
 
   async syncCreateProject(data, syncApi) {
-    const { tempId, ...projectData } = data;
+    const { tempId, ...raw } = data;
+    const projectData = stripTempIds({
+      ...raw,
+      teamId: this.resolveEntityId(raw.teamId),
+    });
     const response = await syncApi.post('/api/project', projectData);
-    if (tempId && response.data?.project?._id) {
-      this.registerIdMapping(tempId, response.data.project._id);
+    const realId = response.data?.project?._id;
+    if ((tempId || raw._id) && realId) {
+      this.registerIdMapping(tempId || raw._id, realId);
     }
     return response.data;
   }
 
   async syncCreateCollection(data, syncApi) {
-    const { tempId, ...collectionData } = data;
+    const { tempId, ...raw } = data;
+    const collectionData = stripTempIds({
+      ...raw,
+      projectId: this.resolveEntityId(raw.projectId),
+      teamId: this.resolveEntityId(raw.teamId),
+    });
     const response = await syncApi.post('/api/collection', collectionData);
-    if (tempId && response.data?.collection?._id) {
-      this.registerIdMapping(tempId, response.data.collection._id);
+    const realId = response.data?.collection?._id;
+    if ((tempId || raw._id) && realId) {
+      this.registerIdMapping(tempId || raw._id, realId);
     }
     return response.data;
   }
 
   async syncCreateRequest(data, syncApi) {
-    const { tempId, ...requestData } = data;
+    const { tempId, ...raw } = data;
+    const requestData = stripTempIds({
+      ...raw,
+      collectionId: this.resolveEntityId(raw.collectionId),
+      projectId: this.resolveEntityId(raw.projectId),
+      teamId: this.resolveEntityId(raw.teamId),
+      folderId: raw.folderId ? this.resolveEntityId(raw.folderId) : raw.folderId,
+    });
     const response = await syncApi.post('/api/request', requestData);
-    if (tempId && response.data?.request?._id) {
-      this.registerIdMapping(tempId, response.data.request._id);
+    const realId = response.data?.request?._id;
+    if ((tempId || raw._id) && realId) {
+      this.registerIdMapping(tempId || raw._id, realId);
     }
     return response.data;
   }
 
+  async syncCreateEnvironment(data, syncApi) {
+    const { tempId, ...raw } = data;
+    const environmentData = stripTempIds({
+      ...raw,
+      projectId: this.resolveEntityId(raw.projectId),
+      teamId: this.resolveEntityId(raw.teamId),
+    });
+    const response = await syncApi.post('/api/environment', environmentData);
+    const realId = response.data?.environment?._id;
+    if ((tempId || raw._id) && realId) {
+      this.registerIdMapping(tempId || raw._id, realId);
+    }
+    return response.data;
+  }
+
+  // ── Updates (temp → create) ──────────────────────────────────────────────
   async syncUpdateTeam(data, syncApi) {
     const { id, ...updateData } = data;
-    const realId = this.idMap[id] || id;
-    const response = await syncApi.put(`/api/team/${realId}`, updateData);
+    if (this.stillTemp(id)) {
+      return this.syncCreateTeam({ ...updateData, tempId: id }, syncApi);
+    }
+    const realId = this.resolveEntityId(id);
+    const response = await syncApi.put(`/api/team/${realId}`, stripTempIds(updateData));
     return response.data;
   }
 
   async syncUpdateProject(data, syncApi) {
     const { id, ...updateData } = data;
-    const realId = this.idMap[id] || id;
-    const response = await syncApi.put(`/api/project/${realId}`, updateData);
+    if (this.stillTemp(id)) {
+      return this.syncCreateProject({ ...updateData, tempId: id }, syncApi);
+    }
+    const realId = this.resolveEntityId(id);
+    const response = await syncApi.put(`/api/project/${realId}`, stripTempIds(updateData));
     return response.data;
   }
 
   async syncUpdateCollection(data, syncApi) {
     const { id, ...updateData } = data;
-    const realId = this.idMap[id] || id;
-    const response = await syncApi.put(`/api/collection/${realId}`, updateData);
+    if (this.stillTemp(id)) {
+      return this.syncCreateCollection({ ...updateData, tempId: id }, syncApi);
+    }
+    const realId = this.resolveEntityId(id);
+    const response = await syncApi.put(`/api/collection/${realId}`, stripTempIds(updateData));
     return response.data;
   }
 
   async syncUpdateRequest(data, syncApi) {
     const { id, ...updateData } = data;
-    const realId = this.idMap[id] || id;
-    const response = await syncApi.put(`/api/request/${realId}`, updateData);
-    return response.data;
-  }
-
-  async syncDeleteTeam(data, syncApi) {
-    const { id } = data;
-    const realId = this.idMap[id] || id;
-    await syncApi.delete(`/api/team/${realId}`);
-    return { success: true };
-  }
-
-  async syncDeleteProject(data, syncApi) {
-    const { id } = data;
-    const realId = this.idMap[id] || id;
-    await syncApi.delete(`/api/project/${realId}`);
-    return { success: true };
-  }
-
-  async syncDeleteCollection(data, syncApi) {
-    const { id } = data;
-    const realId = this.idMap[id] || id;
-    await syncApi.delete(`/api/collection/${realId}`);
-    return { success: true };
-  }
-
-  async syncDeleteRequest(data, syncApi) {
-    const { id, collectionId } = data;
-    const realId = this.idMap[id] || id;
-    const realCollectionId = this.idMap[collectionId] || collectionId;
-    await syncApi.delete(`/api/request/${realId}`, { 
-      params: { collectionId: realCollectionId }
-    });
-    return { success: true };
-  }
-
-  async syncCreateEnvironment(data, syncApi) {
-    const { tempId, ...environmentData } = data;
-    const response = await syncApi.post('/api/environment', environmentData);
-    if (tempId && response.data?.environment?._id) {
-      this.registerIdMapping(tempId, response.data.environment._id);
+    if (this.stillTemp(id)) {
+      return this.syncCreateRequest({ ...updateData, tempId: id }, syncApi);
     }
+    const realId = this.resolveEntityId(id);
+    const response = await syncApi.put(`/api/request/${realId}`, stripTempIds(updateData));
     return response.data;
   }
 
   async syncUpdateEnvironment(data, syncApi) {
     const { id, ...updateData } = data;
-    const realId = this.idMap[id] || id;
-    const response = await syncApi.put(`/api/environment/${realId}`, updateData);
+    if (this.stillTemp(id)) {
+      return this.syncCreateEnvironment({ ...updateData, tempId: id }, syncApi);
+    }
+    const realId = this.resolveEntityId(id);
+    const response = await syncApi.put(`/api/environment/${realId}`, stripTempIds(updateData));
     return response.data;
-  }
-
-  async syncDeleteEnvironment(data, syncApi) {
-    const { id } = data;
-    const realId = this.idMap[id] || id;
-    await syncApi.delete(`/api/environment/${realId}`);
-    return { success: true };
   }
 
   async syncUpdateEnvironmentVariables(data, syncApi) {
     const { id, variables } = data;
-    const realId = this.idMap[id] || id;
+    if (this.stillTemp(id)) {
+      return this.syncCreateEnvironment({ _id: id, tempId: id, variables }, syncApi);
+    }
+    const realId = this.resolveEntityId(id);
     const response = await syncApi.put(`/api/environment/${realId}/variables`, { variables });
     return response.data;
   }
 
   async syncAddEnvironmentVariable(data, syncApi) {
     const { envId, variable } = data;
-    const realEnvId = this.idMap[envId] || envId;
+    if (this.stillTemp(envId)) {
+      return this.syncCreateEnvironment({
+        tempId: envId,
+        variables: variable ? [variable] : [],
+      }, syncApi);
+    }
+    const realEnvId = this.resolveEntityId(envId);
     const response = await syncApi.post(`/api/environment/${realEnvId}/variables`, variable);
     return response.data;
   }
 
-  // Queue a change for sync
+  // ── Deletes (temp → no-op) ───────────────────────────────────────────────
+  async syncDeleteTeam(data, syncApi) {
+    const { id } = data;
+    if (this.stillTemp(id)) return { success: true, skipped: true };
+    const realId = this.resolveEntityId(id);
+    await syncApi.delete(`/api/team/${realId}`);
+    return { success: true };
+  }
+
+  async syncDeleteProject(data, syncApi) {
+    const { id } = data;
+    if (this.stillTemp(id)) return { success: true, skipped: true };
+    const realId = this.resolveEntityId(id);
+    await syncApi.delete(`/api/project/${realId}`);
+    return { success: true };
+  }
+
+  async syncDeleteCollection(data, syncApi) {
+    const { id } = data;
+    if (this.stillTemp(id)) return { success: true, skipped: true };
+    const realId = this.resolveEntityId(id);
+    await syncApi.delete(`/api/collection/${realId}`);
+    return { success: true };
+  }
+
+  async syncDeleteRequest(data, syncApi) {
+    const { id, collectionId } = data;
+    if (this.stillTemp(id)) return { success: true, skipped: true };
+    const realId = this.resolveEntityId(id);
+    const realCollectionId = this.resolveEntityId(collectionId);
+    await syncApi.delete(`/api/request/${realId}`, {
+      params: { collectionId: realCollectionId },
+    });
+    return { success: true };
+  }
+
+  async syncDeleteEnvironment(data, syncApi) {
+    const { id } = data;
+    if (this.stillTemp(id)) return { success: true, skipped: true };
+    const realId = this.resolveEntityId(id);
+    await syncApi.delete(`/api/environment/${realId}`);
+    return { success: true };
+  }
+
   queueChange(type, data, tempId = null) {
     const change = {
       id: tempId || `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -293,23 +361,21 @@ class SyncService {
       data: { ...data, tempId },
       timestamp: Date.now(),
     };
-    
+
     localStorageService.addPendingChange(change);
     this.notifyListeners({ type: 'change-queued', change });
 
     if (this.isOnline) {
       this.syncPendingChanges();
     }
-    
+
     return change;
   }
 
-  // Refresh all stores after sync
   refreshAllStores() {
-    // Trigger refresh on all stores
     const stores = window.__SYNCNEST_STORES__;
     if (stores) {
-      Object.values(stores).forEach(store => {
+      Object.values(stores).forEach((store) => {
         if (store && typeof store.refresh === 'function') {
           store.refresh();
         }
@@ -317,7 +383,6 @@ class SyncService {
     }
   }
 
-  // Clear all ID mappings
   clearIdMappings() {
     this.idMap = {};
     localStorageService.set('syncnest_id_map', {});

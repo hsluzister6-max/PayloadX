@@ -4,6 +4,7 @@ import { localStorageService } from '@/services/localStorageService';
 import { syncService } from '@/services/syncService';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
+import { isTempId, stripTempIds } from '@/utils/tempId';
 
 export const useTeamStore = create((set, get) => ({
   teams: localStorageService.get(localStorageService.KEYS.TEAMS) || [],
@@ -184,6 +185,21 @@ export const useTeamStore = create((set, get) => ({
     }
 
     try {
+      if (isTempId(id)) {
+        const local = get().teams.find((t) => t._id === id);
+        const payload = stripTempIds({ ...(local || {}), name });
+        const { data } = await api.post('/api/team', payload);
+        set((state) => {
+          const updatedTeams = state.teams.map((t) => (t._id === id ? data.team : t));
+          const updatedCurrent = state.currentTeam?._id === id ? data.team : state.currentTeam;
+          localStorageService.saveTeams(updatedTeams);
+          localStorageService.saveCurrentTeam(updatedCurrent);
+          return { teams: updatedTeams, currentTeam: updatedCurrent };
+        });
+        if (id && data.team?._id) syncService.registerIdMapping(id, data.team._id);
+        return { success: true, team: data.team };
+      }
+
       const { data } = await api.put(`/api/team/${id}`, { name });
 
       set((state) => {
@@ -211,7 +227,9 @@ export const useTeamStore = create((set, get) => ({
     const isNotFound = (err) => err.response?.status === 404 || err.response?.data?.error?.includes('not found');
 
     try {
-      await api.delete(`/api/team/${id}`);
+      if (!isTempId(id)) {
+        await api.delete(`/api/team/${id}`);
+      }
     } catch (err) {
       // If not found on server, still clean up locally
       if (!isNotFound(err)) {

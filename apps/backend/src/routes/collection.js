@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Collection from '../../models/Collection.js';
 import Request from '../../models/Request.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 
 const router = express.Router();
 
@@ -131,7 +132,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // GET /api/collection/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const collection = await Collection.findById(req.params.id).populate('createdBy', 'name email');
     if (!collection) return res.status(404).json({ error: 'Collection not found' });
@@ -145,7 +146,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/collection/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const updated = await Collection.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updated) return res.status(404).json({ error: 'Collection not found' });
@@ -156,7 +157,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/collection/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     // Idempotent delete
     await Collection.findByIdAndDelete(req.params.id);
@@ -175,7 +176,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 /** ── FOLDER MANAGEMENT ── **/
 
 // POST /api/collection/:id/folder
-router.post('/:id/folder', authenticate, async (req, res) => {
+router.post('/:id/folder', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { name, description, parentId } = req.body;
     if (!name) return res.status(400).json({ error: 'Folder name is required' });
@@ -203,7 +204,7 @@ router.post('/:id/folder', authenticate, async (req, res) => {
 });
 
 // PUT /api/collection/:id/folder/:folderId
-router.put('/:id/folder/:folderId', authenticate, async (req, res) => {
+router.put('/:id/folder/:folderId', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { name, description } = req.body;
     const collection = await Collection.findById(req.params.id);
@@ -223,7 +224,7 @@ router.put('/:id/folder/:folderId', authenticate, async (req, res) => {
 });
 
 // DELETE /api/collection/:id/folder/:folderId
-router.delete('/:id/folder/:folderId', authenticate, async (req, res) => {
+router.delete('/:id/folder/:folderId', authenticate, requireObjectId(), async (req, res) => {
   try {
     const { id, folderId } = req.params;
     const collection = await Collection.findById(id);

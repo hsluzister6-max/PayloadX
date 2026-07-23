@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 import { db } from '../lib/firebase.js';
 import User from '../../models/User.js';
 
@@ -96,7 +97,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Firestore not initialized' });
@@ -172,7 +173,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Firestore not initialized' });
@@ -219,7 +220,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     if (!db) {
       return res.status(503).json({ error: 'Firestore not initialized' });

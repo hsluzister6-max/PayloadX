@@ -4,6 +4,7 @@ import { localStorageService } from '@/services/localStorageService';
 import { syncService } from '@/services/syncService';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
+import { isTempId, stripTempIds } from '@/utils/tempId';
 
 export const useProjectStore = create((set, get) => ({
   projects: localStorageService.get(localStorageService.KEYS.PROJECTS) || [],
@@ -237,6 +238,21 @@ export const useProjectStore = create((set, get) => ({
     };
 
     try {
+      if (isTempId(id)) {
+        const local = get().projects.find((p) => p._id === id);
+        const payload = stripTempIds({ ...(local || {}), name });
+        const { data } = await api.post('/api/project', payload);
+        set((state) => {
+          const updated = state.projects.map((p) => (p._id === id ? data.project : p));
+          const updatedCurrent = state.currentProject?._id === id ? data.project : state.currentProject;
+          localStorageService.saveProjects(updated);
+          localStorageService.saveCurrentProject(updatedCurrent);
+          return { projects: updated, currentProject: updatedCurrent };
+        });
+        if (id && data.project?._id) syncService.registerIdMapping(id, data.project._id);
+        return { success: true, project: data.project };
+      }
+
       const { data } = await api.put(`/api/project/${id}`, { name });
       
       set((state) => {
@@ -295,7 +311,9 @@ export const useProjectStore = create((set, get) => ({
     };
 
     try {
-      await api.delete(`/api/project/${id}`);
+      if (!isTempId(id)) {
+        await api.delete(`/api/project/${id}`);
+      }
       
       const { useSocketStore } = await import('@/store/socketStore');
       const { useAuthStore } = await import('@/store/authStore');

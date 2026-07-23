@@ -2,6 +2,7 @@ import express from 'express';
 import Request from '../../models/Request.js';
 import Collection from '../../models/Collection.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 import { buildRequestSearchFilter } from '../lib/requestSearch.js';
 
 const router = express.Router();
@@ -194,7 +195,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // GET /api/request/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const requestDoc = await Request.findById(req.params.id).populate('creatorId', 'name email avatar');
     if (!requestDoc) return res.status(404).json({ error: 'Request not found' });
@@ -205,12 +206,13 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/request/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const body = { ...req.body };
 
     // Never allow the frontend to override or change creatorId
     delete body.creatorId;
+    delete body._id;
 
     console.log(`[API PUT] Updating request: ${req.params.id} | Protocol: ${body.protocol || 'N/A'}`);
 
@@ -219,6 +221,10 @@ router.put('/:id', authenticate, async (req, res) => {
     if (!updated) return res.status(404).json({ error: 'Request not found' });
     res.json({ request: updated });
   } catch (err) {
+    console.error('[API PUT /api/request/:id]', err.message);
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -226,11 +232,14 @@ router.put('/:id', authenticate, async (req, res) => {
 
 
 // DELETE /api/request/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     await Request.findByIdAndDelete(req.params.id);
     res.json({ message: 'Request deleted' });
   } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid request id' });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -12,6 +12,7 @@ import express from 'express';
 import Team from '../../models/Team.js';
 import User from '../../models/User.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
@@ -55,7 +56,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // GET /api/team/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const userId = req.user.id;
     const team = await Team.findById(req.params.id)
@@ -121,7 +122,7 @@ router.post('/:id/invite', authenticate, async (req, res) => {
 });
 
 // PUT /api/team/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const userId = req.user.id;
     const team = await Team.findById(req.params.id);
@@ -175,7 +176,7 @@ router.delete('/:id/members/:userId', authenticate, async (req, res) => {
 });
 
 // DELETE /api/team/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const userId = req.user.id;
     const team = await Team.findById(req.params.id);

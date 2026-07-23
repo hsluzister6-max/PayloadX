@@ -12,12 +12,16 @@ import { rustUrlParseParams, rustUrlBuild, jsBuildUrl, jsParseParams } from '@/l
 import { useCollectionStore } from '@/store/collectionStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
+import { isTempId, stripTempIds } from '@/utils/tempId';
 
 function rebuildTabsById(openTabs) {
   const m = new Map();
   (openTabs || []).forEach((t) => m.set(t.id, t));
   return m;
 }
+
+const isTempRequestId = isTempId;
+const stripTempRequestId = stripTempIds;
 
 /** Per-field caps so Zustand persist stays under browser localStorage quota (~5MB shared). */
 const MAX_PERSIST_RESPONSE_BODY_CHARS = 1024;
@@ -588,7 +592,8 @@ export const useRequestStore = create(
         };
 
         try {
-          if (req._id) {
+          // Temp offline ids are local-only — create on the server instead of PUT.
+          if (req._id && !isTempRequestId(req._id)) {
             const { data } = await api.put(`/api/request/${req._id}`, req);
 
             set((state) => {
@@ -600,6 +605,7 @@ export const useRequestStore = create(
                   request: data.request,
                   originalRequest: deepClone(data.request),
                   isDirty: false,
+                  syncPending: false,
                 };
               }
               const newTabsById = rebuildTabsById(newTabs);
@@ -631,7 +637,8 @@ export const useRequestStore = create(
           }
 
           if (req.collectionId) {
-            const { data } = await api.post('/api/request', req);
+            const payload = stripTempRequestId(req);
+            const { data } = await api.post('/api/request', payload);
 
             set((state) => {
               const newTabs = state.openTabs.map((t) => ({ ...t }));
@@ -647,6 +654,7 @@ export const useRequestStore = create(
                 request: data.request,
                 originalRequest: deepClone(data.request),
                 isDirty: false,
+                syncPending: false,
               };
               newTabs[idx] = updatedTab;
               const newTabsById = rebuildTabsById(newTabs);
@@ -669,7 +677,12 @@ export const useRequestStore = create(
             const { useTeamStore } = await import('@/store/teamStore');
             const { useCollectionStore } = await import('@/store/collectionStore');
 
-            useCollectionStore.getState().addRequest(data.request);
+            const collectionApi = useCollectionStore.getState();
+            if (isTempRequestId(req._id)) {
+              collectionApi.removeRequest(req._id, req.collectionId);
+              syncService.registerIdMapping(req._id, data.request._id);
+            }
+            collectionApi.addRequest(data.request);
 
             useSocketStore.getState().emitRequestCreated(
               useTeamStore.getState().currentTeam?._id,
@@ -803,6 +816,15 @@ export const useRequestStore = create(
           toast.success('Renamed locally (Sync pending)');
           return { success: true, offline: true };
         };
+
+        // Temp offline requests aren't on the server yet — save as create/update via saveRequest.
+        if (isTempRequestId(id)) {
+          if (currentReq?._id === id) {
+            set({ currentRequest: { ...currentReq, name } });
+            return get().saveRequest();
+          }
+          return { success: false, error: 'Request is not synced yet — open it and save first' };
+        }
 
         try {
           const { data } = await api.put(`/api/request/${id}`, { name });
@@ -945,7 +967,9 @@ export const useRequestStore = create(
         };
 
         try {
-          await api.delete(`/api/request/${id}`);
+          if (!isTempRequestId(id)) {
+            await api.delete(`/api/request/${id}`);
+          }
 
           const { useSocketStore } = await import('@/store/socketStore');
           const { useAuthStore } = await import('@/store/authStore');

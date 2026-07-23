@@ -2,6 +2,7 @@ import express from 'express';
 import Project from '../../models/Project.js';
 import Team from '../../models/Team.js';
 import { authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
 
 const router = express.Router();
 
@@ -177,7 +178,7 @@ router.post('/', authenticate, async (req, res) => {
  *         description: Project details returned
  */
 // GET /api/project/:id
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('ownerId', 'name email avatar')
@@ -191,7 +192,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PUT /api/project/:id
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const userId = req.user.id;
     const project = await Project.findById(req.params.id);
@@ -213,7 +214,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // DELETE /api/project/:id
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
     const userId = req.user.id;
     const project = await Project.findById(req.params.id);

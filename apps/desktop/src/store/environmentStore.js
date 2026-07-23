@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { syncService } from '@/services/syncService';
+import { isTempId, stripTempIds } from '@/utils/tempId';
 export const useEnvironmentStore = create(
   persist(
     (set, get) => ({
@@ -99,6 +100,20 @@ export const useEnvironmentStore = create(
         };
 
         try {
+          if (isTempId(id)) {
+            const local = get().environments.find((e) => e._id === id);
+            const payload = stripTempIds({ ...(local || {}), ...updates });
+            const { data } = await api.post('/api/environment', payload);
+            const created = data.environment;
+            set((state) => ({
+              environments: state.environments.map((e) => (e._id === id ? created : e)),
+              activeEnvironment:
+                state.activeEnvironment?._id === id ? created : state.activeEnvironment,
+            }));
+            if (id && created?._id) syncService.registerIdMapping(id, created._id);
+            return { success: true, environment: created };
+          }
+
           const { data } = await api.put(`/api/environment/${id}`, updates);
           const updated = data.environment;
           set((state) => ({
@@ -134,6 +149,20 @@ export const useEnvironmentStore = create(
         };
 
         try {
+          if (isTempId(id)) {
+            const local = get().environments.find((e) => e._id === id);
+            const payload = stripTempIds({ ...(local || {}), variables });
+            const { data } = await api.post('/api/environment', payload);
+            const created = data.environment;
+            set((state) => ({
+              environments: state.environments.map((e) => (e._id === id ? created : e)),
+              activeEnvironment:
+                state.activeEnvironment?._id === id ? created : state.activeEnvironment,
+            }));
+            if (id && created?._id) syncService.registerIdMapping(id, created._id);
+            return { success: true, environment: created };
+          }
+
           const { data } = await api.put(`/api/environment/${id}/variables`, { variables });
           const updated = data.environment;
           set((state) => ({
@@ -219,7 +248,9 @@ export const useEnvironmentStore = create(
         };
 
         try {
-          await api.delete(`/api/environment/${id}`);
+          if (!isTempId(id)) {
+            await api.delete(`/api/environment/${id}`);
+          }
           set((state) => ({
             environments: state.environments.filter((e) => e._id !== id),
             activeEnvironment: state.activeEnvironment?._id === id ? null : state.activeEnvironment,
