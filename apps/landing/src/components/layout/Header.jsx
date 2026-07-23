@@ -115,17 +115,18 @@ export default function Header() {
         )}
 
         <div className={styles.navRight}>
+          <button
+            type="button"
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+          >
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+
           {isDocs && (
             <>
-              <button
-                type="button"
-                className={styles.themeToggle}
-                onClick={toggleTheme}
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                title={theme === "dark" ? "Light mode" : "Dark mode"}
-              >
-                {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-              </button>
               <div className={styles.docsBadge}>
                 <span className={styles.docsDot} />
                 Docs v{VERSION}

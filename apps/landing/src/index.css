@@ -34,12 +34,13 @@ html, body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--void);
-  color: #f4f5f7;
+  background: var(--bg-base, var(--void));
+  color: var(--text-primary, #f4f5f7);
   overflow-x: hidden;
   width: 100%;
   letter-spacing: 0;
   word-spacing: 0.02em;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 #root {

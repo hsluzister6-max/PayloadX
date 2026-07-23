@@ -4,7 +4,36 @@ import * as THREE from "three";
 /**
  * Protective network mesh — abstract API graph for the hero.
  * Uses transforms only; disposed cleanly on unmount.
+ * Palette follows data-theme on <html>.
  */
+function themePalette() {
+  const isLight = document.documentElement.getAttribute("data-theme") === "light";
+  if (isLight) {
+    return {
+      core: 0x3a3e46,
+      shell: 0x6b707a,
+      points: 0x121214,
+      lines: 0x6b707a,
+      glow: 0xe8eaee,
+      coreOpacity: 0.35,
+      shellOpacity: 0.2,
+      linesOpacity: 0.28,
+      glowOpacity: 0.55,
+    };
+  }
+  return {
+    core: 0xd8dce3,
+    shell: 0x8b919c,
+    points: 0xf2f3f5,
+    lines: 0x8b919c,
+    glow: 0x1a1a1e,
+    coreOpacity: 0.3,
+    shellOpacity: 0.16,
+    linesOpacity: 0.22,
+    glowOpacity: 0.45,
+  };
+}
+
 export default function HeroScene({ className }) {
   const mountRef = useRef(null);
 
@@ -33,29 +62,28 @@ export default function HeroScene({ className }) {
     const group = new THREE.Group();
     scene.add(group);
 
-    // Core icosahedron — protective shell
+    let palette = themePalette();
+
     const coreGeo = new THREE.IcosahedronGeometry(1.15, 1);
     const coreMat = new THREE.MeshBasicMaterial({
-      color: 0xd8dce3,
+      color: palette.core,
       wireframe: true,
       transparent: true,
-      opacity: 0.3,
+      opacity: palette.coreOpacity,
     });
     const core = new THREE.Mesh(coreGeo, coreMat);
     group.add(core);
 
-    // Outer protective lattice
     const shellGeo = new THREE.IcosahedronGeometry(1.85, 0);
     const shellMat = new THREE.MeshBasicMaterial({
-      color: 0x8b919c,
+      color: palette.shell,
       wireframe: true,
       transparent: true,
-      opacity: 0.16,
+      opacity: palette.shellOpacity,
     });
     const shell = new THREE.Mesh(shellGeo, shellMat);
     group.add(shell);
 
-    // Node points on a sphere
     const nodeCount = 48;
     const positions = new Float32Array(nodeCount * 3);
     const nodeVecs = [];
@@ -75,7 +103,7 @@ export default function HeroScene({ className }) {
     const pointsGeo = new THREE.BufferGeometry();
     pointsGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     const pointsMat = new THREE.PointsMaterial({
-      color: 0xf2f3f5,
+      color: palette.points,
       size: 0.05,
       transparent: true,
       opacity: 0.9,
@@ -84,7 +112,6 @@ export default function HeroScene({ className }) {
     const points = new THREE.Points(pointsGeo, pointsMat);
     group.add(points);
 
-    // Connection lines between nearby nodes
     const linePositions = [];
     const maxDist = 1.35;
     for (let i = 0; i < nodeVecs.length; i++) {
@@ -107,24 +134,46 @@ export default function HeroScene({ className }) {
       new THREE.Float32BufferAttribute(linePositions, 3)
     );
     const linesMat = new THREE.LineBasicMaterial({
-      color: 0x8b919c,
+      color: palette.lines,
       transparent: true,
-      opacity: 0.22,
+      opacity: palette.linesOpacity,
     });
     const lines = new THREE.LineSegments(linesGeo, linesMat);
     group.add(lines);
 
-    // Soft ambient fill via second faint shell
     const glowGeo = new THREE.SphereGeometry(2.4, 32, 32);
     const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x1a1a1e,
+      color: palette.glow,
       transparent: true,
-      opacity: 0.45,
+      opacity: palette.glowOpacity,
       side: THREE.BackSide,
       depthWrite: false,
     });
     const glow = new THREE.Mesh(glowGeo, glowMat);
     group.add(glow);
+
+    const applyPalette = () => {
+      palette = themePalette();
+      coreMat.color.setHex(palette.core);
+      coreMat.opacity = palette.coreOpacity;
+      shellMat.color.setHex(palette.shell);
+      shellMat.opacity = palette.shellOpacity;
+      pointsMat.color.setHex(palette.points);
+      linesMat.color.setHex(palette.lines);
+      linesMat.opacity = palette.linesOpacity;
+      glowMat.color.setHex(palette.glow);
+      glowMat.opacity = palette.glowOpacity;
+    };
+
+    const themeObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === "data-theme") applyPalette();
+      }
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
 
     group.rotation.x = 0.28;
     group.position.x = 0.15;
@@ -164,11 +213,9 @@ export default function HeroScene({ className }) {
         shell.rotation.y = -t * 0.08;
         core.rotation.y = t * 0.18;
         core.rotation.z = t * 0.06;
-        // Pulse opacity gently without layout work
         pointsMat.opacity = 0.7 + Math.sin(t * 1.4) * 0.15;
       }
 
-      // Skip every other frame on small screens when reduceMotion
       if (reduceMotion && frame % 2 === 1) return;
       renderer.render(scene, camera);
     };
@@ -176,6 +223,7 @@ export default function HeroScene({ className }) {
 
     return () => {
       cancelAnimationFrame(raf);
+      themeObserver.disconnect();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onPointer);
       coreGeo.dispose();

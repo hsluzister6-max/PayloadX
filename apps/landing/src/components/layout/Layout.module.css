@@ -30,8 +30,8 @@
   top: 0;
   left: 0;
   right: 0;
-  border-bottom: 1px solid rgba(200, 205, 215, 0.1);
-  background: rgba(14, 14, 16, 0.88);
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-base) 88%, transparent);
   backdrop-filter: blur(18px) saturate(1.1);
   -webkit-backdrop-filter: blur(18px) saturate(1.1);
 }
@@ -69,10 +69,10 @@
   font-weight: 600;
   padding: 2px 5px;
   border-radius: 2px;
-  background: rgba(200, 205, 215, 0.08);
-  color: rgba(232, 234, 238, 0.85);
+  background: var(--accent-soft);
+  color: var(--accent);
   letter-spacing: 0.08em;
-  border: 1px solid rgba(200, 205, 215, 0.22);
+  border: 1px solid var(--border-default);
   text-transform: uppercase;
 }
 
@@ -102,7 +102,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(244, 245, 247, 0.58);
+  color: var(--text-muted);
   text-decoration: none;
   background: none;
   border: none;
@@ -114,8 +114,8 @@
 }
 
 .navTextLink:hover {
-  color: #f4f5f7;
-  background: rgba(200, 205, 215, 0.06);
+  color: var(--text-primary);
+  background: var(--accent-soft);
 }
 
 .navSolid .navTextLink {
@@ -135,19 +135,12 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0e0e10;
+  color: var(--btn-primary-color);
   text-decoration: none;
-  background: linear-gradient(
-    155deg,
-    #ffffff 0%,
-    #e8eaee 20%,
-    #b8bec8 45%,
-    #d4d8e0 75%,
-    #f2f3f5 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
   padding: 0.55rem 1rem;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  box-shadow: var(--btn-primary-shadow);
   transition: filter 0.2s ease, transform 0.2s ease;
   white-space: nowrap;
   display: inline-flex;
@@ -185,17 +178,17 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(200, 205, 215, 0.2);
-  background: rgba(200, 205, 215, 0.04);
-  color: #f4f5f7;
+  border: 1px solid var(--border-default);
+  background: var(--accent-soft);
+  color: var(--text-primary);
   cursor: pointer;
   border-radius: 2px;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .menuBtn:hover {
-  background: rgba(200, 205, 215, 0.1);
-  border-color: rgba(200, 205, 215, 0.35);
+  background: var(--bg-pill-hover);
+  border-color: var(--border-strong);
 }
 
 .navBackdrop {
@@ -288,8 +281,8 @@
     align-items: stretch;
     gap: 0;
     padding: 0.75rem 1.5rem 1.25rem;
-    background: rgba(14, 14, 16, 0.98);
-    border-bottom: 1px solid rgba(200, 205, 215, 0.12);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-default);
     z-index: 1001;
     max-height: calc(100dvh - 60px);
     overflow-y: auto;
@@ -333,7 +326,7 @@
     border: none;
     padding: 0;
     margin: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--overlay);
     z-index: 1000;
     cursor: pointer;
   }

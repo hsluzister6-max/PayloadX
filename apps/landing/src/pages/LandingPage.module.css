@@ -1,25 +1,18 @@
-/* PayloadX cinematic landing — metallic silver */
+/* PayloadX cinematic landing — theme-aware metallic chrome */
 
 .page {
-  --px-bg: #0e0e10;
-  --px-bg-elevated: #16161a;
-  --px-bg-section: #121214;
-  --px-fg: #f4f5f7;
-  --px-fg-muted: #a8adb6;
-  --px-fg-faint: #6b707a;
-  --px-line: rgba(200, 205, 215, 0.14);
-  --px-accent: #c8ccd4;
-  --px-accent-2: #e8eaee;
-  --px-accent-soft: rgba(200, 205, 215, 0.1);
-  --px-chrome: linear-gradient(
-    155deg,
-    #ffffff 0%,
-    #e8eaee 18%,
-    #b8bec8 42%,
-    #8b919c 58%,
-    #d4d8e0 78%,
-    #f2f3f5 100%
-  );
+  --px-bg: var(--bg-base);
+  --px-bg-elevated: var(--bg-surface);
+  --px-bg-section: var(--bg-muted);
+  --px-fg: var(--text-primary);
+  --px-fg-muted: var(--text-muted);
+  --px-fg-faint: var(--text-faint);
+  --px-line: var(--border-default);
+  --px-accent: var(--accent);
+  --px-accent-2: var(--text-secondary);
+  --px-accent-soft: var(--accent-soft);
+  --px-chrome: var(--btn-primary-bg);
+  --px-title-fill: var(--metallic-title);
   --px-display: "Unbounded", system-ui, sans-serif;
   --px-sans: "Sora", system-ui, sans-serif;
   --px-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -31,6 +24,7 @@
   position: relative;
   letter-spacing: 0;
   word-spacing: 0.02em;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .grain {
@@ -43,6 +37,11 @@
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+:global([data-theme="light"]) .grain {
+  opacity: 0.03;
+  mix-blend-mode: multiply;
+}
+
 .progressRail {
   position: fixed;
   top: 0;
@@ -50,7 +49,7 @@
   width: 100%;
   height: 2px;
   z-index: 1200;
-  background: rgba(200, 205, 215, 0.1);
+  background: var(--border-subtle);
   pointer-events: none;
 }
 
@@ -77,7 +76,7 @@
   height: 42vw;
   top: -10%;
   right: -8%;
-  background: radial-gradient(circle, rgba(220, 225, 235, 0.35), transparent 70%);
+  background: radial-gradient(circle, var(--gradient-mesh-1), transparent 70%);
 }
 
 .orbB {
@@ -85,7 +84,7 @@
   height: 36vw;
   bottom: 10%;
   left: -12%;
-  background: radial-gradient(circle, rgba(140, 148, 160, 0.22), transparent 70%);
+  background: radial-gradient(circle, var(--gradient-mesh-2), transparent 70%);
 }
 
 /* —— HERO —— */
@@ -125,8 +124,14 @@
   z-index: 1;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 50% at 78% 48%, rgba(210, 215, 225, 0.14) 0%, transparent 58%),
-    linear-gradient(105deg, #0e0e10 0%, #0e0e10 42%, rgba(14, 14, 16, 0.55) 62%, rgba(14, 14, 16, 0.18) 100%);
+    radial-gradient(ellipse 55% 50% at 78% 48%, var(--gradient-mesh-1) 0%, transparent 58%),
+    linear-gradient(
+      105deg,
+      var(--px-bg) 0%,
+      var(--px-bg) 42%,
+      color-mix(in srgb, var(--px-bg) 55%, transparent) 62%,
+      color-mix(in srgb, var(--px-bg) 18%, transparent) 100%
+    );
 }
 
 .heroContent {
@@ -172,7 +177,7 @@
 .titleChar {
   display: inline-block;
   will-change: transform, opacity;
-  background: var(--px-chrome);
+  background: var(--px-title-fill);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -222,32 +227,28 @@
 
 .btnPrimary {
   background: var(--px-chrome);
-  color: #0e0e10;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.35) inset,
-    0 8px 24px rgba(0, 0, 0, 0.35);
+  color: var(--btn-primary-color);
+  border: 1px solid var(--btn-primary-border);
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .btnPrimary:hover {
   filter: brightness(1.08);
   transform: translateY(-2px);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.45) inset,
-    0 12px 28px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .btnGhost {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--px-accent-soft);
   color: var(--px-fg);
-  border: 1px solid rgba(200, 205, 215, 0.22);
+  border: 1px solid var(--px-line);
   backdrop-filter: blur(8px);
 }
 
 .btnGhost:hover {
-  border-color: rgba(200, 205, 215, 0.45);
+  border-color: var(--border-strong);
   color: var(--px-accent-2);
-  background: rgba(200, 205, 215, 0.06);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   transform: translateY(-2px);
 }
 
@@ -261,7 +262,7 @@
   flex-direction: column;
   gap: 0.55rem;
   padding-top: 0.15rem;
-  border-top: 1px solid rgba(200, 205, 215, 0.1);
+  border-top: 1px solid var(--px-line);
   max-width: 28rem;
 }
 
@@ -516,7 +517,7 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(200, 205, 215, 0.55);
+  -webkit-text-stroke: 1px var(--border-strong);
   margin: 0 0 1rem;
   line-height: 1;
 }
@@ -578,19 +579,19 @@
   flex-shrink: 0;
   border: 1px solid var(--px-line);
   background:
-    linear-gradient(160deg, rgba(232, 234, 238, 0.08), transparent 45%),
+    linear-gradient(160deg, var(--px-accent-soft), transparent 45%),
     var(--px-bg-elevated);
   padding: 2rem 1.75rem;
   min-height: 280px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-md);
   transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
 .propCard:hover {
-  border-color: rgba(200, 205, 215, 0.35);
+  border-color: var(--border-strong);
   transform: translateY(-4px);
 }
 
@@ -625,8 +626,8 @@
   z-index: 2;
   padding: 8rem 4.5rem;
   background:
-    radial-gradient(ellipse 70% 80% at 50% 100%, rgba(200, 205, 215, 0.18) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 60% at 80% 20%, rgba(200, 205, 215, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 80% at 50% 100%, var(--gradient-mesh-1) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 80% 20%, var(--gradient-mesh-2) 0%, transparent 50%),
     var(--px-bg-elevated);
   border-top: 1px solid var(--px-line);
   border-bottom: 1px solid var(--px-line);
@@ -646,7 +647,7 @@
   margin-left: auto;
   margin-right: auto;
   will-change: transform, opacity;
-  background: var(--px-chrome);
+  background: var(--px-title-fill);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -655,7 +656,7 @@
 
 .bandTitle em {
   font-style: normal;
-  background: linear-gradient(180deg, #ffffff, #a8adb6 55%, #e8eaee);
+  background: var(--metallic-footer);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -694,7 +695,7 @@
   text-transform: uppercase;
   color: var(--px-accent-2);
   text-decoration: none;
-  border-bottom: 1px solid rgba(200, 205, 215, 0.35);
+  border-bottom: 1px solid var(--border-strong);
   padding-bottom: 0.25rem;
 }
 
@@ -752,11 +753,11 @@
   letter-spacing: 0.06em;
   word-spacing: 0.04em;
   text-transform: uppercase;
-  color: #0e0e10;
+  color: var(--btn-primary-color);
   text-decoration: none;
   background: var(--px-chrome);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  border: 1px solid var(--btn-primary-border);
+  box-shadow: var(--btn-primary-shadow);
   padding: 0.75rem 1.2rem;
 }
 
@@ -849,8 +850,8 @@
 }
 
 .dlCard:hover {
-  border-color: rgba(200, 205, 215, 0.4);
-  background: rgba(200, 205, 215, 0.08);
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
   transform: translateY(-3px);
 }
 
@@ -885,7 +886,7 @@
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 2.5rem;
-  background: #16161a;
+  background: var(--px-bg-elevated);
 }
 
 .footerBrandLine {
@@ -985,8 +986,13 @@
 
   .heroVeil {
     background:
-      radial-gradient(ellipse 70% 50% at 70% 35%, rgba(210, 215, 225, 0.12) 0%, transparent 55%),
-      linear-gradient(180deg, rgba(14, 14, 16, 0.35) 0%, rgba(14, 14, 16, 0.88) 48%, #0e0e10 100%);
+      radial-gradient(ellipse 70% 50% at 70% 35%, var(--gradient-mesh-1) 0%, transparent 55%),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--px-bg) 35%, transparent) 0%,
+        color-mix(in srgb, var(--px-bg) 88%, transparent) 48%,
+        var(--px-bg) 100%
+      );
   }
 
   .heroContent {

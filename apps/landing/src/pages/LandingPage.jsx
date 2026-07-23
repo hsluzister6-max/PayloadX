@@ -549,7 +549,7 @@ export default function LandingPage() {
                   right: 0,
                   bottom: 0,
                   height: 2,
-                  background: "linear-gradient(90deg, #c8ccd4, transparent)",
+                  background: "linear-gradient(90deg, var(--accent), transparent)",
                   transformOrigin: "left center",
                 }}
               />

@@ -21,7 +21,7 @@
   min-height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #0e0e10;
+  background: var(--bg-base);
 }
 
 .rootDocs {
