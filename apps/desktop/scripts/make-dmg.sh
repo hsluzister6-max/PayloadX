@@ -3,7 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${ROOT}/src-tauri/target/release/bundle/macos/PayloadX.app"
+TARGET_DIR="${CARGO_TARGET_DIR:-${TARGET_DIR:-$ROOT/src-tauri/target}}"
+APP="${TARGET_DIR}/release/bundle/macos/PayloadX.app"
 CONF="${ROOT}/src-tauri/tauri.conf.json"
 
 if [[ ! -d "$APP" ]]; then
@@ -19,7 +20,7 @@ case "$ARCH_RAW" in
   x86_64) ARCH="x86_64" ;;
   *) ARCH="$ARCH_RAW" ;;
 esac
-OUTDIR="${ROOT}/src-tauri/target/release/bundle/dmg"
+OUTDIR="${TARGET_DIR}/release/bundle/dmg"
 mkdir -p "$OUTDIR"
 DMG="${OUTDIR}/PayloadX_${VERSION}_${ARCH}.dmg"
 

@@ -152,7 +152,7 @@ export default function App() {
   // Apply theme class to <html> so CSS variables switch correctly.
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('light', 'nebula', 'nebula-dark', 'nebula-light', 'auth-video');
+    root.classList.remove('light', 'auth-video');
     if (theme === 'light') {
       root.classList.add('light');
     }

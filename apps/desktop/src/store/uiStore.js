@@ -105,25 +105,12 @@ export const useUIStore = create(
     }),
     {
       name: 'syncnest-ui',
-      version: 6,
+      version: 7,
       migrate: (persistedState, version) => {
         const state = persistedState && typeof persistedState === 'object' ? { ...persistedState } : {};
-        // Drop Nebula themes — coerce any legacy nebula* value to dark
-        if (
-          version < 6 ||
-          state.theme === 'nebula' ||
-          state.theme === 'nebula-dark' ||
-          state.theme === 'nebula-light' ||
-          !state.theme
-        ) {
-          if (
-            state.theme === 'nebula' ||
-            state.theme === 'nebula-dark' ||
-            state.theme === 'nebula-light' ||
-            !state.theme
-          ) {
-            state.theme = 'dark';
-          }
+        // Only dark | light are supported — coerce any other legacy value to dark
+        if (state.theme !== 'light' && state.theme !== 'dark') {
+          state.theme = 'dark';
         }
         return state;
       },

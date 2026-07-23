@@ -34,20 +34,31 @@ if ! security find-identity -v -p codesigning 2>/dev/null | grep -q 'Developer I
   exit 1
 fi
 
+# Prefer CARGO_TARGET_DIR when set (Cursor/CI sandboxes), else default Tauri path.
+TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/src-tauri/target}"
+export CARGO_TARGET_DIR="$TARGET_DIR"
+
 echo "==> vite build"
 npm run build
 
 echo "==> tauri: release .app (signed, hardened runtime)"
 npm run tauri -- build -b app --ci
 
-APP="${ROOT}/src-tauri/target/release/bundle/macos/PayloadX.app"
+APP="${TARGET_DIR}/release/bundle/macos/PayloadX.app"
 if [[ ! -d "$APP" ]]; then
   echo "Missing bundle: $APP"
   exit 1
 fi
 
-echo "==> create .dmg (UDZO)"
-bash "${ROOT}/scripts/make-dmg.sh"
+# Guard against packaging a stale binary that still embeds removed media.
+if grep -a -q 'herobg\.mp4' "$APP/Contents/MacOS/PayloadX" 2>/dev/null; then
+  echo "ERROR: PayloadX.app still embeds herobg.mp4 — refusing to package."
+  echo "Clean target and rebuild: rm -rf \"$TARGET_DIR/release\""
+  exit 1
+fi
+
+echo "==> create .dmg (UDZO) from $APP"
+TARGET_DIR="$TARGET_DIR" bash "${ROOT}/scripts/make-dmg.sh"
 
 CONF="${ROOT}/src-tauri/tauri.conf.json"
 VERSION="$(grep -m1 '"version"' "$CONF" | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
@@ -57,7 +68,7 @@ case "$ARCH_RAW" in
   x86_64) ARCH="x86_64" ;;
   *) ARCH="$ARCH_RAW" ;;
 esac
-DMG="${ROOT}/src-tauri/target/release/bundle/dmg/PayloadX_${VERSION}_${ARCH}.dmg"
+DMG="${TARGET_DIR}/release/bundle/dmg/PayloadX_${VERSION}_${ARCH}.dmg"
 
 if [[ ! -f "$DMG" ]]; then
   echo "Missing DMG: $DMG"
@@ -77,5 +88,11 @@ xcrun stapler staple "$DMG"
 echo "==> verify staple"
 xcrun stapler validate "$DMG" || true
 
+# Also copy into the conventional local bundle path for convenience.
+LOCAL_DMG_DIR="$ROOT/src-tauri/target/release/bundle/dmg"
+mkdir -p "$LOCAL_DMG_DIR"
+cp -f "$DMG" "$LOCAL_DMG_DIR/$(basename "$DMG")"
+
 echo "Done. Publishable artifact:"
 echo "  $DMG"
+echo "  $LOCAL_DMG_DIR/$(basename "$DMG")"
