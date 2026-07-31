@@ -1,5 +1,6 @@
 import { z } from 'zod/v4';
 import { errorResult, textResult } from './helpers.js';
+import { registerWorkflowTools } from './registerWorkflowTools.js';
 
 function apiError(err) {
   const msg =
@@ -62,6 +63,36 @@ export function registerPayloadXToolsViaApi(server, api) {
   );
 
   server.registerTool(
+    'create_team',
+    {
+      description: 'Create a new PayloadX team. Returns the new team id.',
+      inputSchema: {
+        name: z.string().describe('Team name'),
+        description: z.string().optional().describe('Optional team description'),
+      },
+    },
+    async ({ name, description }) => {
+      try {
+        const data = await api.post('/api/team', {
+          name: name.trim(),
+          description: description || '',
+        });
+        const t = data.team;
+        return textResult({
+          message: 'Team created',
+          team: {
+            id: String(t._id),
+            name: t.name,
+            description: t.description || '',
+          },
+        });
+      } catch (err) {
+        return apiError(err);
+      }
+    }
+  );
+
+  server.registerTool(
     'list_projects',
     {
       description: 'List projects for a team.',
@@ -77,6 +108,41 @@ export function registerPayloadXToolsViaApi(server, api) {
           teamId: String(p.teamId),
         }));
         return textResult({ projects });
+      } catch (err) {
+        return apiError(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_project',
+    {
+      description: 'Create a new project inside a team.',
+      inputSchema: {
+        teamId: z.string().describe('Team ID'),
+        name: z.string().describe('Project name'),
+        description: z.string().optional(),
+        color: z.string().optional(),
+      },
+    },
+    async ({ teamId, name, description, color }) => {
+      try {
+        const data = await api.post('/api/project', {
+          teamId,
+          name: name.trim(),
+          description: description || '',
+          color: color || '#3B82F6',
+        });
+        const p = data.project;
+        return textResult({
+          message: 'Project created',
+          project: {
+            id: String(p._id),
+            name: p.name,
+            teamId: String(p.teamId),
+            description: p.description || '',
+          },
+        });
       } catch (err) {
         return apiError(err);
       }
@@ -474,4 +540,7 @@ export function registerPayloadXToolsViaApi(server, api) {
       }
     }
   );
+
+  // Workflows (create / edit / order APIs)
+  registerWorkflowTools(server, { mode: 'api', api });
 }

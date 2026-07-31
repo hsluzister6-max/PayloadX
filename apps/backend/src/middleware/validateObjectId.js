@@ -30,3 +30,20 @@ export function requireObjectId(param = 'id') {
     return next();
   };
 }
+
+/**
+ * Firestore document ids (workflows) — not Mongo ObjectIds.
+ * Rejects empty / temp_ offline ids only.
+ */
+export function requireFirestoreId(param = 'id') {
+  return (req, res, next) => {
+    const id = req.params[param];
+    if (typeof id !== 'string' || !id.trim() || isTempId(id)) {
+      return res.status(400).json({
+        error: 'Invalid id',
+        message: 'A valid Firestore document id is required.',
+      });
+    }
+    return next();
+  };
+}

@@ -14,6 +14,8 @@ import {
   textResult,
   toObjectId,
 } from './helpers.js';
+import { registerWorkflowTools } from './registerWorkflowTools.js';
+import { db as firestoreDb } from '../lib/firebase.js';
 
 /**
  * Register all PayloadX MCP tools on an McpServer instance.
@@ -59,6 +61,46 @@ export function registerPayloadXTools(server, user) {
   );
 
   server.registerTool(
+    'create_team',
+    {
+      description: 'Create a new PayloadX team. Returns the new team id.',
+      inputSchema: {
+        name: z.string().describe('Team name'),
+        description: z.string().optional().describe('Optional team description'),
+      },
+    },
+    async ({ name, description }) => {
+      try {
+        const team = await Team.create({
+          name: name.trim(),
+          description: description || '',
+          ownerId: userId,
+          members: [{ userId, role: 'admin' }],
+          inviteToken: uuidv4(),
+        });
+        logActivity({
+          userId,
+          teamId: team._id,
+          action: 'create_team',
+          entityId: team._id,
+          entityType: 'team',
+          metadata: { name: team.name, source: 'mcp' },
+        });
+        return textResult({
+          message: 'Team created',
+          team: {
+            id: String(team._id),
+            name: team.name,
+            description: team.description || '',
+          },
+        });
+      } catch (err) {
+        return errorResult(err.message);
+      }
+    }
+  );
+
+  server.registerTool(
     'list_projects',
     {
       description: 'List projects for a team.',
@@ -81,6 +123,53 @@ export function registerPayloadXTools(server, user) {
             teamId: String(p.teamId),
             color: p.color,
           })),
+        });
+      } catch (err) {
+        return errorResult(err.message);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_project',
+    {
+      description: 'Create a new project inside a team.',
+      inputSchema: {
+        teamId: z.string().describe('Team ID'),
+        name: z.string().describe('Project name'),
+        description: z.string().optional(),
+        color: z.string().optional(),
+      },
+    },
+    async ({ teamId, name, description, color }) => {
+      try {
+        await assertTeamAccess(teamId, userId);
+        const project = await Project.create({
+          name: name.trim(),
+          teamId,
+          ownerId: userId,
+          description: description || '',
+          visibility: 'team',
+          color: color || '#3B82F6',
+          members: [{ userId, role: 'admin' }],
+        });
+        logActivity({
+          userId,
+          teamId,
+          action: 'create_project',
+          entityId: project._id,
+          entityType: 'project',
+          metadata: { name: project.name, source: 'mcp' },
+        });
+        return textResult({
+          message: 'Project created',
+          project: {
+            id: String(project._id),
+            name: project.name,
+            teamId: String(project.teamId),
+            description: project.description || '',
+            color: project.color,
+          },
         });
       } catch (err) {
         return errorResult(err.message);
@@ -667,4 +756,13 @@ export function registerPayloadXTools(server, user) {
       }
     }
   );
+
+  // Workflows (Firestore) — create / edit / order APIs
+  registerWorkflowTools(server, {
+    mode: 'firestore',
+    userId,
+    db: firestoreDb,
+    assertTeamAccess,
+    Request,
+  });
 }

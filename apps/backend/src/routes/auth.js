@@ -6,17 +6,19 @@ import ApiToken, { generateApiToken, decryptApiToken } from '../../models/ApiTok
 import { signToken, authenticate } from '../middleware/auth.js';
 import { requireObjectId } from '../middleware/validateObjectId.js';
 
-const MCP_STDIO_PATH = '/Volumes/PSQUARE SSD/PayloadX/apps/backend/src/mcp/stdio.js';
-
+/** Cursor remote MCP — no local repo path; any user can paste this. */
 function buildMcpConfig(rawToken, baseUrl) {
+  const root = String(baseUrl || '')
+    .trim()
+    .replace(/\/+$/, '');
+  const mcpUrl = `${root}/mcp`;
+
   return {
     mcpServers: {
       payloadx: {
-        command: 'node',
-        args: [MCP_STDIO_PATH],
-        env: {
-          PAYLOADX_TOKEN: rawToken,
-          PAYLOADX_BASE_URL: baseUrl,
+        url: mcpUrl,
+        headers: {
+          Authorization: `Bearer ${rawToken}`,
         },
       },
     },

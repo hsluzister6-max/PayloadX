@@ -4,18 +4,18 @@ import api from '@/lib/api';
 import { getServerBaseUrl } from '@/store/serverConfigStore';
 import ModalShell from '@/components/Modals/ModalShell';
 
-const STDIO_PATH = '/Volumes/PSQUARE SSD/PayloadX/apps/backend/src/mcp/stdio.js';
-
-function buildLocalConfig(token, baseUrl) {
+/** Remote MCP config — works for any user (no local disk path). */
+function buildRemoteConfig(token, baseUrl) {
+  const root = String(baseUrl || '')
+    .trim()
+    .replace(/\/+$/, '');
   return JSON.stringify(
     {
       mcpServers: {
         payloadx: {
-          command: 'node',
-          args: [STDIO_PATH],
-          env: {
-            PAYLOADX_TOKEN: token,
-            PAYLOADX_BASE_URL: baseUrl,
+          url: `${root}/mcp`,
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
         },
       },
@@ -61,7 +61,8 @@ export default function McpTokenSection() {
       setDetail({
         meta: data.apiToken || tokenMeta,
         token: data.token,
-        mcpConfigJson: data.mcpConfigJson || buildLocalConfig(data.token, baseUrl),
+        // Always build remote URL config in the UI (cloud may still return old stdio paths).
+        mcpConfigJson: buildRemoteConfig(data.token, baseUrl),
         error: null,
       });
     } catch (err) {
@@ -94,9 +95,7 @@ export default function McpTokenSection() {
       setDetail({
         meta: data.apiToken,
         token: data.token,
-        mcpConfigJson: data.mcpConfig
-          ? JSON.stringify(data.mcpConfig, null, 2)
-          : buildLocalConfig(data.token, baseUrl),
+        mcpConfigJson: buildRemoteConfig(data.token, baseUrl),
         error: null,
       });
     } catch (err) {
@@ -137,7 +136,7 @@ export default function McpTokenSection() {
         <h3 className="mcp-token-heading">Create MCP token</h3>
         <p className="mcp-token-hint">
           Tokens are <strong>saved in the database</strong> and stay valid until you revoke them.
-          Click a token anytime to view the full value and MCP config.
+          The MCP config uses your <strong>cloud API URL</strong> (no local disk path) — any teammate can paste it into Cursor.
         </p>
 
         <form onSubmit={handleCreate} className="mcp-token-form">

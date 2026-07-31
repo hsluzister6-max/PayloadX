@@ -12,7 +12,7 @@ export function createPayloadXMcpServer(user) {
     },
     {
       instructions:
-        'PayloadX MCP — create and manage API requests, collections, folders, and environments in the user’s PayloadX workspace. Prefer list_teams → list_projects → list_collections before create_request so IDs are valid.',
+        'PayloadX MCP — manage API requests, collections, folders, environments, and workflows. Prefer list_teams → list_projects → list_collections before create_request. For workflows use build_workflow_from_requests (ordered requestIds), or create_workflow/update_workflow with nodes+edges; set_workflow_order / add_workflow_api_node to edit ordering.',
     }
   );
 

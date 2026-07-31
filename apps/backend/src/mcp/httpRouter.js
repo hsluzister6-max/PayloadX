@@ -55,7 +55,9 @@ router.get('/tools', async (req, res) => {
     tools: [
       'whoami',
       'list_teams',
+      'create_team',
       'list_projects',
+      'create_project',
       'list_collections',
       'list_requests',
       'search_requests',
@@ -67,6 +69,15 @@ router.get('/tools', async (req, res) => {
       'delete_request',
       'list_environments',
       'create_environment',
+      'list_workflows',
+      'get_workflow',
+      'create_workflow',
+      'update_workflow',
+      'delete_workflow',
+      'build_workflow_from_requests',
+      'set_workflow_order',
+      'add_workflow_api_node',
+      'list_workflow_executions',
     ],
   });
 });

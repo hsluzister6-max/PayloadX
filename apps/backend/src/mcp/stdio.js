@@ -40,7 +40,7 @@ async function main() {
     { name: 'payloadx', version: '1.0.0' },
     {
       instructions:
-        'PayloadX MCP (API mode). Use list_teams → list_projects → list_collections before create_request.',
+        'PayloadX MCP (API mode). Use list_teams → list_projects → list_collections before create_request. For workflows: build_workflow_from_requests (ordered API ids) or create_workflow/update_workflow with nodes+edges; set_workflow_order to reorder steps.',
     }
   );
   registerPayloadXToolsViaApi(server, api);
