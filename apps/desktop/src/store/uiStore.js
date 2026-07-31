@@ -21,6 +21,7 @@ export const useUIStore = create(
       rightSidebarActiveTab: 'environment',
       rightSidebarWidth: 420,
       showInviteModal: false,
+      showMcpTokenModal: false,
       showConfirmDialog: false,
       showEditNameModal: false,
       showSessionModal: false,
@@ -54,6 +55,7 @@ export const useUIStore = create(
       openRightSidebarTab: (tab) => set({ rightSidebarActiveTab: tab, rightSidebarOpen: true }),
 
       setShowInviteModal: (v) => set({ showInviteModal: v }),
+      setShowMcpTokenModal: (v) => set({ showMcpTokenModal: v }),
       setShowConfirmDialog: (v, config = null) => set({ showConfirmDialog: v, confirmDialogConfig: config }),
       setShowEditNameModal: (v, config = null) => set({ showEditNameModal: v, editNameModalConfig: config }),
       setShowUnsavedModal: (v, config = null) => set({ showUnsavedModal: v, unsavedModalConfig: config }),
@@ -89,6 +91,7 @@ export const useUIStore = create(
           showCollectionModal: false,
           showEnvironmentPanel: false,
           showInviteModal: false,
+          showMcpTokenModal: false,
           showConfirmDialog: false,
           showEditNameModal: false,
           showSessionModal: false,

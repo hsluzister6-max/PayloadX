@@ -2,7 +2,26 @@ import express from 'express';
 import axios from 'axios';
 import User from '../../models/User.js';
 import OtpSession from '../../models/OtpSession.js';
+import ApiToken, { generateApiToken, decryptApiToken } from '../../models/ApiToken.js';
 import { signToken, authenticate } from '../middleware/auth.js';
+import { requireObjectId } from '../middleware/validateObjectId.js';
+
+const MCP_STDIO_PATH = '/Volumes/PSQUARE SSD/PayloadX/apps/backend/src/mcp/stdio.js';
+
+function buildMcpConfig(rawToken, baseUrl) {
+  return {
+    mcpServers: {
+      payloadx: {
+        command: 'node',
+        args: [MCP_STDIO_PATH],
+        env: {
+          PAYLOADX_TOKEN: rawToken,
+          PAYLOADX_BASE_URL: baseUrl,
+        },
+      },
+    },
+  };
+}
 
 const router = express.Router();
 
@@ -453,6 +472,185 @@ router.post('/reset-password-otp', async (req, res) => {
   } catch (error) {
     console.error('[Reset Password] ❌ Error:', error.message);
     res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// ── API / MCP Tokens ────────────────────────────────────────────────────────
+
+/**
+ * POST /api/auth/api-tokens
+ * Create a long-lived PayloadX token for MCP / Cursor / Claude.
+ * Returns the raw token ONCE — store it securely.
+ */
+router.post('/api-tokens', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const name = (req.body?.name || 'MCP Token').trim().slice(0, 100) || 'MCP Token';
+
+    // MCP / API tokens are persisted in MongoDB and stay valid until revoked.
+    // Optional expiresInDays only if client explicitly opts in.
+    let expiresAt = null;
+    if (req.body?.expiresInDays != null && Number(req.body.expiresInDays) > 0) {
+      expiresAt = new Date(Date.now() + Number(req.body.expiresInDays) * 24 * 60 * 60 * 1000);
+    }
+
+    const { raw, prefix, hash, encrypted } = generateApiToken();
+    const doc = await ApiToken.create({
+      userId,
+      name,
+      tokenPrefix: prefix,
+      tokenHash: hash,
+      tokenEncrypted: encrypted,
+      scopes: ['mcp', 'api'],
+      expiresAt, // null = never expires (until revoked from Account page)
+      revokedAt: null,
+    });
+
+    const baseUrl =
+      req.body?.baseUrl ||
+      process.env.PUBLIC_API_URL ||
+      `${req.protocol}://${req.get('host')}`;
+
+    res.status(201).json({
+      message: 'Token saved to database. Valid until you revoke it. You can view it anytime from Account.',
+      token: raw,
+      mcpConfig: buildMcpConfig(raw, baseUrl),
+      apiToken: {
+        id: String(doc._id),
+        name: doc.name,
+        tokenPrefix: doc.tokenPrefix,
+        scopes: doc.scopes,
+        expiresAt: doc.expiresAt,
+        neverExpires: !doc.expiresAt,
+        createdAt: doc.createdAt,
+        canReveal: true,
+      },
+    });
+  } catch (err) {
+    console.error('[POST /api/auth/api-tokens]', err);
+    res.status(500).json({ error: 'Failed to create token' });
+  }
+});
+
+/**
+ * GET /api/auth/api-tokens
+ * List tokens for the current user (never returns raw secrets).
+ */
+router.get('/api-tokens', authenticate, async (req, res) => {
+  try {
+    const tokens = await ApiToken.find({
+      userId: req.user.id,
+      revokedAt: null,
+    })
+      .sort({ createdAt: -1 })
+      .select('_id name tokenPrefix scopes lastUsedAt expiresAt createdAt')
+      .lean();
+
+    // Check which tokens have encrypted payloads (revealable)
+    const withEnc = await ApiToken.find({
+      userId: req.user.id,
+      revokedAt: null,
+      tokenEncrypted: { $ne: null },
+    })
+      .select('_id')
+      .lean();
+    const revealable = new Set(withEnc.map((t) => String(t._id)));
+
+    res.json({
+      tokens: tokens.map((t) => ({
+        id: String(t._id),
+        name: t.name,
+        tokenPrefix: t.tokenPrefix,
+        scopes: t.scopes,
+        lastUsedAt: t.lastUsedAt,
+        expiresAt: t.expiresAt,
+        neverExpires: !t.expiresAt,
+        createdAt: t.createdAt,
+        status: 'active',
+        canReveal: revealable.has(String(t._id)),
+      })),
+    });
+  } catch (err) {
+    console.error('[GET /api/auth/api-tokens]', err);
+    res.status(500).json({ error: 'Failed to list tokens' });
+  }
+});
+
+/**
+ * GET /api/auth/api-tokens/:id
+ * Reveal full token + MCP config for the owner.
+ */
+router.get('/api-tokens/:id', authenticate, requireObjectId(), async (req, res) => {
+  try {
+    const doc = await ApiToken.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+      revokedAt: null,
+    }).select('+tokenEncrypted');
+
+    if (!doc) return res.status(404).json({ error: 'Token not found' });
+
+    const raw = decryptApiToken(doc.tokenEncrypted);
+    if (!raw) {
+      return res.status(409).json({
+        error:
+          'This token was created before reveal support. Revoke it and generate a new one to view the full value.',
+        canReveal: false,
+        apiToken: {
+          id: String(doc._id),
+          name: doc.name,
+          tokenPrefix: doc.tokenPrefix,
+        },
+      });
+    }
+
+    const baseUrl =
+      req.query.baseUrl ||
+      process.env.PUBLIC_API_URL ||
+      `${req.protocol}://${req.get('host')}`;
+
+    res.json({
+      token: raw,
+      mcpConfig: buildMcpConfig(raw, String(baseUrl)),
+      mcpConfigJson: JSON.stringify(buildMcpConfig(raw, String(baseUrl)), null, 2),
+      apiToken: {
+        id: String(doc._id),
+        name: doc.name,
+        tokenPrefix: doc.tokenPrefix,
+        scopes: doc.scopes,
+        lastUsedAt: doc.lastUsedAt,
+        expiresAt: doc.expiresAt,
+        neverExpires: !doc.expiresAt,
+        createdAt: doc.createdAt,
+        canReveal: true,
+      },
+    });
+  } catch (err) {
+    console.error('[GET /api/auth/api-tokens/:id]', err);
+    res.status(500).json({ error: 'Failed to load token' });
+  }
+});
+
+/**
+ * DELETE /api/auth/api-tokens/:id
+ * Revoke a token.
+ */
+router.delete('/api-tokens/:id', authenticate, requireObjectId(), async (req, res) => {
+  try {
+    const doc = await ApiToken.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+      revokedAt: null,
+    });
+    if (!doc) return res.status(404).json({ error: 'Token not found' });
+
+    doc.revokedAt = new Date();
+    await doc.save();
+
+    res.json({ message: 'Token revoked', id: String(doc._id) });
+  } catch (err) {
+    console.error('[DELETE /api/auth/api-tokens/:id]', err);
+    res.status(500).json({ error: 'Failed to revoke token' });
   }
 });
 

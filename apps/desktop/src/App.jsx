@@ -29,6 +29,7 @@ import ContextMenu from '@/components/ContextMenu/ContextMenu';
 import ConfirmDialog from '@/components/ConfirmDialog/ConfirmDialog';
 import EditNameModal from '@/components/EditNameModal/EditNameModal';
 import UnsavedChangesModal from '@/components/Modals/UnsavedChangesModal';
+import McpTokenModal from '@/components/Modals/McpTokenModal';
 import SyncStatusTag from '@/components/SyncStatusTag/SyncStatusTag';
 import OfflineSyncManager from '@/components/OfflineSyncManager/OfflineSyncManager';
 import { useProjectStore } from '@/store/projectStore';
@@ -78,6 +79,7 @@ export default function App() {
     showFolderModal,
     showEnvironmentPanel,
     showInviteModal,
+    showMcpTokenModal,
     showConfirmDialog,
     showEditNameModal,
     showSessionModal,
@@ -330,6 +332,7 @@ export default function App() {
         {showCollectionModal && <CreateCollectionModal />}
         {showFolderModal && <CreateFolderModal />}
         {showInviteModal && <InviteModal />}
+        {showMcpTokenModal && <McpTokenModal />}
         <ContextMenu />
         <ConfirmDialog />
         <EditNameModal />
@@ -462,6 +465,7 @@ export default function App() {
         {showCollectionModal && <CreateCollectionModal />}
         {showFolderModal && <CreateFolderModal />}
         {showInviteModal && <InviteModal />}
+        {showMcpTokenModal && <McpTokenModal />}
         {showSessionModal && <SessionManagerModal />}
         <ContextMenu />
         <ConfirmDialog />

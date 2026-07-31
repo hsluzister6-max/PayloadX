@@ -50,7 +50,16 @@ async function connectDB() {
 app.use(cors({
   origin: CORS_ORIGIN,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'MCP-Protocol-Version',
+    'mcp-session-id',
+    'Last-Event-ID',
+    'Accept',
+  ],
+  exposedHeaders: ['mcp-session-id', 'MCP-Protocol-Version'],
   credentials: true,
 }));
 
@@ -120,6 +129,7 @@ import commentRoutes from './routes/comment.js';
 import workflowRoutes from './routes/workflow.js';
 import workflowExecutionRoutes from './routes/workflowExecution.js';
 import dashboardRoutes from './routes/dashboard.js';
+import mcpHttpRouter from './mcp/httpRouter.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/request', requestRoutes);
@@ -134,12 +144,21 @@ app.use('/api/workflow', workflowRoutes);
 app.use('/api/workflow-execution', workflowExecutionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+// Free MCP server (Cursor / Claude) — Streamable HTTP
+app.use('/mcp', mcpHttpRouter);
+app.use('/api/mcp', mcpHttpRouter);
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
+    mcp: {
+      http: '/mcp',
+      tools: '/mcp/tools',
+      docs: 'See MCP.md',
+    },
   });
 });
 

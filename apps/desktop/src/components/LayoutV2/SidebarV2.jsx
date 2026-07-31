@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useCollectionStore } from '@/store/collectionStore';
@@ -93,7 +92,7 @@ export default function SidebarV2({
     width,
 }) {
     const [refreshingColId, setRefreshingColId] = useState(null);
-    const { user, logout } = useAuthStore();
+    const { user } = useAuthStore();
     const {
         teams,
         currentTeam,
@@ -157,7 +156,6 @@ export default function SidebarV2({
         isDeleting: isDeletingWorkflow
     } = useWorkflowStore();
 
-    const { disconnect } = useSocketStore();
     const { isConnected } = useSocketStore();
     const { hasInternet, isBackendReachable } = useConnectivityStore();
     const isOffline = !hasInternet || !isBackendReachable;
@@ -171,7 +169,7 @@ export default function SidebarV2({
         setShowFolderModal,
         setShowConfirmDialog,
         setShowEditNameModal,
-        setShowInviteModal
+        setShowInviteModal,
     } = useUIStore();
     const {
         currentRequest,
@@ -204,10 +202,6 @@ export default function SidebarV2({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
-    const [showLogout, setShowLogout] = useState(false);
-    const [logoutPos, setLogoutPos] = useState(null);
-    const logoutMenuRef = useRef(null);
-    const logoutTriggerRef = useRef(null);
     const [initializedCollections, setInitializedCollections] = useState(new Set());
 
     const [expandedProjects, setExpandedProjects] = useState(() => {
@@ -360,44 +354,6 @@ export default function SidebarV2({
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
-
-    // ── Close logout menu when clicking outside ──────────────────
-    useEffect(() => {
-        if (!showLogout) return;
-
-        const handleClickOutside = (e) => {
-            if (
-                logoutMenuRef.current && !logoutMenuRef.current.contains(e.target) &&
-                logoutTriggerRef.current && !logoutTriggerRef.current.contains(e.target)
-            ) {
-                setShowLogout(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showLogout]);
-
-    useEffect(() => {
-        if (!showLogout || !logoutTriggerRef.current) {
-            setLogoutPos(null);
-            return;
-        }
-        const update = () => {
-            const r = logoutTriggerRef.current.getBoundingClientRect();
-            setLogoutPos({
-                left: r.left,
-                bottom: window.innerHeight - r.top + 8,
-            });
-        };
-        update();
-        window.addEventListener('resize', update);
-        window.addEventListener('scroll', update, true);
-        return () => {
-            window.removeEventListener('resize', update);
-            window.removeEventListener('scroll', update, true);
-        };
-    }, [showLogout]);
 
     // ── Load cached requests for expanded collections on mount ──────────────────
     useEffect(() => {
@@ -916,12 +872,6 @@ export default function SidebarV2({
         });
     };
 
-    const handleLogout = () => {
-        disconnect();
-        logout();
-        toast.success('Signed out successfully');
-    };
-
     const toggleCollection = async (col) => {
         const id = col._id;
         if (expandedCollections.has(id)) {
@@ -1069,30 +1019,12 @@ export default function SidebarV2({
                         </svg>
                     </button>
                     <button
-                        ref={logoutTriggerRef}
-                        className="sdbv2-activity-avatar"
-                        onClick={() => setShowLogout(!showLogout)}
+                        className={`sdbv2-activity-avatar ${activeV2Nav === 'profile' ? 'sdbv2-activity-avatar--active' : ''}`}
+                        onClick={() => setActiveV2Nav('profile')}
                         title={user?.email || 'Profile'}
                     >
-                        {user?.email?.[0]?.toUpperCase() || 'U'}
+                        {(user?.name || user?.email)?.[0]?.toUpperCase() || 'U'}
                     </button>
-
-                    {showLogout && logoutPos && createPortal(
-                        <div
-                            ref={logoutMenuRef}
-                            className="sdbv2-logout-menu"
-                            style={{ left: logoutPos.left, bottom: logoutPos.bottom }}
-                        >
-                            <div className="sdbv2-logout-email">{user?.email}</div>
-                            <button className="sdbv2-logout-btn" onClick={handleLogout}>
-                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                                Sign Out
-                            </button>
-                        </div>,
-                        document.body
-                    )}
                 </div>
             </nav>
 
@@ -1155,6 +1087,26 @@ export default function SidebarV2({
                             ) : (
                                 <p className="sdbv2-empty-note">No matches found in project</p>
                             )}
+                        </div>
+                    ) : activeV2Nav === 'profile' ? (
+                        <div className="sdbv2-section flex-1 flex flex-col min-h-0">
+                            <div className="sdbv2-section-head">
+                                <span className="sdbv2-section-label">Account</span>
+                            </div>
+                            <p className="sdbv2-empty-note px-2 pb-2">
+                                Profile details, workspace info, and MCP tokens.
+                            </p>
+                            <div className="px-1 flex flex-col gap-1">
+                                <button type="button" className="sdbv2-tree-row w-full sdbv2-tree-row--active" onClick={() => setActiveV2Nav('profile')}>
+                                    <span className="sdbv2-tree-text text-[10px] font-semibold uppercase tracking-wide">Profile &amp; MCP</span>
+                                </button>
+                                <button type="button" className="sdbv2-tree-row w-full" onClick={() => setActiveV2Nav('dashboard')}>
+                                    <span className="sdbv2-tree-text text-[10px] font-semibold uppercase tracking-wide">Dashboard</span>
+                                </button>
+                                <button type="button" className="sdbv2-tree-row w-full" onClick={() => setActiveV2Nav('collections')}>
+                                    <span className="sdbv2-tree-text text-[10px] font-semibold uppercase tracking-wide">Collections</span>
+                                </button>
+                            </div>
                         </div>
                     ) : activeV2Nav === 'dashboard' ? (
                         <div className="sdbv2-section flex-1 flex flex-col min-h-0">

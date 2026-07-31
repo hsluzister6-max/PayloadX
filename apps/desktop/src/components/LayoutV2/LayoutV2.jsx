@@ -17,6 +17,7 @@ import InlineDocViewer from '@/components/ResponseViewer/InlineDocViewer';
 import RightSidebar from './RightSidebar';
 import WorkflowBuilder from '@/components/WorkflowBuilder/WorkflowBuilder';
 import HistoryPanel from '@/components/History/HistoryPanel.jsx';
+import ProfilePage from '@/components/Profile/ProfilePage';
 import toast from 'react-hot-toast';
 import SyncSidebar from '@/components/Sync/SyncSidebar';
 import api from '@/lib/api';
@@ -322,6 +323,8 @@ export default function LayoutV2({
 
           {activeV2Nav === 'dashboard' ? (
             <Dashboard />
+          ) : activeV2Nav === 'profile' ? (
+            <ProfilePage />
           ) : activeV2Nav === 'docs' ? (
             <ApiDocsPanel />
           ) : activeV2Nav === 'workflow' ? (
