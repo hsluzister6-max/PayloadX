@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import { KeyRound, Plus, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { getServerBaseUrl } from '@/store/serverConfigStore';
 import ModalShell from '@/components/Modals/ModalShell';
@@ -25,7 +26,7 @@ function buildRemoteConfig(token, baseUrl) {
   );
 }
 
-export default function McpTokenSection() {
+export default function McpTokenSection({ embedded = false }) {
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -61,13 +62,11 @@ export default function McpTokenSection() {
       setDetail({
         meta: data.apiToken || tokenMeta,
         token: data.token,
-        // Always build remote URL config in the UI (cloud may still return old stdio paths).
         mcpConfigJson: buildRemoteConfig(data.token, baseUrl),
         error: null,
       });
     } catch (err) {
       const msg = err.response?.data?.error || 'Failed to load token';
-      // Fallback for old tokens: still open modal with guidance
       setDetail({
         meta: tokenMeta,
         token: null,
@@ -90,7 +89,7 @@ export default function McpTokenSection() {
         name: name.trim() || 'MCP Token',
         baseUrl,
       });
-      toast.success('Token saved — opening details');
+      toast.success('Token created');
       await loadTokens();
       setDetail({
         meta: data.apiToken,
@@ -131,70 +130,77 @@ export default function McpTokenSection() {
   };
 
   return (
-    <div className="mcp-token-layout profile-mcp-layout">
-      <section className="mcp-token-create">
-        <h3 className="mcp-token-heading">Create MCP token</h3>
-        <p className="mcp-token-hint">
-          Tokens are <strong>saved in the database</strong> and stay valid until you revoke them.
-          The MCP config uses your <strong>cloud API URL</strong> (no local disk path) — any teammate can paste it into Cursor.
-        </p>
-
+    <div className={`mcp-token-layout${embedded ? ' mcp-token-layout--embedded' : ''}`}>
+      <div className="mcp-token-toolbar">
         <form onSubmit={handleCreate} className="mcp-token-form">
-          <input
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Token name (e.g. Cursor MCP)"
-            maxLength={100}
-          />
+          <div className="mcp-token-input-wrap">
+            <KeyRound size={14} className="mcp-token-input-icon" />
+            <input
+              className="mcp-token-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Token name (e.g. Cursor MCP)"
+              maxLength={100}
+            />
+          </div>
           <button type="submit" className="mcp-token-primary-btn" disabled={creating}>
-            {creating ? 'Creating…' : 'Generate token'}
+            <Plus size={14} strokeWidth={2.5} />
+            {creating ? 'Creating…' : 'Generate'}
           </button>
         </form>
-      </section>
+        <p className="mcp-token-hint">
+          Paste the config into <code>~/.cursor/mcp.json</code>. Uses your API URL — no local disk path.
+        </p>
+      </div>
 
-      <section className="mcp-token-list-wrap">
-        <h3 className="mcp-token-heading">Your tokens</h3>
+      <div className="mcp-token-list-wrap">
+        <div className="mcp-token-list-head">
+          <h4>Active tokens</h4>
+          <span>{loading ? '…' : `${tokens.length}`}</span>
+        </div>
+
         {loading ? (
-          <p className="mcp-token-hint">Loading…</p>
+          <div className="mcp-token-empty">Loading tokens…</div>
         ) : tokens.length === 0 ? (
-          <p className="mcp-token-hint">No active tokens yet.</p>
+          <div className="mcp-token-empty">
+            No tokens yet. Generate one to connect Cursor or Claude.
+          </div>
         ) : (
           <div className="mcp-token-list">
             {tokens.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className="mcp-token-row mcp-token-row--clickable"
-                onClick={() => openTokenDetail(t)}
-              >
-                <div className="mcp-token-row-main">
+              <div key={t.id} className="mcp-token-row">
+                <button
+                  type="button"
+                  className="mcp-token-row-main"
+                  onClick={() => openTokenDetail(t)}
+                >
                   <div className="mcp-token-name-row">
                     <p className="mcp-token-name">{t.name}</p>
                     <span className="mcp-token-status">
-                      {t.neverExpires || !t.expiresAt ? 'Active · never expires' : `Expires ${new Date(t.expiresAt).toLocaleDateString()}`}
+                      {t.neverExpires || !t.expiresAt
+                        ? 'Never expires'
+                        : `Expires ${new Date(t.expiresAt).toLocaleDateString()}`}
                     </span>
                   </div>
                   <p className="mcp-token-meta">
-                    {t.tokenPrefix}
-                    {t.lastUsedAt ? ` · last used ${new Date(t.lastUsedAt).toLocaleString()}` : ' · never used'}
-                    {t.createdAt ? ` · created ${new Date(t.createdAt).toLocaleDateString()}` : ''}
-                    {' · click to view'}
+                    <code>{t.tokenPrefix}…</code>
+                    {t.lastUsedAt
+                      ? ` · last used ${new Date(t.lastUsedAt).toLocaleString()}`
+                      : ' · never used'}
+                    {t.createdAt ? ` · ${new Date(t.createdAt).toLocaleDateString()}` : ''}
                   </p>
-                </div>
-                <span
-                  role="button"
-                  tabIndex={0}
+                </button>
+                <button
+                  type="button"
                   className="mcp-token-revoke-btn"
                   onClick={(e) => handleRevoke(t.id, e)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') handleRevoke(t.id, e);
-                  }}
+                  disabled={revoking === t.id}
                   title="Revoke permanently"
                 >
+                  <Trash2 size={13} />
                   {revoking === t.id ? '…' : 'Revoke'}
-                </span>
-              </button>
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -203,7 +209,7 @@ export default function McpTokenSection() {
           <span>API server</span>
           <code>{baseUrl}</code>
         </div>
-      </section>
+      </div>
 
       {detail && (
         <ModalShell

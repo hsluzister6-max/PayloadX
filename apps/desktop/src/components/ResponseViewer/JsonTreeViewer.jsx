@@ -694,7 +694,7 @@ export default function JsonTreeViewer({ value, contentType = '', className = ''
               <VirtualizedResponseText text={rawStr} textClass="text-[11.5px] font-mono text-tx-secondary whitespace-pre-wrap break-all leading-snug" />
             </div>
           ) : (
-            <div className="response-mouse-select selectable" style={{ height: '100%', overflow: 'auto', padding: 12, fontSize: 11.5, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#C8CDD8', fontFamily: "'JetBrains Mono', monospace", cursor: 'text' }}>
+            <div className="response-mouse-select selectable" style={{ height: '100%', overflow: 'auto', padding: '6px 8px', fontSize: 11.5, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#C8CDD8', fontFamily: "'JetBrains Mono', monospace", cursor: 'text' }}>
               {rawStr}
             </div>
           )

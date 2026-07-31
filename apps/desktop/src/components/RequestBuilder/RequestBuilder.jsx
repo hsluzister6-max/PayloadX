@@ -92,8 +92,8 @@ export default function RequestBuilder() {
   return (
     <div className="flex flex-col h-full" onKeyDown={handleKeyDown}>
       {/* Shared Header: Protocol, Name, and Actions */}
-      <div className="flex items-center justify-between px-3 pt-2 pb-1 min-h-[34px]">
-        <div className="flex items-center flex-1 min-w-0 pr-4 gap-3">
+      <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5 min-h-[30px]">
+        <div className="flex items-center flex-1 min-w-0 pr-3 gap-2">
           {/* Protocol Toggle */}
           <div className="relative">
             <button

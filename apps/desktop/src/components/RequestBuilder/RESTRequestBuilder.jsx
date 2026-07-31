@@ -78,6 +78,62 @@ export default function RESTRequestBuilder() {
         value: resolveVariables(h.value),
       }));
 
+      const resolveBody = (body) => {
+        if (!body || typeof body !== 'object') return body;
+        const mode = body.mode || 'none';
+        if (mode === 'raw') {
+          return { ...body, raw: resolveVariables(body.raw || '') };
+        }
+        if (mode === 'form-data') {
+          return {
+            ...body,
+            formData: (body.formData || []).map((item) => ({
+              ...item,
+              value:
+                item?.type === 'file'
+                  ? item.value
+                  : resolveVariables(item?.value ?? ''),
+            })),
+          };
+        }
+        if (mode === 'urlencoded') {
+          return {
+            ...body,
+            urlencoded: (body.urlencoded || []).map((item) => ({
+              ...item,
+              value: resolveVariables(item?.value ?? ''),
+            })),
+          };
+        }
+        return body;
+      };
+
+      const resolveAuth = (auth) => {
+        if (!auth || auth.type === 'none') return auth;
+        const next = { ...auth };
+        if (next.bearer) {
+          next.bearer = {
+            ...next.bearer,
+            token: resolveVariables(next.bearer.token || ''),
+          };
+        }
+        if (next.basic) {
+          next.basic = {
+            ...next.basic,
+            username: resolveVariables(next.basic.username || ''),
+            password: resolveVariables(next.basic.password || ''),
+          };
+        }
+        if (next.apikey) {
+          next.apikey = {
+            ...next.apikey,
+            key: resolveVariables(next.apikey.key || ''),
+            value: resolveVariables(next.apikey.value || ''),
+          };
+        }
+        return next;
+      };
+
       const payload = {
         method: reqAtSend.method,
         url: resolvedUrl,
@@ -86,8 +142,8 @@ export default function RESTRequestBuilder() {
           ...p,
           value: resolveVariables(p.value),
         })),
-        body: reqAtSend.body,
-        auth: reqAtSend.auth,
+        body: resolveBody(reqAtSend.body),
+        auth: resolveAuth(reqAtSend.auth),
         timeoutMs: 30000,
       };
 
@@ -187,12 +243,12 @@ export default function RESTRequestBuilder() {
   return (
     <div className="flex flex-col h-full">
       {/* URL bar */}
-      <div className="flex items-center gap-2 px-3 pb-1.5 pt-0.5">
-        <div className="flex-1 min-w-0 flex items-center bg-[color:var(--surface-1)] border border-[color:var(--border-1)] rounded-md focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent)] hover:border-[color:var(--border-2)] transition-all overflow-visible h-8">
+      <div className="flex items-center gap-1.5 px-2 pb-1 pt-0">
+        <div className="flex-1 min-w-0 flex items-center bg-[color:var(--surface-2)] border border-transparent rounded-md focus-within:border-[color:var(--accent)] focus-within:ring-1 focus-within:ring-[color:var(--accent)] hover:border-[color:var(--border-1)] transition-all overflow-visible h-8">
           <div className="relative h-full flex-shrink-0">
             <button
               onClick={() => setShowMethodDropdown(!showMethodDropdown)}
-              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] font-bold ${METHOD_COLORS[currentRequest.method]} hover:bg-[color:var(--surface-2)] transition-colors min-w-[80px] justify-between border-r border-[color:var(--border-1)] rounded-l-md outline-none focus:outline-none`}
+              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] font-bold ${METHOD_COLORS[currentRequest.method]} hover:bg-[color:var(--surface-3)] transition-colors min-w-[80px] justify-between border-r border-[color:var(--border-1)] rounded-l-md outline-none focus:outline-none`}
             >
               {currentRequest.method}
               <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -226,7 +282,7 @@ export default function RESTRequestBuilder() {
 
       {/* Resolved URL preview */}
       {currentRequest.url?.includes('{{') && (
-        <div className="px-3 pb-1.5 flex items-center gap-1.5">
+        <div className="px-2 pb-1 flex items-center gap-1.5">
           <svg className="w-3 h-3 text-tx-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
@@ -237,13 +293,13 @@ export default function RESTRequestBuilder() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-[var(--border-1)] px-3">
+      <div className="border-b border-[var(--border-1)] px-2">
         <div className="flex items-center gap-0.5">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-medium border-b-2 transition-all ${activeTab === tab.id
+              className={`flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium border-b-2 transition-all ${activeTab === tab.id
                 ? 'border-[var(--accent)] text-[var(--text-primary)]'
                 : 'border-transparent text-surface-500 hover:text-tx-secondary'
                 }`}

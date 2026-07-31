@@ -22,7 +22,7 @@ export default function BodyTab() {
   return (
     <div className="flex flex-col h-full">
       {/* Mode selector */}
-      <div className="flex items-center gap-1 p-3 border-b border-[var(--border-1)]">
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--border-1)]">
         {BODY_MODES.map((m) => (
           <button
             key={m.id}

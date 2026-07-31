@@ -40,7 +40,7 @@ export default function RightSidebar() {
       {/* Collapse button */}
       <button
         onClick={() => setRightSidebarOpen(false)}
-        className="flex-shrink-0 h-full w-6 flex items-center justify-center border-l border-r border-[color:var(--border-1)] bg-[color:var(--bg-secondary)] hover:bg-[color:var(--surface-2)] transition-colors"
+        className="flex-shrink-0 h-full w-5 flex items-center justify-center border-l border-[color:var(--border-1)] bg-[color:var(--bg-secondary)] hover:bg-[color:var(--surface-2)] transition-colors"
         title="Close sidebar"
       >
         <PanelRight size={14} className="text-[color:var(--text-muted)] rotate-180" />
@@ -48,12 +48,12 @@ export default function RightSidebar() {
 
       {/* Sidebar */}
       <div
-        className="flex-shrink-0 flex flex-col h-full bg-[color:var(--bg-secondary)] border-l border-[color:var(--border-1)]"
+        className="flex-shrink-0 flex flex-col h-full bg-[color:var(--bg-secondary)]"
         style={{ width: rightSidebarWidth }}
       >
         {/* Header with tabs */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-[color:var(--border-1)] bg-[color:var(--bg-primary)]">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-2 py-1 border-b border-[color:var(--border-1)]">
+          <div className="flex items-center gap-0.5">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = rightSidebarActiveTab === tab.id;
@@ -61,7 +61,7 @@ export default function RightSidebar() {
                 <button
                   key={tab.id}
                   onClick={() => setRightSidebarActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all ${
                     isActive
                       ? 'bg-[color:var(--surface-2)] text-[color:var(--text-primary)]'
                       : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-1)]'

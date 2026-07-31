@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Docs.module.css";
 import {
   ChevronRight, Terminal, Cpu, Layers, Github, Zap,
-  Server, Lock, Code, BookOpen, Keyboard, Menu, X
+  Server, Lock, Code, BookOpen, Keyboard, Menu, X, Plug
 } from "lucide-react";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
     group: "Getting Started",
     items: [
       { id: "localSetup", label: "Local Setup", icon: <Terminal size={14} /> },
+      { id: "mcp", label: "MCP Server", icon: <Plug size={14} /> },
     ],
   },
   {
@@ -51,6 +52,7 @@ export default function Docs() {
 
   const SECTIONS = {
     localSetup: <LocalSetup />,
+    mcp: <McpServer />,
     architecture: <Architecture />,
     structure: <Structure />,
     performance: <Performance />,
@@ -132,6 +134,266 @@ export default function Docs() {
 /* ============================================================
    SECTION COMPONENTS
    ============================================================ */
+
+function McpServer() {
+  return (
+    <div className={styles.section}>
+      <div>
+        <div className={styles.sectionBadge}><Plug size={10} /> Integrations</div>
+        <h1 className={styles.metallicTitle}>MCP Server</h1>
+        <p className={styles.lead}>
+          Connect Cursor or Claude to PayloadX with the Model Context Protocol.
+          Create teams, collections, requests, and workflows from your AI client —
+          they show up instantly in the desktop app.
+        </p>
+      </div>
+
+      <div className={styles.quickStartCard}>
+        <div className={styles.quickStartHeader}>
+          <Plug size={13} />
+          SETUP FLOW — CURSOR / CLAUDE
+        </div>
+        <div className={styles.quickStartBody}>
+          <div className={styles.qsStep}>
+            <div className={styles.qsNum}>01</div>
+            <div className={styles.qsContent}>
+              <label>SIGN IN TO PAYLOADX</label>
+              <p className={styles.qsDesc}>
+                Open the desktop app and sign in with your PayloadX account.
+              </p>
+            </div>
+          </div>
+          <div className={styles.qsStep}>
+            <div className={styles.qsNum}>02</div>
+            <div className={styles.qsContent}>
+              <label>CREATE AN MCP TOKEN</label>
+              <p className={styles.qsDesc}>
+                Click your <strong>avatar</strong> (bottom-left) → <strong>MCP / API Tokens</strong> →
+                {" "}<strong>Generate token</strong>. Open the token and copy the ready-made config.
+              </p>
+            </div>
+          </div>
+          <div className={styles.qsStep}>
+            <div className={styles.qsNum}>03</div>
+            <div className={styles.qsContent}>
+              <label>ADD TO CURSOR</label>
+              <p className={styles.qsDesc}>
+                Paste the config into <code>~/.cursor/mcp.json</code> or your project{" "}
+                <code>.cursor/mcp.json</code>, then reload MCP servers in Cursor.
+              </p>
+            </div>
+          </div>
+          <div className={styles.qsStep}>
+            <div className={styles.qsNum}>04</div>
+            <div className={styles.qsContent}>
+              <label>USE IT</label>
+              <p className={styles.qsDesc}>
+                Ask Cursor to create APIs or workflows — for example{" "}
+                <em>“Create a REST collection for auth and add login + signup requests.”</em>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className={styles.qsFooter}>
+          <Server size={11} />
+          Tokens look like <code>pxat_…</code> · No Mongo URI or JWT secret needed on the client
+        </div>
+      </div>
+
+      <div>
+        <div className={styles.sectionTitle}>Cursor config (recommended)</div>
+        <p className={styles.text}>
+          Prefer <strong>Streamable HTTP</strong>. You only need your token and the{" "}
+          <code>/mcp</code> URL — no local repo checkout.
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>~/.cursor/mcp.json</span></div>
+          <div className={styles.codeBody}>
+            {"{"}<br />
+            &nbsp;&nbsp;&quot;mcpServers&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&quot;payloadx&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;url&quot;: &quot;https://payload-x-884697093779.europe-west1.run.app/mcp&quot;,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;headers&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;Authorization&quot;: &quot;Bearer pxat_YOUR_TOKEN&quot;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;{"}"}<br />
+            {"}"}
+          </div>
+        </div>
+        <p className={styles.text}>
+          Self-hosted backends use the same shape with your API origin, e.g.{" "}
+          <code>http://localhost:3001/mcp</code>.
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Local / self-hosted</span></div>
+          <div className={styles.codeBody}>
+            {"{"}<br />
+            &nbsp;&nbsp;&quot;mcpServers&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&quot;payloadx&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;url&quot;: &quot;http://localhost:3001/mcp&quot;,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;headers&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;Authorization&quot;: &quot;Bearer pxat_YOUR_TOKEN&quot;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;{"}"}<br />
+            {"}"}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className={styles.sectionTitle}>What you can do</div>
+        <p className={styles.text}>
+          Typical API flow:{" "}
+          <code>create_team</code> → <code>create_project</code> → <code>create_collection</code> →{" "}
+          <code>create_folder</code> → <code>create_request</code>.
+        </p>
+        <p className={styles.text}>
+          Typical workflow flow: search requests →{" "}
+          <code>build_workflow_from_requests</code> → adjust nodes with{" "}
+          <code>add_workflow_api_node</code> / <code>set_workflow_order</code> → inspect with{" "}
+          <code>get_workflow</code>.
+        </p>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>Tools</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Workspace</td>
+              <td>
+                <code>whoami</code>, <code>list_teams</code>, <code>create_team</code>,{" "}
+                <code>list_projects</code>, <code>create_project</code>,{" "}
+                <code>list_collections</code>, <code>list_requests</code>,{" "}
+                <code>search_requests</code>, <code>get_request</code>,{" "}
+                <code>create_collection</code>, <code>create_folder</code>,{" "}
+                <code>create_request</code>, <code>update_request</code>,{" "}
+                <code>delete_request</code>, <code>list_environments</code>,{" "}
+                <code>create_environment</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Workflows</td>
+              <td>
+                <code>list_workflows</code>, <code>get_workflow</code>,{" "}
+                <code>create_workflow</code>, <code>update_workflow</code>,{" "}
+                <code>delete_workflow</code>, <code>build_workflow_from_requests</code>,{" "}
+                <code>set_workflow_order</code>, <code>add_workflow_api_node</code>,{" "}
+                <code>list_workflow_executions</code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div className={styles.sectionTitle}>API reference</div>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Path</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>POST</code></td>
+              <td><code>/api/auth/api-tokens</code></td>
+              <td>Create token</td>
+            </tr>
+            <tr>
+              <td><code>GET</code></td>
+              <td><code>/api/auth/api-tokens</code></td>
+              <td>List tokens</td>
+            </tr>
+            <tr>
+              <td><code>GET</code></td>
+              <td><code>/api/auth/api-tokens/:id</code></td>
+              <td>Reveal token + MCP config</td>
+            </tr>
+            <tr>
+              <td><code>DELETE</code></td>
+              <td><code>/api/auth/api-tokens/:id</code></td>
+              <td>Revoke token</td>
+            </tr>
+            <tr>
+              <td><code>GET</code></td>
+              <td><code>/mcp</code></td>
+              <td>Discovery / health</td>
+            </tr>
+            <tr>
+              <td><code>GET</code></td>
+              <td><code>/mcp/tools</code></td>
+              <td>List tools (auth required)</td>
+            </tr>
+            <tr>
+              <td><code>POST</code></td>
+              <td><code>/mcp</code></td>
+              <td>MCP Streamable HTTP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div className={styles.sectionTitle}>Dev-only: stdio</div>
+        <p className={styles.text}>
+          Use stdio only when you have this repo checked out and want a local process bridge.
+          For sharing with teammates, prefer the <code>url</code> config above.
+        </p>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Terminal</span></div>
+          <div className={styles.codeBody}>
+            PAYLOADX_TOKEN=pxat_... PAYLOADX_BASE_URL=http://localhost:3001 npm run mcp -w apps/backend
+          </div>
+        </div>
+        <div className={styles.codeBlock}>
+          <div className={styles.codeHeader}><span>Cursor mcp.json (stdio)</span></div>
+          <div className={styles.codeBody}>
+            {"{"}<br />
+            &nbsp;&nbsp;&quot;mcpServers&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&quot;payloadx&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;command&quot;: &quot;node&quot;,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;args&quot;: [&quot;apps/backend/src/mcp/stdio.js&quot;],<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;env&quot;: {"{"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;PAYLOADX_TOKEN&quot;: &quot;pxat_YOUR_TOKEN&quot;,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;PAYLOADX_BASE_URL&quot;: &quot;http://localhost:3001&quot;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{"}"}<br />
+            &nbsp;&nbsp;{"}"}<br />
+            {"}"}
+          </div>
+        </div>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Env var</th>
+              <th>Required</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PAYLOADX_TOKEN</code></td>
+              <td>✓</td>
+              <td>API token (<code>pxat_…</code>), or use <code>PAYLOADX_JWT</code></td>
+            </tr>
+            <tr>
+              <td><code>PAYLOADX_BASE_URL</code></td>
+              <td>Optional</td>
+              <td>Backend origin (defaults to PayloadX Cloud)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function LocalSetup() {
   return (

@@ -49,7 +49,7 @@ export default function ResponseMonacoViewer({
   );
 
   return (
-    <div className="h-full min-h-0 flex flex-col response-mouse-select border border-[var(--border-1)] rounded-md overflow-hidden bg-[var(--surface-1)]">
+    <div className="h-full min-h-0 flex flex-col response-mouse-select overflow-hidden bg-[var(--surface-1)]">
       <Editor
         height="100%"
         language={effectiveLang}

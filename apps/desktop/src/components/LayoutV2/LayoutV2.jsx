@@ -510,24 +510,18 @@ export default function LayoutV2({
 
                       {/* Response / Docs card */}
                       <div className="v2-card" style={{ flex: 1, minWidth: 0 }}>
-                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 32 }}>
+                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 28 }}>
                           <div className="flex h-full">
                             <button
                               onClick={() => setRightPanelTab('Response')}
-                              className={`flex items-center gap-2 px-4 h-full border-b-[2px] transition-colors ${rightPanelTab === 'Response' ? 'border-accent text-tx-primary bg-surface-2' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
+                              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] border-b-[2px] transition-colors ${rightPanelTab === 'Response' ? 'border-accent text-tx-primary' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
                             >
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                              </svg>
                               Response
                             </button>
                             <button
                               onClick={() => setRightPanelTab('Documentation')}
-                              className={`flex items-center gap-2 px-4 h-full border-b-[2px] transition-colors ${rightPanelTab === 'Documentation' ? 'border-accent text-tx-primary bg-surface-2' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
+                              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] border-b-[2px] transition-colors ${rightPanelTab === 'Documentation' ? 'border-accent text-tx-primary' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
                             >
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
                               Docs
                             </button>
                           </div>
@@ -579,24 +573,18 @@ export default function LayoutV2({
 
                       {/* Response / Docs card */}
                       <div className="v2-card" style={{ height: responseHeight, flexShrink: 0 }}>
-                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 32 }}>
+                        <div className="v2-card-title flex items-center justify-between w-full" style={{ padding: 0, minHeight: 28 }}>
                           <div className="flex h-full">
                             <button
                               onClick={() => setRightPanelTab('Response')}
-                              className={`flex items-center gap-2 px-4 h-full border-b-[2px] transition-colors ${rightPanelTab === 'Response' ? 'border-accent text-tx-primary bg-surface-2' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
+                              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] border-b-[2px] transition-colors ${rightPanelTab === 'Response' ? 'border-accent text-tx-primary' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
                             >
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                              </svg>
                               Response
                             </button>
                             <button
                               onClick={() => setRightPanelTab('Documentation')}
-                              className={`flex items-center gap-2 px-4 h-full border-b-[2px] transition-colors ${rightPanelTab === 'Documentation' ? 'border-accent text-tx-primary bg-surface-2' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
+                              className={`flex items-center gap-1.5 px-2.5 h-full text-[11px] border-b-[2px] transition-colors ${rightPanelTab === 'Documentation' ? 'border-accent text-tx-primary' : 'border-transparent text-surface-500 hover:text-tx-secondary'}`}
                             >
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
                               Docs
                             </button>
                           </div>

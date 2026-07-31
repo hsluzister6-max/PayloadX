@@ -12,9 +12,9 @@ const HeroScene = lazy(() => import("../components/three/HeroScene"));
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
-const RELEASE_TAG = "v1.5.0";
+const RELEASE_TAG = "v1.0.6";
 const RELEASE_DL = `${REPO_URL}/releases/download/${RELEASE_TAG}`;
-const MAC_DMG = `${RELEASE_DL}/PayloadX_1.5.0_aarch64.dmg`;
+const MAC_DMG = `${RELEASE_DL}/PayloadX_1.0.6_aarch64.dmg`;
 
 const PLATFORMS = [
   { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, link: MAC_DMG },

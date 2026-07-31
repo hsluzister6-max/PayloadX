@@ -35,7 +35,7 @@ export default function JsonToolbar({
   };
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-1)] bg-[var(--surface-2)]">
+    <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--border-1)] bg-transparent">
       {/* Search */}
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400" />

@@ -3,6 +3,9 @@ import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } fr
 import toast from 'react-hot-toast';
 import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
 import { toggleJsonLineComment } from '@/utils/jsonLineComment';
+import { useEnvironmentStore } from '@/store/environmentStore';
+import VariableValueTooltip from '../VariableValueTooltip';
+import { useVariablePopoverHover } from '../useVariablePopoverHover';
 
 // ── Syntax Highlighter (JSONC: faded full-line //, /* */, trailing // outside strings) ──
 function escapeHtml(s) {
@@ -179,6 +182,79 @@ function highlightPlain(code) {
   return escapeHtml(code || '');
 }
 
+/** Wrap {{env}} tokens in escaped HTML (safe — pattern cannot match tag markup). */
+function wrapEnvVarsHtml(html, activeEnvironment) {
+  if (!html) return html;
+  return html.replace(/\{\{([^}]+)\}\}/g, (full, key) => {
+    const varName = String(key).trim();
+    const variable = activeEnvironment?.variables?.find(
+      (v) => v.key === varName && v.enabled !== false,
+    );
+    const cls = variable ? 'jenv jenv--set' : 'jenv jenv--missing';
+    return `<span class="${cls}">${full}</span>`;
+  });
+}
+
+function findVarAtIndex(value, index, activeEnvironment) {
+  const regex = /\{\{[^}]+\}\}/g;
+  let m;
+  while ((m = regex.exec(value)) !== null) {
+    const start = m.index;
+    const end = m.index + m[0].length;
+    if (index >= start && index < end) {
+      const varName = m[0].slice(2, -2).trim();
+      const variable = activeEnvironment?.variables?.find(
+        (v) => v.key === varName && v.enabled !== false,
+      );
+      return {
+        varName,
+        variable: variable || null,
+        found: Boolean(variable),
+        start,
+        end,
+      };
+    }
+  }
+  return null;
+}
+
+/** Map mouse position → character index in a monospace textarea. */
+function charIndexFromTextareaCoords(ta, clientX, clientY) {
+  if (!ta) return 0;
+  const value = ta.value || '';
+  if (!value) return 0;
+
+  const style = window.getComputedStyle(ta);
+  const fontSize = parseFloat(style.fontSize) || 12;
+  const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.7;
+  const padTop = parseFloat(style.paddingTop) || 0;
+  const padLeft = parseFloat(style.paddingLeft) || 0;
+  const rect = ta.getBoundingClientRect();
+  const y = clientY - rect.top - padTop + (ta.scrollTop || 0);
+  const x = clientX - rect.left - padLeft + (ta.scrollLeft || 0);
+  const lineIndex = Math.max(0, Math.min(Math.floor(y / lineHeight), value.split('\n').length - 1));
+  const lines = value.split('\n');
+
+  let offset = 0;
+  for (let i = 0; i < lineIndex; i++) offset += lines[i].length + 1;
+
+  const line = lines[lineIndex] || '';
+  const canvas = charIndexFromTextareaCoords._canvas
+    || (charIndexFromTextareaCoords._canvas = document.createElement('canvas'));
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`.trim();
+
+  if (x <= 0) return offset;
+  let lo = 0;
+  let hi = line.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (ctx.measureText(line.slice(0, mid)).width <= x) lo = mid;
+    else hi = mid - 1;
+  }
+  return offset + lo;
+}
+
 function duplicateSelectedLines(text, selStart, selEnd) {
   const s0 = Math.min(selStart, selEnd);
   const s1 = Math.max(selStart, selEnd);
@@ -306,7 +382,11 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   const pendingSelectionRef = useRef(null);
   const suppressInputRef = useRef(false);
   const isFocusedRef = useRef(false);
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef(null);
   const [localValue, setLocalValue] = useState(value ?? '');
+  const activeEnvironment = useEnvironmentStore((s) => s.activeEnvironment);
+  const { popover, openPopover, scheduleClose, closePopover, clearCloseTimer } = useVariablePopoverHover();
 
   // Sync external value when editor is not focused (format, minify, tab switch)
   useEffect(() => {
@@ -314,6 +394,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       setLocalValue(value ?? '');
     }
   }, [value]);
+
+  useEffect(() => () => clearTimeout(typingTimeoutRef.current), []);
 
   const applyEdit = useCallback(({ text, selStart, selEnd }) => {
     pendingSelectionRef.current = { start: selStart, end: selEnd };
@@ -359,9 +441,76 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
 
   const highlighted = useMemo(() => {
     const v = localValue || '';
-    if (language === 'json') return highlightJsonc(v);
-    return highlightPlain(v);
-  }, [localValue, language]);
+    const base = language === 'json' ? highlightJsonc(v) : highlightPlain(v);
+    return wrapEnvVarsHtml(base, activeEnvironment);
+  }, [localValue, language, activeEnvironment]);
+
+  const openTipForVar = useCallback(
+    (hit, clientX, clientY) => {
+      const ta = taRef.current;
+      if (!ta) return;
+      const style = window.getComputedStyle(ta);
+      const canvas = charIndexFromTextareaCoords._canvas
+        || (charIndexFromTextareaCoords._canvas = document.createElement('canvas'));
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`.trim();
+      const padLeft = parseFloat(style.paddingLeft) || 0;
+      const padTop = parseFloat(style.paddingTop) || 0;
+      const lineHeight = parseFloat(style.lineHeight) || 12 * 1.7;
+      const rect = ta.getBoundingClientRect();
+      const lineIndex = (localValue || '').slice(0, hit.start).split('\n').length - 1;
+      const lineStart = (localValue || '')
+        .split('\n')
+        .slice(0, lineIndex)
+        .reduce((acc, ln) => acc + ln.length + 1, 0);
+      const line = (localValue || '').split('\n')[lineIndex] || '';
+      const startX = ctx.measureText(line.slice(0, hit.start - lineStart)).width;
+      const endX = ctx.measureText(line.slice(0, hit.end - lineStart)).width;
+      const tokenCenter =
+        rect.left + padLeft - (ta.scrollLeft || 0) + (startX + endX) / 2;
+      const tokenTop = rect.top + padTop - (ta.scrollTop || 0) + lineIndex * lineHeight;
+
+      openPopover({
+        varName: hit.varName,
+        variable: hit.variable,
+        start: hit.start,
+        anchor: {
+          x: Number.isFinite(tokenCenter) ? tokenCenter : clientX,
+          y: Number.isFinite(tokenTop) ? tokenTop : clientY,
+          width: Math.max(8, endX - startX),
+          height: lineHeight,
+        },
+      });
+    },
+    [openPopover, localValue],
+  );
+
+  const handleVarMouseMove = useCallback(
+    (e) => {
+      if (isTypingRef.current) return;
+      const ta = taRef.current;
+      if (!ta) return;
+      const idx = charIndexFromTextareaCoords(ta, e.clientX, e.clientY);
+      const hit = findVarAtIndex(localValue || '', idx, activeEnvironment);
+      if (hit) {
+        clearCloseTimer();
+        if (popover?.varName !== hit.varName || popover?.start !== hit.start) {
+          openTipForVar({ ...hit }, e.clientX, e.clientY);
+        }
+      } else if (popover) {
+        scheduleClose();
+      }
+    },
+    [activeEnvironment, clearCloseTimer, localValue, openTipForVar, popover, scheduleClose],
+  );
+
+  const handleVarMouseLeave = useCallback(
+    (e) => {
+      if (e.relatedTarget?.closest?.('.var-tip')) return;
+      scheduleClose();
+    },
+    [scheduleClose],
+  );
 
   // ── Key Handling (Postman-style: no auto-pair, no smart Enter, no autocomplete) ──
   const handleKeyDown = useCallback((e) => {
@@ -440,6 +589,10 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       syncScroll();
       return;
     }
+    isTypingRef.current = true;
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => { isTypingRef.current = false; }, 500);
+    scheduleClose();
     pendingSelectionRef.current = {
       start: ta.selectionStart,
       end: ta.selectionEnd,
@@ -447,7 +600,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     setLocalValue(ta.value);
     onChange(ta.value);
     syncScroll();
-  }, [onChange]);
+  }, [onChange, scheduleClose]);
 
   const handleSelect = useCallback((e) => {
     pendingSelectionRef.current = {
@@ -506,7 +659,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   };
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: 'transparent', borderRadius: 12, border: '1px solid var(--border-1)' }}>
+    <div className={`flex flex-col h-full overflow-hidden ${className}`} style={{ background: 'transparent', borderRadius: 0, border: 'none' }}>
       <style>{`
         .jk  { color: var(--text-primary) }
         .js  { color: var(--success) }
@@ -516,6 +669,21 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         .jbk { color: var(--text-secondary) }
         .jc-comment { opacity: 0.46; color: var(--text-muted) !important; font-style: italic; }
         .jc-comment .jk, .jc-comment .js, .jc-comment .jn, .jc-comment .jb, .jc-comment .jnu, .jc-comment .jbk { color: inherit !important; opacity: 1; }
+        .jenv {
+          border-radius: 3px;
+          padding: 0 1px;
+          font-weight: 600;
+        }
+        .jenv--set {
+          color: #38bdf8;
+          background: rgba(56, 189, 248, 0.12);
+          box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.28);
+        }
+        .jenv--missing {
+          color: #fbbf24;
+          background: rgba(251, 191, 36, 0.12);
+          box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.35);
+        }
         .editor-ta {
           position: absolute; inset: 0; width: 100%; height: 100%;
           background: transparent; color: transparent; caret-color: var(--text-primary);
@@ -620,13 +788,27 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             onChange={handleChange}
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}
-            onScroll={syncScroll}
+            onScroll={() => { syncScroll(); scheduleClose(); }}
+            onMouseMove={handleVarMouseMove}
+            onMouseLeave={handleVarMouseLeave}
             onFocus={() => { isFocusedRef.current = true; }}
             onBlur={() => { isFocusedRef.current = false; }}
-            placeholder={language === 'json' ? '{\n  "key": "value"  // JSONC\n}' : ''}
+            placeholder={language === 'json' ? '{\n  "email": "{{email}}",\n  "token": "{{token}}"\n}' : ''}
           />
         </div>
       </div>
+
+      {popover && (
+        <VariableValueTooltip
+          anchor={popover.anchor}
+          varName={popover.varName}
+          variable={popover.variable}
+          envName={activeEnvironment?.name}
+          onMouseEnter={clearCloseTimer}
+          onMouseLeave={scheduleClose}
+          onClose={closePopover}
+        />
+      )}
 
       {/* Bottom status bar */}
       {language === 'json' && validStatus !== null && (

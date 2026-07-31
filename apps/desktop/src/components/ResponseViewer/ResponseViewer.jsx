@@ -224,23 +224,24 @@ export default function ResponseViewer() {
     <div className="flex flex-col h-full bg-transparent">
       {/* ── Compact single-row header ─────────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '5px 10px', borderBottom: '1px solid var(--border-1)',
-        background: 'var(--surface-1)', flexShrink: 0, flexWrap: 'wrap',
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '3px 8px', borderBottom: '1px solid var(--border-1)',
+        background: 'transparent', flexShrink: 0, flexWrap: 'wrap',
       }}>
         {/* Left: tab pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--surface-2)', borderRadius: 7, padding: '3px 4px', border: '1px solid var(--border-1)' }}>
-          {RESPONSE_TABS.map((tab, i) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 1, background: 'transparent', borderRadius: 0, padding: 0, border: 'none' }}>
+          {RESPONSE_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
-                padding: '3px 9px', borderRadius: 5, border: 'none', cursor: 'pointer',
-                fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
-                transition: 'all 0.15s', fontFamily: 'Inter, sans-serif',
-                background: activeTab === tab ? 'var(--surface-3)' : 'transparent',
-                color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
-                boxShadow: activeTab === tab ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                padding: '4px 8px', borderRadius: 0, border: 'none', cursor: 'pointer',
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                transition: 'color 0.15s, border-color 0.15s', fontFamily: 'Inter, sans-serif',
+                background: 'transparent',
+                color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-muted)',
+                borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
+                boxShadow: 'none',
               }}
             >
               {tab}
@@ -249,24 +250,24 @@ export default function ResponseViewer() {
         </div>
 
         {/* Center: status / time / size badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 2 }}>
           {/* Status */}
           <span style={{
-            fontSize: 10, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.02em',
-            padding: '2px 7px', borderRadius: 5,
+            fontSize: 10, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.02em',
+            padding: '1px 6px', borderRadius: 4,
             background: response.status >= 200 && response.status < 300 ? 'rgba(74,222,128,0.1)' : response.status >= 400 ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
             color: response.status >= 200 && response.status < 300 ? 'var(--success)' : response.status >= 400 ? 'var(--error)' : 'var(--warning)',
-            border: `1px solid ${response.status >= 200 && response.status < 300 ? 'rgba(74,222,128,0.25)' : response.status >= 400 ? 'rgba(248,113,113,0.25)' : 'rgba(251,191,36,0.25)'}`,
+            border: 'none',
           }}>
             {response.status} {response.statusText}
           </span>
           {/* Time */}
-          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border-1)' }}>
-            ⏱ {formatTime(response.responseTimeMs)}
+          <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-muted)', padding: '1px 4px', borderRadius: 4, background: 'transparent', border: 'none' }}>
+            {formatTime(response.responseTimeMs)}
           </span>
           {/* Size */}
-          <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border-1)' }}>
-            ⬇ {formatSize(response.sizeBytes)}
+          <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-muted)', padding: '1px 4px', borderRadius: 4, background: 'transparent', border: 'none' }}>
+            {formatSize(response.sizeBytes)}
           </span>
         </div>
 
@@ -317,15 +318,15 @@ export default function ResponseViewer() {
         )}
 
         {activeTab === 'Raw' && (
-          <div className="h-full min-h-0 overflow-hidden p-4 bg-[var(--surface-1)] flex flex-col response-mouse-select">
+          <div className="h-full min-h-0 overflow-hidden px-2 py-1.5 bg-[var(--surface-1)] flex flex-col response-mouse-select">
             {typeof response.body === 'string' && response.body.length >= MONACO_RAW_MIN_CHARS ? (
               <div className="flex-1 min-h-0 flex flex-col">
-                <p className="text-[10px] text-tx-muted mb-2 shrink-0">
+                <p className="text-[10px] text-tx-muted mb-1.5 shrink-0">
                   Large response — code editor view (virtualized). Pretty tab still uses tree / workers for JSON under the size caps.
                 </p>
                 <div className="flex-1 min-h-0">
                   <Suspense fallback={(
-                    <div className="h-full min-h-[200px] flex items-center justify-center text-tx-muted text-xs bg-[var(--surface-1)] rounded-md border border-[var(--border-1)]">
+                    <div className="h-full min-h-[200px] flex items-center justify-center text-tx-muted text-xs bg-[var(--surface-1)]">
                       Loading code editor…
                     </div>
                   )}
@@ -354,20 +355,20 @@ export default function ResponseViewer() {
         )}
 
         {activeTab === 'Headers' && (
-          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)] response-mouse-select">
+          <div className="overflow-auto h-full px-2 py-1.5 bg-[var(--surface-1)] response-mouse-select">
             <div className="max-w-3xl">
               <table className="w-full text-[11px] border-collapse">
                 <thead>
                   <tr className="border-b border-[var(--border-1)]">
-                    <th className="text-left text-surface-500 font-black pb-3 pr-4 uppercase tracking-widest">Header Key</th>
-                    <th className="text-left text-surface-500 font-black pb-3 uppercase tracking-widest">Value</th>
+                    <th className="text-left text-surface-500 font-black pb-2 pr-3 uppercase tracking-widest">Header Key</th>
+                    <th className="text-left text-surface-500 font-black pb-2 uppercase tracking-widest">Value</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(response.headers || {}).map(([k, v]) => (
                     <tr key={k} className="border-b border-[var(--border-1)] hover:bg-[var(--surface-2)] transition-colors">
-                      <td className="py-2.5 pr-4 font-mono text-[var(--accent)] font-bold">{k}</td>
-                      <td className="py-2.5 font-mono text-tx-secondary break-all">{v}</td>
+                      <td className="py-1.5 pr-3 font-mono text-[var(--accent)] font-bold">{k}</td>
+                      <td className="py-1.5 font-mono text-tx-secondary break-all">{v}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -377,7 +378,7 @@ export default function ResponseViewer() {
         )}
 
         {activeTab === 'Cookies' && (
-          <div className="overflow-auto h-full p-4 bg-[var(--surface-1)] response-mouse-select">
+          <div className="overflow-auto h-full px-2 py-1.5 bg-[var(--surface-1)] response-mouse-select">
             {responseCookies.length > 0 ? (
               <table className="w-full text-[11px]">
                 <thead>
@@ -418,7 +419,7 @@ export default function ResponseViewer() {
 
         {activeTab === 'Docs' && (
           <div className="h-full overflow-hidden flex flex-col bg-[var(--surface-1)]">
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto px-2 py-1.5">
               <SwaggerUI spec={swaggerPreview} />
             </div>
           </div>
