@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useUIStore } from '@/store/uiStore';
-
+import { confirmDialog } from '@/utils/confirmDialog';
 import { useApiDocStore } from '@/store/apiDocStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useTeamStore } from '@/store/teamStore';
@@ -126,10 +126,15 @@ export default function EndpointEditor({ endpoint, docId }) {
     triggerSave({ ...localEp, responses: nextResponses });
   };
 
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this endpoint?')) {
-      deleteEndpoint(docId, endpoint.id);
-    }
+  const handleDelete = async () => {
+    const confirmed = await confirmDialog({
+      title: 'Delete Endpoint',
+      message: 'Are you sure you want to delete this endpoint?',
+      itemName: localEp.name || localEp.path || 'Endpoint',
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (confirmed) deleteEndpoint(docId, endpoint.id);
   };
 
   const methodColor = METHOD_COLORS[localEp.method] || '#9A9A9A';

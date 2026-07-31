@@ -8,6 +8,7 @@ import EndpointEditor from './EndpointEditor';
 import { formatTime } from '@/utils/helpers';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 const METHOD_COLORS = {
   GET: '#3FB950', POST: '#58A6FF', PUT: '#E3B341', PATCH: '#A8A8A8',
@@ -141,11 +142,16 @@ export default function ApiDocsPanel() {
     }
   };
 
-  const handleDeleteDoc = (e, doc) => {
+  const handleDeleteDoc = async (e, doc) => {
     e.stopPropagation();
-    if (confirm(`Delete API Documentation "${doc.name}"?`)) {
-      deleteDoc(doc._id);
-    }
+    const confirmed = await confirmDialog({
+      title: 'Delete Documentation',
+      message: 'This will permanently delete this API documentation.',
+      itemName: doc.name,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (confirmed) deleteDoc(doc._id);
   };
 
   if (!currentTeam || !currentProject) {

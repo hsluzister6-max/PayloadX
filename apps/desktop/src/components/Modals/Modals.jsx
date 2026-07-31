@@ -8,6 +8,7 @@ import { useSocketStore } from '@/store/socketStore';
 import { useConnectivityStore } from '@/store/connectivityStore';
 import ModalShell from './ModalShell';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 export default function CreateTeamModal() {
   const { createTeam, setCurrentTeam } = useTeamStore();
@@ -229,8 +230,7 @@ export function InviteModal() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('developer');
   const [loading, setLoading] = useState(false);
-  const [removing, setRemoving] = useState(null); // userId being removed
-  const [confirmRemove, setConfirmRemove] = useState(null); // userId pending confirm
+  const [removing, setRemoving] = useState(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const roleDropdownRef = useRef(null);
 
@@ -240,7 +240,6 @@ export function InviteModal() {
     { id: 'viewer', label: 'Viewer', icon: <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> },
   ];
 
-  // Click outside to close dropdown
   useEffect(() => {
     const handleClick = (e) => {
       if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target)) {
@@ -251,12 +250,51 @@ export function InviteModal() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // Load fully-populated member list when modal opens
   useEffect(() => {
     if (currentTeam?._id) {
       fetchTeamDetails(currentTeam._id);
     }
   }, [currentTeam?._id]);
+
+  const ownerId = currentTeam?.ownerId?._id || currentTeam?.ownerId || null;
+
+  // Deduplicate: owner is often also listed in members[] as admin
+  const members = (() => {
+    if (!currentTeam) return [];
+    const seen = new Set();
+    const rows = [];
+
+    if (ownerId) {
+      const id = String(ownerId);
+      seen.add(id);
+      rows.push({
+        id,
+        name: currentTeam.ownerId?.name || 'Owner',
+        email: currentTeam.ownerId?.email || '',
+        role: 'owner',
+        isOwner: true,
+      });
+    }
+
+    for (const m of currentTeam.members || []) {
+      const id = String(m.userId?._id || m.userId || '');
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      rows.push({
+        id,
+        name: m.userId?.name || m.userId?.email || 'Member',
+        email: m.userId?.email || '',
+        role: m.role || 'developer',
+        isOwner: false,
+      });
+    }
+
+    return rows;
+  })();
+
+  const onlineCount = members.filter((m) =>
+    roomMembers.some((rm) => String(rm._id || rm.id) === m.id)
+  ).length;
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -272,254 +310,192 @@ export function InviteModal() {
     }
   };
 
-  const handleRemove = async (userId) => {
-    setRemoving(userId);
-    const result = await removeMember(currentTeam._id, userId);
+  const handleRemove = async (member) => {
+    const confirmed = await confirmDialog({
+      title: 'Remove Member',
+      message: 'They will lose access to this team’s projects and collections.',
+      itemName: member.name || member.email,
+      confirmText: 'Remove',
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    setRemoving(member.id);
+    const result = await removeMember(currentTeam._id, member.id);
     setRemoving(null);
-    setConfirmRemove(null);
-    if (result.success) {
-      toast.success('Member removed from team');
-    } else {
-      toast.error(result.error);
-    }
+    if (result.success) toast.success('Member removed from team');
+    else toast.error(result.error);
   };
 
-  const isOwner = currentTeam?.ownerId?._id === user?._id ||
-    currentTeam?.ownerId === user?._id;
-  const isAdmin = isOwner || currentTeam?.members?.some(
-    (m) => (m.userId?._id || m.userId) === user?._id && m.role === 'admin'
-  );
+  const isOwner =
+    String(ownerId || '') === String(user?._id || '') ||
+    String(ownerId || '') === String(user?.id || '');
+  const isAdmin =
+    isOwner ||
+    currentTeam?.members?.some((m) => {
+      const mid = String(m.userId?._id || m.userId || '');
+      return mid === String(user?._id || user?.id || '') && m.role === 'admin';
+    });
 
-  const ROLE_COLORS = {
-    admin: 'bg-brand-500/10 text-brand-300 border border-brand-500/20',
-    developer: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-    viewer: 'bg-surface-600/10 text-tx-secondary border border-surface-600/20',
+  const ROLE_STYLES = {
+    owner: 'invite-role invite-role--owner',
+    admin: 'invite-role invite-role--admin',
+    developer: 'invite-role invite-role--developer',
+    viewer: 'invite-role invite-role--viewer',
   };
 
   return (
     <ModalWrapper onClose={() => setShowInviteModal(false)} title="Team Members" wide showLogo>
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Left side: Member list */}
-        <div className="flex-1 flex flex-col gap-4">
+      <div className="invite-layout">
+        <div className="invite-members-col">
+          <div className="invite-section-head">
+            <h3 className="invite-section-title">Members</h3>
+            <span className="invite-count-pill">{members.length}</span>
+          </div>
 
-          {/* ── Current members list ── */}
-          {currentTeam && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] text-surface-500 uppercase tracking-widest font-bold mb-1 px-1">
-                {(currentTeam.members?.length || 0) + 1} member{(currentTeam.members?.length || 0) !== 0 ? 's' : ''}
-              </span>
+          {!currentTeam ? (
+            <p className="invite-empty">Select a team to manage members.</p>
+          ) : members.length === 0 ? (
+            <p className="invite-empty">No members yet.</p>
+          ) : (
+            <div className="invite-member-list custom-scrollbar">
+              {members.map((member) => {
+                const isYou = member.id === String(user?._id || user?.id || '');
+                const isOnline = roomMembers.some((rm) => String(rm._id || rm.id) === member.id);
+                const initial = (member.name || member.email || '?')[0]?.toUpperCase() || '?';
 
-              <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
-                {/* Owner row */}
-                {currentTeam.ownerId && (
-                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-1)] relative overflow-hidden group transition-all hover:border-[var(--border-2)] hover:bg-[var(--surface-3)]">
-                    {/* Subtle inner glow for owner */}
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[var(--border-2)] shadow-inner bg-gradient-to-br from-[var(--surface-3)] to-[var(--surface-1)]"
-                    >
-                      {(currentTeam.ownerId?.name || currentTeam.ownerId)?.[0]?.toUpperCase() || '?'}
+                return (
+                  <div
+                    key={member.id}
+                    className={`invite-member-row ${member.isOwner ? 'invite-member-row--owner' : ''}`}
+                  >
+                    <div className="invite-avatar">
+                      {initial}
+                      {isOnline && <span className="invite-online-dot" title="Online" />}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[13px] font-semibold text-tx-primary truncate">
-                          {currentTeam.ownerId?.name || 'Owner'}
-                        </p>
-                        {(currentTeam.ownerId?._id || currentTeam.ownerId) === user?._id && (
-                          <span className="text-[10px] text-surface-500 font-medium px-1.5 py-0.5 rounded-md bg-surface-800/50">you</span>
-                        )}
-                        {roomMembers.some(rm => (rm._id === (currentTeam.ownerId?._id || currentTeam.ownerId) || rm.id === (currentTeam.ownerId?._id || currentTeam.ownerId))) && (
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                          </span>
-                        )}
+
+                    <div className="invite-member-info">
+                      <div className="invite-member-name-row">
+                        <p className="invite-member-name">{member.name}</p>
+                        {isYou && <span className="invite-you-badge">You</span>}
                       </div>
-                      <p className="text-[11px] text-surface-500 truncate font-mono opacity-80">{currentTeam.ownerId?.email || ''}</p>
+                      {member.email && <p className="invite-member-email">{member.email}</p>}
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md metallic-app-name !animate-none border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]">
-                      owner
+
+                    <span className={ROLE_STYLES[member.role] || ROLE_STYLES.viewer}>
+                      {member.role}
                     </span>
+
+                    {isAdmin && !isYou && !member.isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(member)}
+                        disabled={removing === member.id}
+                        className="invite-remove-btn"
+                        title="Remove member"
+                      >
+                        {removing === member.id ? (
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <aside className="invite-side-col">
+          {isAdmin ? (
+            <form onSubmit={handleInvite} className="invite-form">
+              <h3 className="invite-section-title">Invite by email</h3>
+              <p className="invite-form-hint">They’ll get access to this team’s workspace.</p>
+
+              <input
+                className="input invite-email-input"
+                type="email"
+                placeholder="colleague@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+
+              <div className="relative" ref={roleDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                  className="invite-role-select"
+                >
+                  <span className="invite-role-select-left">
+                    <span className="invite-role-select-icon">{ROLES.find((r) => r.id === role)?.icon}</span>
+                    <span>{ROLES.find((r) => r.id === role)?.label}</span>
+                  </span>
+                  <svg className={`w-4 h-4 transition-transform ${showRoleDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showRoleDropdown && (
+                  <div className="invite-role-menu">
+                    {ROLES.map((r) => {
+                      const isActive = role === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => {
+                            setRole(r.id);
+                            setShowRoleDropdown(false);
+                          }}
+                          className={`invite-role-option ${isActive ? 'invite-role-option--active' : ''}`}
+                        >
+                          {r.icon}
+                          <span>{r.label}</span>
+                          {isActive && (
+                            <svg className="w-3.5 h-3.5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
-
-                {/* Member rows */}
-                {currentTeam.members?.map((m) => {
-                  const memberId = m.userId?._id || m.userId;
-                  const isYou = memberId === user?._id;
-                  const memberName = m.userId?.name || 'Member';
-                  const memberEmail = m.userId?.email || '';
-
-                  return (
-                    <div key={memberId} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-1)] border border-[var(--border-1)] group transition-all hover:border-[var(--border-2)] hover:bg-[var(--surface-2)]">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-tx-primary text-sm font-bold flex-shrink-0 border border-[var(--border-1)] bg-gradient-to-br from-[var(--surface-2)] to-[var(--bg-primary)]"
-                      >
-                        {memberName[0]?.toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-[13px] font-semibold text-tx-primary truncate">
-                            {memberName}
-                          </p>
-                          {isYou && <span className="text-[10px] text-surface-500 font-medium px-1.5 py-0.5 rounded-md bg-surface-800/50">you</span>}
-                          {roomMembers.some(rm => (rm._id === memberId || rm.id === memberId)) && (
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-surface-500 truncate font-mono opacity-70">{memberEmail}</p>
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium flex-shrink-0 ${ROLE_COLORS[m.role] || ROLE_COLORS.viewer}`}>
-                        {m.role}
-                      </span>
-
-                      {isAdmin && !isYou && (
-                        confirmRemove === memberId ? (
-                          <div className="flex gap-1.5 flex-shrink-0">
-                            <button
-                              onClick={() => handleRemove(memberId)}
-                              disabled={removing === memberId}
-                              className="text-[10px] px-2 py-1 rounded-lg bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 transition-colors font-bold"
-                            >
-                              {removing === memberId ? '...' : 'YES'}
-                            </button>
-                            <button
-                              onClick={() => setConfirmRemove(null)}
-                              className="text-[10px] px-2 py-1 rounded-lg bg-surface-700/50 text-tx-secondary hover:bg-surface-600 transition-colors font-bold"
-                            >
-                              NO
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmRemove(memberId)}
-                            className="flex-shrink-0 text-tx-muted hover:text-danger transition-colors p-1.5 rounded-lg hover:bg-danger/10"
-                            title="Remove member"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
-                            </svg>
-                          </button>
-                        )
-                      )}
-                    </div>
-                  );
-                })}
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Right side: Actions & Stats */}
-        <div className="w-full md:w-[280px] flex flex-col gap-6">
-          {/* ── Add member form ── */}
-          {isAdmin ? (
-            <form onSubmit={handleInvite} className="flex flex-col gap-3 mt-2">
-              <span className="text-[10px] text-surface-500 uppercase tracking-widest font-bold px-1">Add member by email</span>
-              <div className="flex flex-col gap-2.5">
-                <input
-                  className="input !h-10 text-[13px]"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <div className="relative flex-1" ref={roleDropdownRef}>
-                    <button
-                      type="button"
-                      onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                      className="input !h-10 text-[12px] bg-[var(--surface-1)] flex items-center justify-between group px-4 border-[var(--border-2)] hover:border-[var(--accent)] transition-all"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-surface-500 group-hover:text-tx-primary transition-colors">
-                          {ROLES.find(r => r.id === role)?.icon}
-                        </span>
-                        <span className="text-tx-primary font-bold">
-                          {ROLES.find(r => r.id === role)?.label}
-                        </span>
-                      </div>
-                      <svg className={`w-4 h-4 text-surface-500 transition-transform duration-300 ${showRoleDropdown ? 'rotate-180 text-[color:var(--accent)]' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-
-                    {showRoleDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-[var(--surface-2)] border border-[var(--border-2)] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.7)] z-[60] overflow-hidden animate-in">
-                        {ROLES.map((r) => {
-                          const isActive = role === r.id;
-                          return (
-                            <button
-                              key={r.id}
-                              type="button"
-                              onClick={() => {
-                                setRole(r.id);
-                                setShowRoleDropdown(false);
-                              }}
-                              className={`w-full px-4 py-2.5 text-left transition-all flex items-center gap-3 border-b border-[var(--border-1)] last:border-0 ${isActive ? 'bg-[var(--surface-3)]' : 'hover:bg-[var(--surface-3)]'}`}
-                            >
-                              <div className={`${isActive ? 'text-[color:var(--accent)]' : 'text-surface-500'}`}>
-                                {r.icon}
-                              </div>
-                              <span className={`text-[12px] font-bold ${isActive ? 'text-[var(--accent)]' : 'text-tx-primary'}`}>{r.label}</span>
-                              {isActive && (
-                                <div className="ml-auto">
-                                  <svg className="w-3.5 h-3.5 text-[color:var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <button type="submit" className="btn-primary !h-10 px-5 flex items-center justify-center group" disabled={loading || !currentTeam}>
-                    {loading ? (
-                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                    ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-widest">Invite</span>
-                    </div>
-                    )}
-                  </button>
-                </div>
-              </div>
-              {!currentTeam && (
-                <p className="text-warning text-[11px] bg-warning/5 border border-warning/20 rounded-xl px-3 py-2">Select a team first</p>
-              )}
+              <button type="submit" className="invite-submit-btn" disabled={loading || !currentTeam}>
+                {loading ? 'Inviting…' : 'Send invite'}
+              </button>
             </form>
           ) : (
-            <p className="text-surface-500 text-[11px] text-center py-4 bg-surface-800/30 rounded-xl border border-dashed border-surface-700">Only admins can add or remove members.</p>
+            <div className="invite-readonly-note">Only owners and admins can invite or remove members.</div>
           )}
 
-          <div className="mt-auto space-y-4">
-            <div className="p-4 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-1)] border-dashed">
-              <h4 className="text-[10px] font-bold text-surface-500 uppercase tracking-widest mb-2">Team Statistics</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-surface-500">Active Now</span>
-                  <span className="text-[11px] font-mono text-emerald-400">{roomMembers.length}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-surface-500">Total Seats</span>
-                  <span className="text-[11px] font-mono text-tx-primary">{(currentTeam?.members?.length || 0) + 1} / ∞</span>
-                </div>
-              </div>
+          <div className="invite-stats">
+            <h4 className="invite-section-title">Team stats</h4>
+            <div className="invite-stat-row">
+              <span>Online now</span>
+              <strong className="invite-stat-online">{onlineCount}</strong>
             </div>
-            <button onClick={() => setShowInviteModal(false)} className="btn-ghost w-full !py-2.5">Close Panel</button>
+            <div className="invite-stat-row">
+              <span>Members</span>
+              <strong>{members.length}</strong>
+            </div>
           </div>
-        </div>
+
+          <button type="button" onClick={() => setShowInviteModal(false)} className="invite-close-btn">
+            Close
+          </button>
+        </aside>
       </div>
     </ModalWrapper>
   );

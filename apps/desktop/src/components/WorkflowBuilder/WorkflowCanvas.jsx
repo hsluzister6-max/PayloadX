@@ -26,8 +26,8 @@ import {
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { listen } from '@tauri-apps/api/event';
-import { confirm } from '@tauri-apps/api/dialog';
 import { writeWorkflowTestSheet } from '@/utils/workflowTestReport';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 const nodeTypes = {
   api: ApiNode,
@@ -340,10 +340,12 @@ function WorkflowCanvasInner() {
     addNode(nodeType, position);
   }, [reactFlowInstance, addNode]);
 
-  // Handle drop from sidebar
+  // Handle drop from sidebar (single handler on ReactFlow — do not also
+  // attach on the wrapper or drop events bubble and create duplicate nodes).
   const onDrop = useCallback(
     (event) => {
       event.preventDefault();
+      event.stopPropagation();
 
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
@@ -439,9 +441,6 @@ function WorkflowCanvasInner() {
       ref={reactFlowWrapper}
       className="h-full w-full relative"
       style={{ background: 'var(--bg-primary)' }}
-      onDragOver={onDragOver}
-      onDragEnter={onDragEnter}
-      onDrop={onDrop}
     >
       {/* ── Workflow Toolbar ─────────────────────────────────────── */}
       <div className="absolute top-6 left-6 z-10 flex flex-col gap-3">
@@ -713,13 +712,18 @@ function WorkflowCanvasInner() {
 
           <button
             onClick={async () => {
-              const confirmed = await confirm(`Are you sure you want to delete "${menu.data.name || 'this node'}"?`, {
+              const nodeId = menu.id;
+              const nodeName = menu.data?.name || 'this node';
+              setMenu(null);
+              const confirmed = await confirmDialog({
                 title: 'Delete Node',
-                type: 'warning'
+                message: `Are you sure you want to delete "${nodeName}"?`,
+                itemName: nodeName,
+                confirmText: 'Delete',
+                danger: true,
               });
               if (confirmed) {
-                deleteWorkflowNode(menu.id);
-                setMenu(null);
+                deleteWorkflowNode(nodeId);
                 toast.success('Node deleted');
               }
             }}
@@ -795,10 +799,16 @@ function WorkflowCanvasInner() {
 
           <button
             onClick={async () => {
-              const confirmed = await confirm('Remove this connection?', { title: 'Delete Connection', type: 'warning' });
+              const edgeId = edgeMenu.id;
+              setEdgeMenu(null);
+              const confirmed = await confirmDialog({
+                title: 'Delete Connection',
+                message: 'Remove this connection?',
+                confirmText: 'Remove',
+                danger: true,
+              });
               if (confirmed) {
-                deleteWorkflowEdge(edgeMenu.id);
-                setEdgeMenu(null);
+                deleteWorkflowEdge(edgeId);
                 toast.success('Connection removed');
               }
             }}

@@ -4,9 +4,12 @@ import { useRequestStore } from '@/store/requestStore';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import { useSocketStore } from '@/store/socketStore';
 import { useTeamStore } from '@/store/teamStore';
+import { useProjectStore } from '@/store/projectStore';
 import { useAuthStore } from '@/store/authStore';
+import { useDashboardStore } from '@/store/dashboardStore';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
+import { isTempId } from '@/utils/tempId';
 import ParamsTab from './tabs/ParamsTab';
 import HeadersTab from './tabs/HeadersTab';
 import BodyTab from './tabs/BodyTab';
@@ -109,6 +112,26 @@ export default function RESTRequestBuilder() {
       if (currentTeam && user) {
         emitRequestUpdate(currentTeam._id, reqAtSend, user.id);
       }
+
+      const teamId = currentTeam?._id || reqAtSend.teamId;
+      const projectId = useProjectStore.getState().currentProject?._id || reqAtSend.projectId;
+      if (teamId) {
+        const status = response?.status;
+        useDashboardStore.getState().logRun({
+          teamId,
+          projectId,
+          requestId: reqAtSend._id && !isTempId(reqAtSend._id) ? reqAtSend._id : undefined,
+          name: reqAtSend.name,
+          method: reqAtSend.method || 'GET',
+          protocol: reqAtSend.protocol || 'http',
+          url: resolvedUrl,
+          status,
+          statusText: response?.statusText,
+          responseTimeMs: response?.responseTimeMs,
+          sizeBytes: response?.sizeBytes,
+          success: typeof status === 'number' && status >= 200 && status < 400,
+        });
+      }
     } catch (err) {
       console.error('[ExecuteRequest] Error:', err);
       const errorMsg = typeof err === 'string'
@@ -118,6 +141,23 @@ export default function RESTRequestBuilder() {
       toast.error(`${failure.clientError.shortTitle}: ${failure.clientError.headline}`);
       if (!isCancelled) {
         store().setResponse(failure, runTabId);
+        const teamId = currentTeam?._id || reqAtSend?.teamId;
+        const projectId = useProjectStore.getState().currentProject?._id || reqAtSend?.projectId;
+        if (teamId && reqAtSend) {
+          useDashboardStore.getState().logRun({
+            teamId,
+            projectId,
+            requestId: reqAtSend._id && !isTempId(reqAtSend._id) ? reqAtSend._id : undefined,
+            name: reqAtSend.name,
+            method: reqAtSend.method || 'GET',
+            protocol: reqAtSend.protocol || 'http',
+            url: reqAtSend.url,
+            status: failure?.status ?? 0,
+            statusText: failure?.statusText || 'Client Error',
+            responseTimeMs: failure?.responseTimeMs,
+            success: false,
+          });
+        }
       }
     } finally {
       console.log('[ExecuteRequest] Finally block, isCancelled:', isCancelled);

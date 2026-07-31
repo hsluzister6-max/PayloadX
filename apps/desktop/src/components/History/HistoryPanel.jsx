@@ -1,6 +1,7 @@
 import { useRequestStore } from '@/store/requestStore';
 import { Clock, Trash2, ArrowUpRight, Search } from 'lucide-react';
 import { useState } from 'react';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 export default function HistoryPanel() {
   const { history, clearHistory, setCurrentRequest, activeTabId } = useRequestStore();
@@ -26,8 +27,14 @@ export default function HistoryPanel() {
           <p className="text-xs text-[var(--text-muted)] mt-1">Track and reuse your past API requests</p>
         </div>
         <button 
-          onClick={() => {
-            if (window.confirm('Clear all history?')) clearHistory();
+          onClick={async () => {
+            const confirmed = await confirmDialog({
+              title: 'Clear History',
+              message: 'Clear all request history? This cannot be undone.',
+              confirmText: 'Clear All',
+              danger: true,
+            });
+            if (confirmed) clearHistory();
           }}
           className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/10 rounded-lg transition-colors"
         >

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { save } from '@tauri-apps/api/dialog';
 import { writeTextFile } from '@tauri-apps/api/fs';
 import { exportToPostman } from '@/utils/postmanExporter';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
@@ -239,11 +240,16 @@ export default function Sidebar() {
           id: 'delete',
           label: 'Delete',
           icon: <svg className="w-3.5 h-3.5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
-          onClick: () => {
+          onClick: async () => {
             const { deleteFolder } = useCollectionStore.getState();
-            if (confirm(`Delete folder "${folder.name}"? Requests will be moved to collection root.`)) {
-              deleteFolder(colId, folder.id);
-            }
+            const confirmed = await confirmDialog({
+              title: 'Delete Folder',
+              message: 'Requests will be moved to the collection root.',
+              itemName: folder.name,
+              confirmText: 'Delete',
+              danger: true,
+            });
+            if (confirmed) deleteFolder(colId, folder.id);
           }
         }
       ]

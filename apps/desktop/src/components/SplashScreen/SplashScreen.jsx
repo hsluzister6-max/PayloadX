@@ -1,81 +1,68 @@
 import { useEffect, useState } from 'react';
 import PayloadX from '@/components/core/logo';
 
-const steps = [
-  { progress: 18, text: 'Initializing…' },
-  { progress: 40, text: 'Loading workspace…' },
-  { progress: 62, text: 'Connecting to services…' },
-  { progress: 82, text: 'Restoring sessions…' },
-  { progress: 100, text: 'Welcome to PayloadX' },
+const STEPS = [
+  { progress: 22, text: 'Starting PayloadX' },
+  { progress: 48, text: 'Loading workspace' },
+  { progress: 72, text: 'Connecting services' },
+  { progress: 90, text: 'Restoring sessions' },
+  { progress: 100, text: 'Ready' },
 ];
 
 export default function SplashScreen({ onComplete }) {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('');
+  const [statusText, setStatusText] = useState(STEPS[0].text);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const show = requestAnimationFrame(() => setVisible(true));
     let i = 0;
+    let timers = [];
+
     const tick = () => {
-      if (i >= steps.length) return;
-      setProgress(steps[i].progress);
-      setStatusText(steps[i].text);
-      i++;
-      if (i < steps.length) setTimeout(tick, 700);
-      else setTimeout(onComplete, 600);
+      if (i >= STEPS.length) return;
+      setProgress(STEPS[i].progress);
+      setStatusText(STEPS[i].text);
+      i += 1;
+      if (i < STEPS.length) {
+        timers.push(setTimeout(tick, 650));
+      } else {
+        timers.push(setTimeout(onComplete, 500));
+      }
     };
-    setTimeout(tick, 600);
+
+    timers.push(setTimeout(tick, 280));
+
+    return () => {
+      cancelAnimationFrame(show);
+      timers.forEach(clearTimeout);
+    };
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 bg-[#07090D] flex flex-col items-center justify-center z-50 overflow-hidden font-mono">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.01] blur-[120px] rounded-full pointer-events-none" />
+    <div className="splash-screen" data-visible={visible ? 'true' : 'false'}>
+      <div className="splash-screen__atmosphere" aria-hidden="true" />
 
-      <div className="relative flex flex-col items-center w-full max-w-lg">
-        <div className="relative w-full h-[320px] mb-12 animate-fade-up">
-          <div className="absolute -inset-4 bg-white/[0.01] blur-3xl rounded-[30px]" />
-
-          <div className="relative h-full bg-[#0B0D13] rounded-2xl border border-white/[0.04] shadow-2xl overflow-hidden flex flex-col">
-            <div className="h-9 border-b border-white/[0.03] bg-white/[0.01] flex items-center px-4 gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-[#FF5F57]" />
-              <div className="w-2 h-2 rounded-full bg-[#FEBC2E]" />
-              <div className="w-2 h-2 rounded-full bg-[#28C840]" />
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center relative">
-              <PayloadX className="w-16 h-16" fontSize="24px" />
-
-              <div className="mt-6 text-center">
-                <h1 className="text-4xl metallic-app-name">PayloadX</h1>
-                <p className="text-[10px] text-[#4A5060] font-bold uppercase tracking-[0.3em] mt-1">
-                  API Studio
-                </p>
-              </div>
-            </div>
-
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/[0.02]">
-              <div
-                className="h-full bg-[#9CA3B0] transition-all duration-700 ease-in-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+      <div className="splash-screen__content">
+        <div className="splash-screen__brand">
+          <PayloadX className="splash-screen__mark" fontSize="22px" />
+          <div className="splash-screen__wordmark">
+            <h1 className="splash-screen__title metallic-app-name">PayloadX</h1>
+            <p className="splash-screen__subtitle">API Studio</p>
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 border border-white/5 border-t-white/20 rounded-full animate-spin" />
-            <span className="text-[10px] text-[#2E3445] font-medium uppercase tracking-[0.2em]">
-              {statusText}
-            </span>
+        <div className="splash-screen__status" aria-live="polite">
+          <div className="splash-screen__track" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+            <div className="splash-screen__fill" style={{ width: `${progress}%` }} />
           </div>
-        </div>
-
-        <div className="absolute bottom-[-100px] left-0 right-0 text-center opacity-20">
-          <p className="text-[9px] text-slate-500 uppercase tracking-[0.25em] font-medium">
-            Project by <span className="text-slate-300">Sundan Sharma</span>
-          </p>
+          <p className="splash-screen__label">{statusText}</p>
         </div>
       </div>
+
+      <p className="splash-screen__credit">
+        Project by <span>Sundan Sharma</span>
+      </p>
     </div>
   );
 }

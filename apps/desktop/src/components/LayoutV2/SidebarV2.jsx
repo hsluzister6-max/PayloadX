@@ -18,6 +18,15 @@ import { useConnectivityStore } from '@/store/connectivityStore';
 
 const NAV_ITEMS = [
     {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: (
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
+            </svg>
+        ),
+    },
+    {
         id: 'collections',
         label: 'Collections',
         icon: (
@@ -32,6 +41,15 @@ const NAV_ITEMS = [
         icon: (
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+        ),
+    },
+    {
+        id: 'history',
+        label: 'History',
+        icon: (
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
         ),
     },
@@ -1137,6 +1155,54 @@ export default function SidebarV2({
                             ) : (
                                 <p className="sdbv2-empty-note">No matches found in project</p>
                             )}
+                        </div>
+                    ) : activeV2Nav === 'dashboard' ? (
+                        <div className="sdbv2-section flex-1 flex flex-col min-h-0">
+                            <div className="sdbv2-section-head">
+                                <span className="sdbv2-section-label">Dashboard</span>
+                            </div>
+                            <p className="sdbv2-empty-note px-2 pb-2">
+                                Project overview, API analytics, and recent activity.
+                            </p>
+                            <div className="sdbv2-section-head">
+                                <span className="sdbv2-section-label">Recent APIs</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5 overflow-y-auto pr-1 flex-1 min-h-0">
+                                {(() => {
+                                    const projectCollections = collections.filter((c) => c.projectId === currentProject?._id);
+                                    const colIds = new Set(projectCollections.map((c) => c._id));
+                                    const recent = requests
+                                        .filter((r) => colIds.has(r.collectionId))
+                                        .slice()
+                                        .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+                                        .slice(0, 20);
+                                    if (!currentProject) {
+                                        return <p className="sdbv2-empty-note">Select a project to see APIs</p>;
+                                    }
+                                    if (recent.length === 0) {
+                                        return <p className="sdbv2-empty-note">No APIs created yet</p>;
+                                    }
+                                    return recent.map((req) => (
+                                        <SidebarRequest key={`dash-${req._id}`} request={req} onSelect={handleRequestSelect} />
+                                    ));
+                                })()}
+                            </div>
+                            <div className="mt-2 px-1 pb-2 flex flex-col gap-1">
+                                <button
+                                    type="button"
+                                    className="sdbv2-tree-row w-full"
+                                    onClick={() => setActiveV2Nav('collections')}
+                                >
+                                    <span className="sdbv2-tree-text text-[10px] font-semibold uppercase tracking-wide">Open Collections</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="sdbv2-tree-row w-full"
+                                    onClick={() => setActiveV2Nav('history')}
+                                >
+                                    <span className="sdbv2-tree-text text-[10px] font-semibold uppercase tracking-wide">View History</span>
+                                </button>
+                            </div>
                         </div>
                     ) : activeV2Nav === 'workflow' ? (
                         <div className="flex-1 flex flex-col min-h-0">

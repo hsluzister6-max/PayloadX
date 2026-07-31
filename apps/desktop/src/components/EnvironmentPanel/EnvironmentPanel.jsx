@@ -4,6 +4,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useUIStore } from '@/store/uiStore';
 import toast from 'react-hot-toast';
+import { confirmDialog } from '@/utils/confirmDialog';
 import {
   Layers, X, Plus, Trash2, Copy, Eye, EyeOff,
   CheckCircle2, Lock, ChevronRight, Save, AlertCircle
@@ -63,9 +64,15 @@ export default function EnvironmentPanel() {
     }
   }, [selectedEnvId, environments]);
 
-  const handleSelectEnv = (env) => {
+  const handleSelectEnv = async (env) => {
     if (isDirty && selectedEnvId) {
-      if (!window.confirm('You have unsaved changes. Discard?')) return;
+      const confirmed = await confirmDialog({
+        title: 'Discard Changes?',
+        message: 'You have unsaved changes. Discard them?',
+        confirmText: 'Discard',
+        danger: true,
+      });
+      if (!confirmed) return;
     }
     setSelectedEnvId(env._id);
     setIsDirty(false);
@@ -114,7 +121,14 @@ export default function EnvironmentPanel() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete "${selectedEnv.name}"? This cannot be undone.`)) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete Environment',
+      message: 'This cannot be undone.',
+      itemName: selectedEnv.name,
+      confirmText: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return;
     const result = await deleteEnvironment(selectedEnvId);
     if (result.success) { setSelectedEnvId(null); toast.success('Deleted'); }
     else toast.error(result.error);

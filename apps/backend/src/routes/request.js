@@ -4,6 +4,7 @@ import Collection from '../../models/Collection.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireObjectId } from '../middleware/validateObjectId.js';
 import { buildRequestSearchFilter } from '../lib/requestSearch.js';
+import { logActivity } from '../lib/activityLog.js';
 
 const router = express.Router();
 
@@ -184,6 +185,21 @@ router.post('/', authenticate, async (req, res) => {
 
     const populated = await Request.findById(newReq._id).populate('creatorId', 'name email avatar');
 
+    logActivity({
+      userId,
+      teamId,
+      action: 'create_request',
+      entityId: newReq._id,
+      entityType: 'request',
+      metadata: {
+        name: newReq.name,
+        method: newReq.method,
+        protocol: newReq.protocol,
+        projectId,
+        collectionId,
+      },
+    });
+
     res.status(201).json({ request: populated });
   } catch (err) {
     console.error('[API POST /request] Error:', err.message);
@@ -234,7 +250,26 @@ router.put('/:id', authenticate, requireObjectId(), async (req, res) => {
 // DELETE /api/request/:id
 router.delete('/:id', authenticate, requireObjectId(), async (req, res) => {
   try {
+    const existing = await Request.findById(req.params.id).lean();
+    if (!existing) return res.status(404).json({ error: 'Request not found' });
+
     await Request.findByIdAndDelete(req.params.id);
+
+    logActivity({
+      userId: req.user.id,
+      teamId: existing.teamId,
+      action: 'delete_request',
+      entityId: existing._id,
+      entityType: 'request',
+      metadata: {
+        name: existing.name,
+        method: existing.method,
+        protocol: existing.protocol,
+        projectId: existing.projectId,
+        collectionId: existing.collectionId,
+      },
+    });
+
     res.json({ message: 'Request deleted' });
   } catch (err) {
     if (err.name === 'CastError') {
