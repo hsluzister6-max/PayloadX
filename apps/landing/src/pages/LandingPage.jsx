@@ -1,27 +1,35 @@
-import { useRef, useState, useEffect, lazy, Suspense, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowUpRight } from "lucide-react";
 import { FaApple, FaWindows, FaLinux } from "react-icons/fa6";
+import DesktopShellMock from "../components/mocks/DesktopShellMock";
+import DashboardMock from "../components/mocks/DashboardMock";
+import WorkflowMock from "../components/mocks/WorkflowMock";
+import HeroDashboard from "../components/mocks/HeroDashboard";
 import styles from "./LandingPage.module.css";
-
-const HeroScene = lazy(() => import("../components/three/HeroScene"));
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
 const RELEASE_TAG = "v1.0.6";
 const RELEASE_DL = `${REPO_URL}/releases/download/${RELEASE_TAG}`;
-const MAC_DMG = `${RELEASE_DL}/PayloadX_1.0.6_aarch64.dmg`;
+// Filenames match GitHub Actions rename step (version stripped)
+const MAC_DMG = `${RELEASE_DL}/PayloadX_aarch64.dmg`;
+const WIN_SETUP = `${RELEASE_DL}/PayloadX_x64-setup.exe`;
+const WIN_MSI = `${RELEASE_DL}/PayloadX_x64.msi`;
+const LINUX_APPIMAGE = `${RELEASE_DL}/payload-x_amd64.AppImage`;
+const LINUX_DEB = `${RELEASE_DL}/payload-x_amd64.deb`;
 
 const PLATFORMS = [
   { os: "macOS", arch: "Apple Silicon", icon: <FaApple />, link: MAC_DMG },
-  { os: "Windows", arch: "x64", icon: <FaWindows />, link: `${RELEASE_DL}/PayloadX_x64-setup.exe` },
+  { os: "Windows", arch: "x64 Setup", icon: <FaWindows />, link: WIN_SETUP },
+  { os: "Windows", arch: "x64 MSI", icon: <FaWindows />, link: WIN_MSI },
   { os: "iOS", arch: "Beta", icon: <FaApple />, link: "#", comingSoon: true },
-  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: `${RELEASE_DL}/payload-x_amd64.AppImage` },
-  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: `${RELEASE_DL}/payload-x_amd64.deb` },
+  { os: "Linux", arch: "AppImage", icon: <FaLinux />, link: LINUX_APPIMAGE },
+  { os: "Linux", arch: "Debian", icon: <FaLinux />, link: LINUX_DEB },
 ];
 
 const PILLARS = [
@@ -122,9 +130,9 @@ function detectUserOS() {
   }
   const ua = window.navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
-  if (ua.includes("Win")) return { name: "Windows", link: `${RELEASE_DL}/PayloadX_x64-setup.exe`, icon: <FaWindows /> };
+  if (ua.includes("Win")) return { name: "Windows", link: WIN_SETUP, icon: <FaWindows /> };
   if (ua.includes("Mac")) return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
-  if (ua.includes("Linux")) return { name: "Linux", link: `${RELEASE_DL}/payload-x_amd64.AppImage`, icon: <FaLinux /> };
+  if (ua.includes("Linux")) return { name: "Linux", link: LINUX_APPIMAGE, icon: <FaLinux /> };
   return { name: "macOS", link: MAC_DMG, icon: <FaApple /> };
 }
 
@@ -245,6 +253,7 @@ export default function LandingPage() {
             .from(".hero-lead", { autoAlpha: 0, y: 28, duration: 0.7 }, "-=0.35")
             .from(".hero-cta", { autoAlpha: 0, y: 22, scale: 0.96, stagger: 0.1, duration: 0.55 }, "-=0.4")
             .from(".hero-listed", { autoAlpha: 0, y: 16, duration: 0.5 }, "-=0.25")
+            .from(".hero-canvas", { autoAlpha: 0, y: 16, duration: 0.9 }, 0)
             .from(".scroll-hint", { autoAlpha: 0, y: 12, duration: 0.5 }, "-=0.3");
 
           gsap.to(".scroll-line", {
@@ -256,7 +265,7 @@ export default function LandingPage() {
             ease: "sine.inOut",
           });
 
-          // Hero exit scrub — cinematic pull-back
+          // Hero exit scrub
           gsap
             .timeline({
               scrollTrigger: {
@@ -266,8 +275,7 @@ export default function LandingPage() {
                 scrub: 1,
               },
             })
-            .to(".hero-content", { y: -120, autoAlpha: 0, ease: "none" }, 0)
-            .to(".hero-canvas", { scale: 1.25, autoAlpha: 0.35, ease: "none" }, 0)
+            .to(".hero-content", { y: -48, autoAlpha: 0.35, ease: "none" }, 0)
             .to(".scroll-hint", { autoAlpha: 0, ease: "none" }, 0);
 
           // Intro wipe
@@ -365,22 +373,26 @@ export default function LandingPage() {
             });
           }
 
-          // Horizontal props scroll (desktop)
+          // Horizontal props scroll (desktop) — start only when section fills the viewport
           if (isDesktop) {
             const track = document.querySelector(".h-track");
-            if (track) {
+            const stack = document.querySelector(".stack-section");
+            if (track && stack) {
               const getScroll = () => -(track.scrollWidth - window.innerWidth + 72);
               gsap.to(track, {
                 x: getScroll,
                 ease: "none",
                 scrollTrigger: {
-                  trigger: ".h-scroll",
+                  trigger: stack,
+                  // Wait until the whole section is parked at the top of the screen
                   start: "top top",
-                  end: () => `+=${track.scrollWidth}`,
+                  end: () => `+=${Math.max(track.scrollWidth * 0.85, window.innerHeight)}`,
                   pin: true,
-                  scrub: 1,
-                  anticipatePin: 1,
+                  scrub: 0.85,
+                  anticipatePin: 0,
                   invalidateOnRefresh: true,
+                  // Don't begin scrubbing until the pin is actually engaged
+                  preventOverlaps: true,
                 },
               });
             }
@@ -480,40 +492,11 @@ export default function LandingPage() {
       <div className={`${styles.orb} ${styles.orbB} orb-b`} aria-hidden="true" />
 
       <section className={`${styles.hero} hero-section`} id="home">
-        <Suspense fallback={null}>
-          <HeroScene className={`${styles.heroCanvas} hero-canvas`} />
-        </Suspense>
-        <div className={styles.heroVeil} />
-        <div className={`${styles.heroContent} hero-content`}>
-          <p className={`${styles.brandMark} hero-brand hero-anim`}>PayloadX</p>
-          <h1 className={`${styles.heroTitle} hero-title hero-anim`}>{titleChars}</h1>
-          <p className={`${styles.heroLead} hero-lead hero-anim`}>
-            PayloadX is the institutional-grade API studio giving developers a
-            faster, more protective access vehicle to every request they ship.
-          </p>
-          <div className={styles.ctaRow}>
-            <a
-              href={downloadLink}
-              className={`${styles.btnPrimary} hero-cta hero-anim`}
-              download
-            >
-              Download for {downloadLabel}
-              <ArrowUpRight size={16} />
-            </a>
-            <Link to="/docs" className={`${styles.btnGhost} hero-cta hero-anim`}>
-              Read the docs
-            </Link>
-          </div>
-          <div className={`${styles.listed} hero-listed hero-anim`}>
-            <span className={styles.listedLabel}>Proudly built with</span>
-            <div className={styles.listedLogos}>
-              <span>Rust</span>
-              <span>Tauri</span>
-              <span>React</span>
-              <span>TypeScript</span>
-            </div>
-          </div>
-        </div>
+        <HeroDashboard
+          titleChars={titleChars}
+          downloadLink={downloadLink}
+          downloadLabel={downloadLabel}
+        />
         <div className={`${styles.scrollHint} scroll-hint`} aria-hidden="true">
           <span>Scroll</span>
           <div className={`${styles.scrollLine} scroll-line`} />
@@ -531,6 +514,45 @@ export default function LandingPage() {
           <h2 className={styles.newsTitle}>Open beta · Desktop builds live</h2>
           <p className={styles.newsMeta}>Windows, Linux &amp; macOS (Apple Silicon) installers</p>
         </aside>
+      </section>
+
+      <section className={`${styles.showcase} showcase-section`} aria-label="PayloadX studio">
+        <div className={`${styles.showcaseHeader} reveal`}>
+          <p className={styles.sectionEyebrow}>Request studio</p>
+          <h2 className={styles.sectionTitle}>Ship requests with clarity</h2>
+          <p className={styles.sectionLead}>
+            Method, environment variables, body, and response — the same desktop surface, live.
+          </p>
+        </div>
+        <div className={`${styles.showcaseStage} reveal`}>
+          <DesktopShellMock variant="section" />
+        </div>
+      </section>
+
+      <section className={`${styles.showcase} showcase-section`} aria-label="PayloadX workflows">
+        <div className={`${styles.showcaseHeader} reveal`}>
+          <p className={styles.sectionEyebrow}>Workflows</p>
+          <h2 className={styles.sectionTitle}>APIs that run themselves</h2>
+          <p className={styles.sectionLead}>
+            Login → profile → delay → teams. Watch the graph execute step by step.
+          </p>
+        </div>
+        <div className={`${styles.showcaseStage} reveal`}>
+          <WorkflowMock />
+        </div>
+      </section>
+
+      <section className={`${styles.showcase} showcase-section`} aria-label="PayloadX dashboard">
+        <div className={`${styles.showcaseHeader} reveal`}>
+          <p className={styles.sectionEyebrow}>Analytics</p>
+          <h2 className={styles.sectionTitle}>Clarity across every run</h2>
+          <p className={styles.sectionLead}>
+            Methods, latency, and recent activity — a clean workspace overview without the noise.
+          </p>
+        </div>
+        <div className={`${styles.showcaseStage} reveal`}>
+          <DashboardMock />
+        </div>
       </section>
 
       <section className={`${styles.statsPin}`} id="dashboard" aria-label="Product metrics">
@@ -587,7 +609,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className={styles.stack} id="stack">
+      <section className={`${styles.stack} stack-section`} id="stack">
         <div className={`${styles.stackHeader} reveal`}>
           <p className={styles.stackLabel}>Propositions</p>
           <h2 className={styles.sectionTitle}>The stack for shipping APIs</h2>

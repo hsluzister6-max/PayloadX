@@ -92,81 +92,39 @@
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  align-items: center;
-  gap: 2rem;
-  padding: 6.5rem 4.5rem 3.5rem;
+  padding: 0;
   isolation: isolate;
   overflow: hidden;
 }
 
-.heroCanvas {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 38%;
-  z-index: 0;
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
-.heroCanvas canvas {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
-
-.heroVeil {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 55% 50% at 78% 48%, var(--gradient-mesh-1) 0%, transparent 58%),
-    linear-gradient(
-      105deg,
-      var(--px-bg) 0%,
-      var(--px-bg) 42%,
-      color-mix(in srgb, var(--px-bg) 55%, transparent) 62%,
-      color-mix(in srgb, var(--px-bg) 18%, transparent) 100%
-    );
-}
-
 .heroContent {
-  position: relative;
-  z-index: 2;
-  max-width: 36rem;
-  grid-column: 1;
-  padding: 1rem 0;
   will-change: transform, opacity;
 }
 
 .brandMark {
   font-family: var(--px-mono);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   word-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--px-fg-muted);
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
 }
 
 .heroTitle {
   font-family: var(--px-display);
-  font-size: clamp(2.6rem, 5.8vw, 4.75rem);
+  font-size: clamp(2.75rem, 6vw, 5rem);
   font-weight: 600;
-  line-height: 1.14;
-  letter-spacing: -0.01em;
-  margin: 0 0 1.35rem;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.2rem;
   color: var(--px-fg);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 0.32em;
-  row-gap: 0.1em;
+  column-gap: 0.3em;
+  row-gap: 0.08em;
 }
 
 .titleWord {
@@ -190,21 +148,21 @@
 }
 
 .heroLead {
-  font-size: clamp(0.98rem, 1.35vw, 1.1rem);
-  line-height: 1.7;
-  letter-spacing: 0.015em;
-  word-spacing: 0.05em;
+  font-size: clamp(0.95rem, 1.25vw, 1.05rem);
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  word-spacing: 0.04em;
   color: var(--px-fg-muted);
-  max-width: 32rem;
-  margin: 0 0 2.25rem;
+  max-width: 30rem;
+  margin: 0 0 2rem;
   font-weight: 300;
 }
 
 .ctaRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.85rem;
-  margin-bottom: 3rem;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
 }
 
 .btnPrimary,
@@ -266,6 +224,48 @@
   max-width: 28rem;
 }
 
+.creator {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.creatorPhoto {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  object-position: center 20%;
+  border-radius: 4px;
+  border: 1px solid var(--px-line);
+  flex-shrink: 0;
+  filter: grayscale(0.15) contrast(1.05);
+}
+
+.creatorText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.creatorLabel {
+  font-family: var(--px-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--px-fg-faint);
+}
+
+.creatorName {
+  font-family: var(--px-sans);
+  font-size: 0.95rem;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  color: var(--px-fg);
+}
+
 .listedLabel {
   font-family: var(--px-mono);
   font-size: 0.62rem;
@@ -273,7 +273,7 @@
   word-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--px-fg-faint);
-  margin-top: 1.1rem;
+  margin-top: 0.55rem;
 }
 
 .listedLogos {
@@ -315,6 +315,30 @@
   height: 48px;
   background: linear-gradient(to bottom, var(--px-accent), transparent);
   transform-origin: top;
+}
+
+/* —— SHOWCASE (product video) —— */
+.showcase {
+  position: relative;
+  z-index: 2;
+  padding: 5rem 0 0;
+  border-top: 1px solid var(--px-line);
+  background: var(--px-bg);
+}
+
+.showcase + .showcase {
+  padding-top: 5.5rem;
+}
+
+.showcaseHeader {
+  padding: 0 clamp(1.5rem, 5vw, 4.5rem) 2.25rem;
+  max-width: 42rem;
+}
+
+.showcaseStage {
+  width: 100%;
+  padding: 0;
+  background: transparent;
 }
 
 /* —— INTRO —— */
@@ -473,7 +497,7 @@
   word-spacing: 0.04em;
   margin: 0 0 1.25rem;
   max-width: 14ch;
-  background: var(--px-chrome);
+  background: var(--px-title-fill);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -546,10 +570,15 @@
   padding: 0;
   background: var(--px-bg);
   overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stackHeader {
-  padding: 5rem 4.5rem 2rem;
+  padding: 3.5rem 4.5rem 1.25rem;
+  flex-shrink: 0;
 }
 
 .stackLabel {
@@ -563,7 +592,8 @@
 
 .hScroll {
   overflow: hidden;
-  padding-bottom: 5rem;
+  padding-bottom: 4rem;
+  flex: 0 0 auto;
 }
 
 .hTrack {
@@ -953,10 +983,10 @@
 }
 
 @media (max-width: 960px) {
-  .hero,
   .intro,
   .prodPin,
   .stackHeader,
+  .showcaseHeader,
   .hTrack,
   .band,
   .opportunity,
@@ -972,31 +1002,7 @@
   }
 
   .hero {
-    grid-template-columns: 1fr;
-    align-items: end;
-    padding-top: 6rem;
-    padding-bottom: 3rem;
-    min-height: 92vh;
-  }
-
-  .heroCanvas {
-    left: 0;
-    opacity: 0.55;
-  }
-
-  .heroVeil {
-    background:
-      radial-gradient(ellipse 70% 50% at 70% 35%, var(--gradient-mesh-1) 0%, transparent 55%),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--px-bg) 35%, transparent) 0%,
-        color-mix(in srgb, var(--px-bg) 88%, transparent) 48%,
-        var(--px-bg) 100%
-      );
-  }
-
-  .heroContent {
-    max-width: 100%;
+    min-height: 100svh;
   }
 
   .heroTitle {

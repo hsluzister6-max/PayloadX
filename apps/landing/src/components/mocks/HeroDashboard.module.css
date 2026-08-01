@@ -1,0 +1,449 @@
+.shell {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 64px;
+  box-sizing: border-box;
+  background: var(--mock-bg);
+  color: var(--mock-text);
+  font-family: Inter, system-ui, sans-serif;
+  overflow: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 44px 180px 1fr;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 0;
+  border-right: 1px solid var(--mock-line);
+  background: var(--mock-rail);
+}
+
+.rail span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--mock-faint);
+  opacity: 0.75;
+}
+
+.railOn {
+  opacity: 1 !important;
+  color: var(--mock-text) !important;
+  background: var(--mock-active);
+  box-shadow: inset 2px 0 0 var(--mock-chrome);
+}
+
+.sidebar {
+  border-right: 1px solid var(--mock-line);
+  background: var(--mock-sidebar);
+  padding: 14px 10px;
+  overflow: hidden;
+}
+
+.sideLabel {
+  margin: 0 0 8px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.sideLabel:not(:first-child) {
+  margin-top: 18px;
+}
+
+.navItem {
+  margin: 0;
+  padding: 7px 8px;
+  font-size: 12px;
+  color: var(--mock-muted);
+  border-radius: 5px;
+}
+
+.navOn {
+  color: var(--mock-text);
+  background: var(--mock-active);
+  box-shadow: inset 2px 0 0 var(--mock-chrome);
+}
+
+.recent {
+  margin: 0;
+  padding: 5px 6px;
+  font-size: 11px;
+  color: var(--mock-muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.recent i {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: "DM Mono", ui-monospace, monospace;
+  width: 28px;
+}
+
+.main {
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 70% 45% at 20% 0%, var(--mock-wash), transparent 55%),
+    var(--mock-bg);
+}
+
+.heroBlock {
+  padding: clamp(1.75rem, 4vh, 2.75rem) clamp(1.25rem, 3.5vw, 2.75rem) 1.5rem;
+  max-width: 40rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.85rem;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mock-muted);
+}
+
+.title {
+  margin: 0 0 0.9rem;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: clamp(2.4rem, 5.2vw, 4.25rem);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.28em;
+  row-gap: 0.06em;
+}
+
+.title :global(.char) {
+  display: inline-block;
+  background: var(--metallic-title);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lead {
+  margin: 0 0 1.5rem;
+  font-size: clamp(0.92rem, 1.2vw, 1.02rem);
+  line-height: 1.6;
+  color: var(--mock-muted);
+  font-weight: 300;
+  max-width: 30rem;
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1.5rem;
+}
+
+.btnPrimary,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.8rem 1.25rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 2px;
+  transition: transform 0.2s, filter 0.2s, border-color 0.2s;
+}
+
+.btnPrimary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  border: 1px solid var(--btn-primary-border);
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.btnGhost {
+  color: var(--mock-text);
+  border: 1px solid var(--mock-line);
+  background: var(--mock-wash);
+}
+
+.btnGhost:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.creator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mock-line);
+  max-width: 32rem;
+}
+
+.photo {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 1px solid var(--mock-line);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.creatorLabel {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+  margin-bottom: 2px;
+}
+
+.creatorName {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.stack {
+  margin-left: auto;
+  display: flex;
+  gap: 0.65rem;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--mock-line);
+  border-top: 1px solid var(--mock-line);
+  border-bottom: 1px solid var(--mock-line);
+}
+
+.stat {
+  background: var(--mock-bg);
+  padding: 0.85rem clamp(0.9rem, 2vw, 1.5rem);
+}
+
+.stat p {
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 1px;
+  background: var(--mock-line);
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  background: var(--mock-bg);
+  padding: 1rem clamp(1rem, 2.5vw, 1.75rem) 1.15rem;
+  min-height: 160px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.panelTitle {
+  margin: 0 0 0.85rem;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  height: 100px;
+  align-items: end;
+}
+
+.barCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.track {
+  flex: 1;
+  width: 100%;
+  max-width: 26px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--mock-wash);
+}
+
+.track div {
+  width: 100%;
+  min-height: 2px;
+  background: linear-gradient(180deg, #86efac, #22c55e);
+  transition: height 0.4s ease;
+}
+
+.barCol span {
+  font-size: 9px;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.methodRow {
+  display: grid;
+  grid-template-columns: 36px 1fr 24px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.meter {
+  height: 3px;
+  background: var(--mock-wash);
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.methodRow em {
+  font-style: normal;
+  color: var(--mock-muted);
+  text-align: right;
+}
+
+.run {
+  display: grid;
+  grid-template-columns: 40px 1fr 36px 52px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--mock-line);
+  font-size: 12px;
+}
+
+.run:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.run span {
+  font-size: 9px;
+  font-weight: 800;
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.run b {
+  font-weight: 550;
+}
+
+.run em {
+  font-style: normal;
+  color: var(--success);
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.run small {
+  text-align: right;
+  color: var(--mock-faint);
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.runFlash {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  box-shadow: inset 2px 0 0 var(--success);
+}
+
+@media (max-width: 960px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .rail,
+  .sidebar {
+    display: none;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stack {
+    display: none;
+  }
+
+  .run {
+    grid-template-columns: 40px 1fr 36px;
+  }
+
+  .run small {
+    display: none;
+  }
+}

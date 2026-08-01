@@ -1,0 +1,324 @@
+.shell {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--mock-line);
+  border-bottom: 1px solid var(--mock-line);
+  background: var(--mock-bg);
+  overflow: hidden;
+  font-family: "Sora", system-ui, sans-serif;
+  color: var(--mock-text);
+  user-select: none;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 clamp(1.25rem, 4vw, 3rem);
+  background: var(--mock-panel);
+  border-bottom: 1px solid var(--mock-line);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot[data-c="r"] { background: #ff5f57; }
+.dot[data-c="y"] { background: #febc2e; }
+.dot[data-c="g"] { background: #28c840; }
+
+.title {
+  margin-left: 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--mock-muted);
+  flex: 1;
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #4ade80;
+}
+
+.live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem clamp(1.25rem, 4vw, 3rem) 1.1rem;
+  border-bottom: 1px solid var(--mock-line);
+}
+
+.greet {
+  margin: 0;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mock-muted);
+  letter-spacing: 0.02em;
+}
+
+.headActions {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.headActions span {
+  padding: 6px 10px;
+  border: 1px solid var(--mock-line);
+  color: var(--mock-muted);
+}
+
+.primary {
+  background: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-color) !important;
+  border-color: transparent !important;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--mock-line);
+  border-bottom: 1px solid var(--mock-line);
+}
+
+.stat {
+  background: var(--mock-bg);
+  padding: 1rem clamp(1rem, 3vw, 2rem);
+}
+
+.statLabel {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.statValue {
+  margin: 0.35rem 0 0;
+  font-family: "Unbounded", system-ui, sans-serif;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1px;
+  background: var(--mock-line);
+  padding: 1px;
+}
+
+.panel {
+  background: var(--mock-bg);
+  padding: 1.15rem clamp(1.15rem, 3.5vw, 2.5rem) 1.35rem;
+  min-height: 200px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.panelTitle {
+  margin: 0 0 0.9rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  align-items: end;
+  height: 120px;
+}
+
+.barCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.barTrack {
+  flex: 1;
+  width: 100%;
+  max-width: 28px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--mock-wash);
+}
+
+.barFill {
+  width: 100%;
+  background: linear-gradient(180deg, #86efac, #22c55e);
+  min-height: 2px;
+  transition: height 0.45s ease;
+}
+
+.barCol span {
+  font-size: 9px;
+  color: var(--mock-faint);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.methods {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.methodRow {
+  display: grid;
+  grid-template-columns: 56px 1fr 28px;
+  gap: 10px;
+  align-items: center;
+}
+
+.badge {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 5px;
+  text-align: center;
+}
+
+.mGet { color: #4ade80; background: rgba(74, 222, 128, 0.1); }
+.mPost { color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+.mPut { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.mDel { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+.meter {
+  height: 4px;
+  background: var(--mock-wash);
+  overflow: hidden;
+}
+
+.meter div {
+  height: 100%;
+  transition: width 0.45s ease;
+}
+
+.methodRow em {
+  font-style: normal;
+  font-size: 11px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  color: var(--mock-muted);
+  text-align: right;
+}
+
+.runs {
+  display: flex;
+  flex-direction: column;
+}
+
+.runRow {
+  display: grid;
+  grid-template-columns: 56px 1fr 40px 56px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--mock-line);
+  font-size: 12px;
+}
+
+.runRow:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.runFlash {
+  background: rgba(34, 197, 94, 0.08);
+  box-shadow: inset 2px 0 0 #22c55e;
+}
+
+.runName {
+  color: var(--mock-text);
+  font-weight: 500;
+}
+
+.runStatus {
+  color: #4ade80;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.runMs {
+  text-align: right;
+  color: var(--mock-faint);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.foot {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--mock-line);
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mock-faint);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@media (max-width: 800px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .runRow {
+    grid-template-columns: 56px 1fr 40px;
+  }
+
+  .runMs {
+    display: none;
+  }
+}

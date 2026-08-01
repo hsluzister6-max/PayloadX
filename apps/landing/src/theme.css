@@ -54,7 +54,8 @@
   --shadow-terminal: 0 16px 40px rgba(18, 18, 20, 0.14);
 
   --title-x: #6b707a;
-  --metallic-title: linear-gradient(160deg, #121214 0%, #6b707a 45%, #121214 100%);
+  /* Light: dark steel fill so titles stay readable on pale backgrounds */
+  --metallic-title: linear-gradient(180deg, #1a1c20 0%, #3a3e46 42%, #6b707a 100%);
   --metallic-footer: linear-gradient(175deg, #121214 0%, #6b707a 40%, #3a3e46 100%);
 
   --btn-primary-bg: linear-gradient(
@@ -79,6 +80,28 @@
   --term-time: #8b919c;
 
   --overlay: rgba(18, 18, 20, 0.4);
+
+  /* Product UI mocks (landing) */
+  --mock-bg: #f4f5f7;
+  --mock-panel: #ffffff;
+  --mock-surface: #ffffff;
+  --mock-sidebar: #eef0f3;
+  --mock-rail: #e8eaee;
+  --mock-input: #ffffff;
+  --mock-response: #f8f9fb;
+  --mock-line: rgba(18, 18, 20, 0.1);
+  --mock-text: #121214;
+  --mock-muted: #6b707a;
+  --mock-faint: #9aa0aa;
+  --mock-code: #0e7490;
+  --mock-wash: rgba(18, 18, 20, 0.035);
+  --mock-active: rgba(18, 18, 20, 0.06);
+  --mock-chrome: #6b707a;
+  --mock-canvas: #eef0f3;
+  --mock-canvas-dot: rgba(18, 18, 20, 0.08);
+  --mock-node-bg: rgba(255, 255, 255, 0.96);
+  --mock-node-shadow: 0 8px 28px rgba(18, 18, 20, 0.1);
+  --mock-edge: rgba(18, 18, 20, 0.12);
 }
 
 [data-theme="dark"] {
@@ -134,7 +157,8 @@
   --shadow-terminal: 0 16px 40px rgba(0, 0, 0, 0.6);
 
   --title-x: #c8ccd4;
-  --metallic-title: linear-gradient(160deg, #ffffff 0%, #c8ccd4 45%, #8b919c 100%);
+  /* Dark: soft chrome vertical fill (same look as the light-mode reference) */
+  --metallic-title: linear-gradient(180deg, #f4f5f7 0%, #c8ccd4 45%, #8b93a8 100%);
   --metallic-footer: linear-gradient(175deg, #ffffff 0%, #c8ccd4 40%, #a8adb6 100%);
 
   --btn-primary-bg: linear-gradient(
@@ -160,6 +184,28 @@
   --term-time: #6b707a;
 
   --overlay: rgba(8, 8, 10, 0.72);
+
+  /* Product UI mocks (landing) */
+  --mock-bg: #060606;
+  --mock-panel: #0a0a0a;
+  --mock-surface: #111111;
+  --mock-sidebar: #080808;
+  --mock-rail: #050505;
+  --mock-input: #030303;
+  --mock-response: #080808;
+  --mock-line: rgba(255, 255, 255, 0.07);
+  --mock-text: #e8ecf4;
+  --mock-muted: #8b93a8;
+  --mock-faint: #5c6370;
+  --mock-code: #7dd3fc;
+  --mock-wash: rgba(255, 255, 255, 0.04);
+  --mock-active: rgba(255, 255, 255, 0.06);
+  --mock-chrome: #c8cdd8;
+  --mock-canvas: #070707;
+  --mock-canvas-dot: rgba(255, 255, 255, 0.045);
+  --mock-node-bg: rgba(12, 12, 12, 0.94);
+  --mock-node-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  --mock-edge: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="light"] .metallic-app-name {

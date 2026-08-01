@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowRight, Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SiTypescript, SiRust, SiReact, SiTauri } from "react-icons/si";
@@ -83,14 +83,9 @@ export default function PixelHero({
   githubUrl = "https://github.com/hsluzister6-max/PayloadX",
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const videoRef = useRef(null);
 
   useEffect(() => {
     const loadTimer = setTimeout(() => setIsLoaded(true), 40);
-    const video = videoRef.current;
-    if (video) {
-      video.play().catch(() => {});
-    }
     return () => clearTimeout(loadTimer);
   }, []);
 
@@ -99,15 +94,10 @@ export default function PixelHero({
   return (
     <div className={styles.hero}>
       <div className={styles.videoWrap} aria-hidden="true">
-        <video
-          ref={videoRef}
+        <img
           className={styles.video}
-          src="/herobg.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
+          src="/payloadx-studio.png"
+          alt=""
         />
         <div className={styles.videoOverlay} />
       </div>

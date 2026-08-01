@@ -1,0 +1,239 @@
+.shell {
+  --m-bg: var(--mock-bg);
+  --m-panel: var(--mock-panel);
+  --m-line: var(--mock-line);
+  --m-text: var(--mock-text);
+  --m-muted: var(--mock-muted);
+  --m-faint: var(--mock-faint);
+  width: 100%;
+  background: var(--m-bg);
+  border-top: 1px solid var(--m-line);
+  border-bottom: 1px solid var(--m-line);
+  overflow: hidden;
+  color: var(--m-text);
+  font-family: Inter, system-ui, sans-serif;
+  user-select: none;
+  transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 48px;
+  padding: 0 clamp(1.25rem, 4vw, 3rem);
+  background: var(--m-panel);
+  border-bottom: 1px solid var(--m-line);
+}
+
+.toolLeft,
+.toolRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wfName {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.badge {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+  border: 1px solid var(--m-line);
+  padding: 3px 7px;
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.ghost {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+  padding: 7px 12px;
+  border: 1px solid var(--m-line);
+}
+
+.runBtn {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+}
+
+.runHot {
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+.canvas {
+  position: relative;
+  height: clamp(320px, 48vh, 480px);
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, var(--mock-wash), transparent 70%),
+    radial-gradient(circle at 1px 1px, var(--mock-canvas-dot) 1px, transparent 0) 0 0 / 24px 24px,
+    var(--mock-canvas);
+  overflow: hidden;
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.edge,
+.edgeOn {
+  fill: none;
+  stroke-width: 0.35;
+  stroke-linecap: round;
+  transition: stroke 0.35s ease, opacity 0.35s ease;
+}
+
+.edge {
+  stroke: var(--mock-edge);
+}
+
+.edgeOn {
+  stroke: #22c55e;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 1.5px rgba(34, 197, 94, 0.5));
+}
+
+.node {
+  position: absolute;
+  top: 50%;
+  width: min(220px, 22vw);
+  min-width: 160px;
+  transform: translate(-50%, -50%);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--mock-line);
+  background: var(--mock-node-bg);
+  box-shadow: var(--mock-node-shadow);
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+
+.nodeActive {
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.2),
+    0 12px 36px rgba(0, 0, 0, 0.4),
+    0 0 28px rgba(34, 197, 94, 0.12);
+}
+
+.nodeDone {
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+}
+
+.nodeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.step {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-faint);
+  border: 1px solid var(--m-line);
+  padding: 2px 6px;
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--m-faint);
+}
+
+.statusDot[data-state="run"] {
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.statusDot[data-state="ok"] {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+}
+
+.nodeName {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.nodeMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: "DM Mono", ui-monospace, monospace;
+  min-width: 0;
+}
+
+.nodeMeta code {
+  font-size: 9px;
+  color: var(--m-muted);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.latency {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--m-line);
+  font-size: 10px;
+  font-family: "DM Mono", ui-monospace, monospace;
+  color: #22c55e;
+  letter-spacing: 0.02em;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+@media (max-width: 800px) {
+  .canvas {
+    height: auto;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 1.25rem;
+  }
+
+  .edges {
+    display: none;
+  }
+
+  .node {
+    position: relative;
+    top: auto !important;
+    left: auto !important;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+  }
+}
