@@ -36,17 +36,17 @@ const PILLARS = [
   {
     num: "01",
     title: "Native since day one",
-    body: "Rust-powered core and Tauri shell deliver Postman-class workflows without Electron bloat — cold starts measured in milliseconds.",
+    body: "Rust powered core and Tauri shell deliver Postman class workflows without Electron bloat. Cold starts measured in milliseconds.",
   },
   {
     num: "02",
-    title: "Local-first protection",
+    title: "Local first protection",
     body: "Collections, secrets, and history stay on your machine by default. No forced cloud sync. Your APIs never leave your control.",
   },
   {
     num: "03",
     title: "Trackable request by request",
-    body: "Inspect timing, headers, and payloads with clarity. Debug faster with a studio that treats every request as first-class.",
+    body: "Inspect timing, headers, and payloads with clarity. Debug faster with a studio that treats every request as first class.",
   },
 ];
 
@@ -54,7 +54,7 @@ const PROPS = [
   {
     cat: "Performance",
     title: "Built for developers who ship",
-    body: "PayloadX is engineered as a native desktop studio — TypeScript UI, Rust networking, and a UI that stays responsive under heavy collections.",
+    body: "PayloadX is engineered as a native desktop studio. TypeScript UI, Rust networking, and a UI that stays responsive under heavy collections.",
   },
   {
     cat: "Operations",
@@ -64,17 +64,17 @@ const PROPS = [
   {
     cat: "Open source",
     title: "Public code as an advantage",
-    body: "Fork it, audit it, extend it. Open source means you can verify what runs against your APIs — and shape the roadmap with the community.",
+    body: "Fork it, audit it, extend it. Open source means you can verify what runs against your APIs, and shape the roadmap with the community.",
   },
   {
     cat: "Privacy",
     title: "Committed to local clarity",
-    body: "We provide full visibility into where data lives. Local-first by design, with optional collaboration when you choose it — never by surprise.",
+    body: "We provide full visibility into where data lives. Local first by design, with optional collaboration when you choose it, never by surprise.",
   },
   {
     cat: "Stack",
     title: "Partnered with the right tools",
-    body: "Built on Rust, Tauri, and React — the same stack used for high-trust, high-performance desktop software — so PayloadX stays lean and protective.",
+    body: "Built on Rust, Tauri, and React, the same stack used for high trust, high performance desktop software, so PayloadX stays lean and protective.",
   },
 ];
 
@@ -85,11 +85,11 @@ const OPPORTUNITIES = [
   },
   {
     title: "APIs secure the product economy",
-    body: "Auth, contracts, and edge cases live in your collections. Treat them with the same care as production code — locally, versionably, safely.",
+    body: "Auth, contracts, and edge cases live in your collections. Treat them with the same care as production code: locally, versionably, safely.",
   },
   {
     title: "Tooling should scale with usage",
-    body: "As services multiply, so do environments and secrets. PayloadX keeps that complexity on-device and under your policies.",
+    body: "As services multiply, so do environments and secrets. PayloadX keeps that complexity on device and under your policies.",
   },
   {
     title: "Structural tailwinds favor native",
@@ -100,15 +100,15 @@ const OPPORTUNITIES = [
 const FAQS = [
   {
     q: "What is PayloadX?",
-    a: "PayloadX is a high-performance, Rust-powered API studio for testing, debugging, and collaborating on APIs — a modern, local-first alternative to Postman.",
+    a: "PayloadX is a high performance, Rust powered API studio for testing, debugging, and collaborating on APIs, a modern, local first alternative to Postman.",
   },
   {
     q: "How is PayloadX different from Postman?",
-    a: "PayloadX ships as a native Tauri desktop app with a Rust core. It prioritizes speed, low memory use, and local-first data so your collections and secrets stay protective by default.",
+    a: "PayloadX ships as a native Tauri desktop app with a Rust core. It prioritizes speed, low memory use, and local first data so your collections and secrets stay protective by default.",
   },
   {
     q: "Where does my data live?",
-    a: "On your machine. PayloadX is local-first: requests, environments, and history are stored locally unless you explicitly configure external sync.",
+    a: "On your machine. PayloadX is local first: requests, environments, and history are stored locally unless you explicitly configure external sync.",
   },
   {
     q: "Which platforms are supported?",
@@ -505,9 +505,9 @@ export default function LandingPage() {
 
       <section className={`${styles.intro} intro-section`} id="product">
         <p className={`${styles.introCopy} intro-copy`}>
-          By combining native performance, local-first custody of your data, and
+          By combining native performance, local first custody of your data, and
           a studio built for real workflows, we set a new standard for how API
-          tooling should feel — fast, clear, and under your control.
+          tooling should feel: fast, clear, and under your control.
         </p>
         <aside className={`${styles.newsCard} news-card`}>
           <p className={styles.newsEyebrow}>Product news</p>
@@ -521,7 +521,7 @@ export default function LandingPage() {
           <p className={styles.sectionEyebrow}>Request studio</p>
           <h2 className={styles.sectionTitle}>Ship requests with clarity</h2>
           <p className={styles.sectionLead}>
-            Method, environment variables, body, and response — the same desktop surface, live.
+            Method, environment variables, body, and response. The same desktop surface, live.
           </p>
         </div>
         <div className={`${styles.showcaseStage} reveal`}>
@@ -547,7 +547,7 @@ export default function LandingPage() {
           <p className={styles.sectionEyebrow}>Analytics</p>
           <h2 className={styles.sectionTitle}>Clarity across every run</h2>
           <p className={styles.sectionLead}>
-            Methods, latency, and recent activity — a clean workspace overview without the noise.
+            Methods, latency, and recent activity. A clean workspace overview without the noise.
           </p>
         </div>
         <div className={`${styles.showcaseStage} reveal`}>
@@ -559,7 +559,7 @@ export default function LandingPage() {
         <div className={`${styles.stats} stats-grid`}>
           {[
             { label: "Runtime", value: "Native", hint: "Rust + Tauri core" },
-            { label: "Data model", value: "Local-first", hint: "Your machine, your keys" },
+            { label: "Data model", value: "Local first", hint: "Your machine, your keys" },
             { label: "License", value: "Open", hint: "Audit on GitHub" },
             { label: "Cloud tax", value: "$0", hint: "No account required" },
           ].map((s) => (
@@ -590,8 +590,8 @@ export default function LandingPage() {
             <p className={`${styles.sectionEyebrow} reveal`}>Pioneering productivity</p>
             <h2 className={`${styles.sectionTitle} section-title`}>Built to compound velocity</h2>
             <p className={`${styles.sectionLead} reveal`}>
-              Native protocol speed, protective defaults, and day-by-day clarity —
-              scroll the reel like a VFX sequence.
+              Native protocol speed, protective defaults, and day by day clarity.
+              Scroll the reel like a VFX sequence.
             </p>
           </div>
           <div className={`${styles.pillars} pillars-grid`}>
@@ -744,7 +744,7 @@ export default function LandingPage() {
         <div>
           <p className={styles.footerBrandLine}>PayloadX</p>
           <p className={styles.footerNote}>
-            PayloadX is the open-source API studio giving developers a smarter,
+            PayloadX is the open source API studio giving developers a smarter,
             more protective way to work with HTTP.
           </p>
         </div>

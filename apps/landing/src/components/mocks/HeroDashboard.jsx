@@ -92,7 +92,7 @@ export default function HeroDashboard({
             <p className={`${styles.eyebrow} hero-brand hero-anim`}>PayloadX</p>
             <h1 className={`${styles.title} hero-title hero-anim`}>{titleChars}</h1>
             <p className={`${styles.lead} hero-lead hero-anim`}>
-              Institutional-grade API studio — native speed, local-first custody,
+              Institutional grade API studio. Native speed, local first custody,
               workflows that ship with you.
             </p>
             <div className={styles.ctaRow}>

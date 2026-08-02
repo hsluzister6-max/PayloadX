@@ -143,7 +143,7 @@ function McpServer() {
         <h1 className={styles.metallicTitle}>MCP Server</h1>
         <p className={styles.lead}>
           Connect Cursor or Claude to PayloadX with the Model Context Protocol.
-          Create teams, collections, requests, and workflows from your AI client —
+          Create teams, collections, requests, and workflows from your AI client.
           they show up instantly in the desktop app.
         </p>
       </div>
@@ -151,7 +151,7 @@ function McpServer() {
       <div className={styles.quickStartCard}>
         <div className={styles.quickStartHeader}>
           <Plug size={13} />
-          SETUP FLOW — CURSOR / CLAUDE
+          SETUP FLOW: CURSOR / CLAUDE
         </div>
         <div className={styles.quickStartBody}>
           <div className={styles.qsStep}>
@@ -168,8 +168,8 @@ function McpServer() {
             <div className={styles.qsContent}>
               <label>CREATE AN MCP TOKEN</label>
               <p className={styles.qsDesc}>
-                Click your <strong>avatar</strong> (bottom-left) → <strong>MCP / API Tokens</strong> →
-                {" "}<strong>Generate token</strong>. Open the token and copy the ready-made config.
+                Click your <strong>avatar</strong> (bottom left) → <strong>MCP / API Tokens</strong> →
+                {" "}<strong>Generate token</strong>. Open the token and copy the ready made config.
               </p>
             </div>
           </div>
@@ -188,7 +188,7 @@ function McpServer() {
             <div className={styles.qsContent}>
               <label>USE IT</label>
               <p className={styles.qsDesc}>
-                Ask Cursor to create APIs or workflows — for example{" "}
+                Ask Cursor to create APIs or workflows, for example{" "}
                 <em>“Create a REST collection for auth and add login + signup requests.”</em>
               </p>
             </div>
@@ -204,7 +204,7 @@ function McpServer() {
         <div className={styles.sectionTitle}>Cursor config (recommended)</div>
         <p className={styles.text}>
           Prefer <strong>Streamable HTTP</strong>. You only need your token and the{" "}
-          <code>/mcp</code> URL — no local repo checkout.
+          <code>/mcp</code> URL. No local repo checkout.
         </p>
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>~/.cursor/mcp.json</span></div>
@@ -222,11 +222,11 @@ function McpServer() {
           </div>
         </div>
         <p className={styles.text}>
-          Self-hosted backends use the same shape with your API origin, e.g.{" "}
+          Self hosted backends use the same shape with your API origin, e.g.{" "}
           <code>http://localhost:3001/mcp</code>.
         </p>
         <div className={styles.codeBlock}>
-          <div className={styles.codeHeader}><span>Local / self-hosted</span></div>
+          <div className={styles.codeHeader}><span>Local / self hosted</span></div>
           <div className={styles.codeBody}>
             {"{"}<br />
             &nbsp;&nbsp;&quot;mcpServers&quot;: {"{"}<br />
@@ -341,7 +341,7 @@ function McpServer() {
       </div>
 
       <div>
-        <div className={styles.sectionTitle}>Dev-only: stdio</div>
+        <div className={styles.sectionTitle}>Dev only: stdio</div>
         <p className={styles.text}>
           Use stdio only when you have this repo checked out and want a local process bridge.
           For sharing with teammates, prefer the <code>url</code> config above.
@@ -401,7 +401,7 @@ function LocalSetup() {
 
       {/* HEADER */}
       <div>
-        <div className={styles.sectionBadge}><Terminal size={10} /> Self-Hosting</div>
+        <div className={styles.sectionBadge}><Terminal size={10} /> Self Hosting</div>
         <h1 className={styles.metallicTitle}>Local Setup</h1>
         <p className={styles.lead}>
           Run the PayloadX backend on your own infrastructure using Docker.
@@ -413,7 +413,7 @@ function LocalSetup() {
       <div className={styles.quickStartCard}>
         <div className={styles.quickStartHeader}>
           <Terminal size={13} />
-          DEPLOYMENT FLOW — READY TO RUN
+          DEPLOYMENT FLOW: READY TO RUN
         </div>
         <div className={styles.quickStartBody}>
           <div className={styles.qsStep}>
@@ -427,7 +427,7 @@ function LocalSetup() {
             <div className={styles.qsNum}>02</div>
             <div className={styles.qsContent}>
               <label>CREATE YOUR .ENV FILE</label>
-              <p className={styles.qsDesc}>Configure your environment variables — see the full reference below.</p>
+              <p className={styles.qsDesc}>Configure your environment variables. See the full reference below.</p>
             </div>
           </div>
           <div className={styles.qsStep}>
@@ -442,7 +442,7 @@ function LocalSetup() {
             <div className={styles.qsContent}>
               <label>CONNECT DESKTOP</label>
               <p className={styles.qsDesc}>
-                Open PayloadX Desktop → Select <strong>"Self-Hosted / Local"</strong> → Enter <code>http://localhost:3001</code>
+                Open PayloadX Desktop → Select <strong>"Self Hosted / Local"</strong> → Enter <code>http://localhost:3001</code>
               </p>
             </div>
           </div>
@@ -474,7 +474,7 @@ function LocalSetup() {
             FIREBASE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com<br />
             FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"<br />
             <br />
-            # ── SMTP (Optional — for email OTP) ─────────────────<br />
+            # ── SMTP (Optional, for email OTP) ─────────────────<br />
             SMTP_HOST=smtp.gmail.com<br />
             SMTP_USER=your-email@gmail.com<br />
             SMTP_PASS=your-app-password
@@ -494,16 +494,16 @@ function LocalSetup() {
             </tr>
           </thead>
           <tbody>
-            <tr><td><code>MONGODB_URI</code></td><td>✓</td><td>MongoDB connection string — local or Atlas</td></tr>
-            <tr><td><code>JWT_SECRET</code></td><td>✓</td><td>Min 32-char secret for signing auth tokens</td></tr>
+            <tr><td><code>MONGODB_URI</code></td><td>✓</td><td>MongoDB connection string, local or Atlas</td></tr>
+            <tr><td><code>JWT_SECRET</code></td><td>✓</td><td>Min 32 char secret for signing auth tokens</td></tr>
             <tr><td><code>PORT</code></td><td>✓</td><td>Port the server listens on (default: 3001)</td></tr>
-            <tr><td><code>CORS_ORIGIN</code></td><td>✓</td><td>Allowed origins — use <code>*</code> for all</td></tr>
+            <tr><td><code>CORS_ORIGIN</code></td><td>✓</td><td>Allowed origins. Use <code>*</code> for all</td></tr>
             <tr><td><code>FIREBASE_PROJECT_ID</code></td><td>Workflows</td><td>Your Firebase project ID</td></tr>
             <tr><td><code>FIREBASE_CLIENT_EMAIL</code></td><td>Workflows</td><td>Service account client email</td></tr>
             <tr><td><code>FIREBASE_PRIVATE_KEY</code></td><td>Workflows</td><td>PEM private key from Firebase service account JSON</td></tr>
             <tr><td><code>SMTP_HOST</code></td><td>Optional</td><td>SMTP server hostname for email OTP</td></tr>
             <tr><td><code>SMTP_USER</code></td><td>Optional</td><td>SMTP login email address</td></tr>
-            <tr><td><code>SMTP_PASS</code></td><td>Optional</td><td>App-specific SMTP password</td></tr>
+            <tr><td><code>SMTP_PASS</code></td><td>Optional</td><td>App specific SMTP password</td></tr>
           </tbody>
         </table>
       </div>
@@ -522,15 +522,15 @@ function LocalSetup() {
           <div className={styles.firebasePoint}>
             <span className={styles.firebasePointNum}>1</span>
             <div>
-              <strong>Authentication</strong> — Firebase Auth secures user sessions with
-              short-lived ID tokens. This means your users' credentials are never stored in plain text
+              <strong>Authentication.</strong> Firebase Auth secures user sessions with
+              short lived ID tokens. This means your users' credentials are never stored in plain text
               in MongoDB.
             </div>
           </div>
           <div className={styles.firebasePoint}>
             <span className={styles.firebasePointNum}>2</span>
             <div>
-              <strong>Workflow execution</strong> — Background workflow tasks are coordinated
+              <strong>Workflow execution.</strong> Background workflow tasks are coordinated
               via Firebase Admin SDK to securely verify the identity of the caller before running
               chained API nodes on the server.
             </div>
@@ -689,28 +689,28 @@ function Performance() {
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>collectionStore.js</span></div>
           <div className={styles.codeBody}>
-            {`// Before — O(n)\nif (state.requests.find(r => r._id === id)) ...\n\n// After — O(1)\nif (state._requestsById.has(id)) ...`}
+            {`// Before: O(n)\nif (state.requests.find(r => r._id === id)) ...\n\n// After: O(1)\nif (state._requestsById.has(id)) ...`}
           </div>
         </div>
       </div>
 
       <div>
-        <div className={styles.sectionTitle}>Memoized BFS — Workflow Layers</div>
-        <p className={styles.text}><code>calculateLayers()</code> runs Kahn's topological sort memoized by a topology fingerprint — skipping the O(V+E) pass entirely when structure hasn't changed.</p>
+        <div className={styles.sectionTitle}>Memoized BFS: Workflow Layers</div>
+        <p className={styles.text}><code>calculateLayers()</code> runs Kahn's topological sort memoized by a topology fingerprint, skipping the O(V+E) pass entirely when structure hasn't changed.</p>
         <div className={styles.featGrid}>
-          {["Kahn's Algorithm (BFS)", "Topology Fingerprint Cache", "O(V+E) → O(1) on re-render"].map(t => (
+          {["Kahn's Algorithm (BFS)", "Topology Fingerprint Cache", "O(V+E) → O(1) on rerender"].map(t => (
             <span key={t} className={styles.featTag}>{t}</span>
           ))}
         </div>
       </div>
 
       <div>
-        <div className={styles.sectionTitle}>structuredClone — Fast Deep Copy</div>
-        <p className={styles.text}>All deep clones replaced with native <code>structuredClone()</code> — ~10× faster than <code>JSON.parse(JSON.stringify())</code>.</p>
+        <div className={styles.sectionTitle}>structuredClone: Fast Deep Copy</div>
+        <p className={styles.text}>All deep clones replaced with native <code>structuredClone()</code>, about 10× faster than <code>JSON.parse(JSON.stringify())</code>.</p>
       </div>
 
       <div>
-        <div className={styles.sectionTitle}>RAF-Debounced localStorage</div>
+        <div className={styles.sectionTitle}>RAF Debounced localStorage</div>
         <p className={styles.text}><code>batchedLocalStorageWrite()</code> coalesces writes within a single animation frame, eliminating serialization on every keystroke.</p>
       </div>
     </div>
@@ -723,12 +723,12 @@ function Rust() {
       <div>
         <div className={styles.sectionBadge}><Cpu size={10} /> Engine</div>
         <h1 className={styles.metallicTitle}>Rust Core</h1>
-        <p className={styles.lead}>Critical hot-path functions implemented as native Rust Tauri commands with transparent JS fallbacks.</p>
+        <p className={styles.lead}>Critical hot path functions implemented as native Rust Tauri commands with transparent JS fallbacks.</p>
       </div>
 
       <div>
         <div className={styles.sectionTitle}>IPC Bridge</div>
-        <p className={styles.text}>Every Rust function is wrapped in <code>src/lib/rust.js</code> — tries Tauri IPC first, falls back to pure JS automatically.</p>
+        <p className={styles.text}>Every Rust function is wrapped in <code>src/lib/rust.js</code>. Tries Tauri IPC first, falls back to pure JS automatically.</p>
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>src/lib/rust.js</span></div>
           <div className={styles.codeBody}>
@@ -748,7 +748,7 @@ function Rust() {
 
       <div>
         <div className={styles.sectionTitle}>URL ↔ Params Sync</div>
-        <p className={styles.text}>Rust's <code>url</code> crate enables zero-allocation, percent-correct query string parsing — ~5-8× faster than the JS equivalent.</p>
+        <p className={styles.text}>Rust's <code>url</code> crate enables zero allocation, percent correct query string parsing, about 5 to 8× faster than the JS equivalent.</p>
       </div>
 
       <div>
@@ -757,7 +757,7 @@ function Rust() {
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>env_tools.rs</span></div>
           <div className={styles.codeBody}>
-            {`static ENV_REGEX: OnceLock<Regex> = OnceLock::new();\n// Compiled once — reused on every invocation`}
+            {`static ENV_REGEX: OnceLock<Regex> = OnceLock::new();\n// Compiled once, reused on every invocation`}
           </div>
         </div>
       </div>
@@ -776,18 +776,18 @@ function Protocols() {
 
       <div>
         <div className={styles.sectionTitle}>REST APIs</div>
-        <p className={styles.text}>Full HTTP method support with automatic header generation, multi-part form data, raw body editors, and Bearer/Basic/API Key auth.</p>
+        <p className={styles.text}>Full HTTP method support with automatic header generation, multi part form data, raw body editors, and Bearer/Basic/API Key auth.</p>
       </div>
       <div>
         <div className={styles.sectionTitle}>WebSockets</div>
-        <p className={styles.text}>Bi-directional connections with manual message sending, incoming stream monitoring, and connection lifecycle events.</p>
+        <p className={styles.text}>Bidirectional connections with manual message sending, incoming stream monitoring, and connection lifecycle events.</p>
         <div className={styles.featGrid}>
           {["Live Connection Status","Message History","Ping/Pong Keep-Alive"].map(t => <span key={t} className={styles.featTag}>{t}</span>)}
         </div>
       </div>
       <div>
         <div className={styles.sectionTitle}>Socket.IO</div>
-        <p className={styles.text}>Native Socket.IO client with event-name targeting for emit and selective listener subscriptions.</p>
+        <p className={styles.text}>Native Socket.IO client with event name targeting for emit and selective listener subscriptions.</p>
       </div>
     </div>
   );
@@ -799,12 +799,12 @@ function Environments() {
       <div>
         <div className={styles.sectionBadge}><Lock size={10} /> Engine</div>
         <h1 className={styles.metallicTitle}>Environments</h1>
-        <p className={styles.lead}>Define key-value pairs and inject them dynamically into any part of your requests.</p>
+        <p className={styles.lead}>Define key value pairs and inject them dynamically into any part of your requests.</p>
       </div>
 
       <div>
         <div className={styles.sectionTitle}>Variable Syntax</div>
-        <p className={styles.text}>Use double-curly-brace syntax to inject variables into URLs, headers, and body.</p>
+        <p className={styles.text}>Use double curly brace syntax to inject variables into URLs, headers, and body.</p>
         <div className={styles.codeBlock}>
           <div className={styles.codeHeader}><span>Usage</span></div>
           <div className={styles.codeBody}>
@@ -815,7 +815,7 @@ function Environments() {
 
       <div>
         <div className={styles.sectionTitle}>Rust-Powered Resolution</div>
-        <p className={styles.text}>Variable interpolation handled by a Rust regex compiled once at startup — massive JSON payloads resolved in under 1ms before dispatch.</p>
+        <p className={styles.text}>Variable interpolation handled by a Rust regex compiled once at startup. Massive JSON payloads resolved in under 1ms before dispatch.</p>
       </div>
     </div>
   );
@@ -827,7 +827,7 @@ function Workflows() {
       <div>
         <div className={styles.sectionBadge}><BookOpen size={10} /> Engine</div>
         <h1 className={styles.metallicTitle}>Workflows</h1>
-        <p className={styles.lead}>Chain multiple APIs together in a drag-and-drop canvas to test complex multi-step scenarios.</p>
+        <p className={styles.lead}>Chain multiple APIs together in a drag and drop canvas to test complex multi step scenarios.</p>
       </div>
 
       <div>

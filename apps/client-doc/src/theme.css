@@ -1,0 +1,217 @@
+/* PayloadX — metallic silver theme (shared by docs + global UI) */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-base: #f4f5f7;
+  --bg-elevated: rgba(255, 255, 255, 0.92);
+  --bg-surface: #ffffff;
+  --bg-muted: #e8eaee;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-solid: #ffffff;
+  --bg-terminal: #121214;
+  --bg-terminal-header: #1a1a1e;
+  --bg-mockup: #e8eaee;
+  --bg-mockup-header: #dce0e6;
+  --bg-mockup-sidebar: #f4f5f7;
+  --bg-mockup-input: #ffffff;
+  --bg-mockup-response: #f8f9fb;
+  --bg-code: #eef0f3;
+  --bg-code-header: #e4e7ec;
+  --bg-pill: #ffffff;
+  --bg-pill-hover: #eef0f3;
+
+  --text-primary: #121214;
+  --text-secondary: #3a3e46;
+  --text-muted: #6b707a;
+  --text-faint: #9aa0aa;
+  --text-inverse: #f4f5f7;
+
+  --border-subtle: rgba(18, 18, 20, 0.06);
+  --border-default: rgba(18, 18, 20, 0.12);
+  --border-strong: rgba(18, 18, 20, 0.18);
+
+  --accent: #6b707a;
+  --accent-soft: rgba(107, 112, 122, 0.1);
+  --accent-glow: rgba(107, 112, 122, 0.2);
+
+  --success: #15803D;
+  --success-muted: #16A34A;
+  --error: #B91C1C;
+  --error-muted: #DC2626;
+
+  --gradient-page: linear-gradient(180deg, #ffffff 0%, #f4f5f7 45%, #e8eaee 100%);
+  --gradient-mesh-1: rgba(180, 186, 196, 0.18);
+  --gradient-mesh-2: rgba(140, 148, 160, 0.12);
+  --gradient-mesh-3: rgba(18, 18, 20, 0.04);
+  --gradient-mesh-4: rgba(18, 18, 20, 0.02);
+
+  --scanline-color: rgba(18, 18, 20, 0.03);
+  --shadow-sm: 0 4px 16px rgba(18, 18, 20, 0.06);
+  --shadow-md: 0 12px 36px rgba(18, 18, 20, 0.08);
+  --shadow-lg: 0 20px 50px rgba(18, 18, 20, 0.1);
+  --shadow-terminal: 0 16px 40px rgba(18, 18, 20, 0.14);
+
+  --title-x: #6b707a;
+  /* Light: dark steel fill so titles stay readable on pale backgrounds */
+  --metallic-title: linear-gradient(180deg, #1a1c20 0%, #3a3e46 42%, #6b707a 100%);
+  --metallic-footer: linear-gradient(175deg, #121214 0%, #6b707a 40%, #3a3e46 100%);
+
+  --btn-primary-bg: linear-gradient(
+    155deg,
+    #ffffff 0%,
+    #e8eaee 20%,
+    #b8bec8 45%,
+    #d4d8e0 75%,
+    #f2f3f5 100%
+  );
+  --btn-primary-color: #0e0e10;
+  --btn-primary-border: rgba(18, 18, 20, 0.12);
+  --btn-primary-shadow: 0 4px 14px rgba(18, 18, 20, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  --term-prompt: #8b919c;
+  --term-cmd: #e8eaee;
+  --term-muted: #8b919c;
+  --term-ok: #22C55E;
+  --term-err: #EF4444;
+  --term-status: #4ADE80;
+  --term-status-err: #F87171;
+  --term-time: #8b919c;
+
+  --overlay: rgba(18, 18, 20, 0.4);
+
+  /* Product UI mocks (landing) */
+  --mock-bg: #f4f5f7;
+  --mock-panel: #ffffff;
+  --mock-surface: #ffffff;
+  --mock-sidebar: #eef0f3;
+  --mock-rail: #e8eaee;
+  --mock-input: #ffffff;
+  --mock-response: #f8f9fb;
+  --mock-line: rgba(18, 18, 20, 0.1);
+  --mock-text: #121214;
+  --mock-muted: #6b707a;
+  --mock-faint: #9aa0aa;
+  --mock-code: #0e7490;
+  --mock-wash: rgba(18, 18, 20, 0.035);
+  --mock-active: rgba(18, 18, 20, 0.06);
+  --mock-chrome: #6b707a;
+  --mock-canvas: #eef0f3;
+  --mock-canvas-dot: rgba(18, 18, 20, 0.08);
+  --mock-node-bg: rgba(255, 255, 255, 0.96);
+  --mock-node-shadow: 0 8px 28px rgba(18, 18, 20, 0.1);
+  --mock-edge: rgba(18, 18, 20, 0.12);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-base: #0e0e10;
+  --bg-elevated: rgba(22, 22, 26, 0.92);
+  --bg-surface: #16161a;
+  --bg-muted: #1a1a1e;
+  --bg-card: rgba(22, 22, 26, 0.88);
+  --bg-card-solid: #16161a;
+  --bg-terminal: #0a0a0c;
+  --bg-terminal-header: #121214;
+  --bg-mockup: #121214;
+  --bg-mockup-header: #1a1a1e;
+  --bg-mockup-sidebar: #0e0e10;
+  --bg-mockup-input: #0a0a0c;
+  --bg-mockup-response: #121214;
+  --bg-code: #121214;
+  --bg-code-header: #1a1a1e;
+  --bg-pill: #1a1a1e;
+  --bg-pill-hover: #222228;
+
+  --text-primary: #f4f5f7;
+  --text-secondary: #d4d8e0;
+  --text-muted: #a8adb6;
+  --text-faint: #6b707a;
+  --text-inverse: #0e0e10;
+
+  --border-subtle: rgba(200, 205, 215, 0.08);
+  --border-default: rgba(200, 205, 215, 0.14);
+  --border-strong: rgba(200, 205, 215, 0.22);
+
+  --accent: #c8ccd4;
+  --accent-soft: rgba(200, 205, 215, 0.1);
+  --accent-glow: rgba(200, 205, 215, 0.22);
+
+  --success: #22C55E;
+  --success-muted: #4ADE80;
+  --error: #EF4444;
+  --error-muted: #F87171;
+
+  --gradient-page: linear-gradient(180deg, #0e0e10 0%, #121214 50%, #16161a 100%);
+  --gradient-mesh-1: rgba(200, 205, 215, 0.1);
+  --gradient-mesh-2: rgba(140, 148, 160, 0.08);
+  --gradient-mesh-3: rgba(255, 255, 255, 0.03);
+  --gradient-mesh-4: rgba(255, 255, 255, 0.02);
+
+  --scanline-color: rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --shadow-terminal: 0 16px 40px rgba(0, 0, 0, 0.6);
+
+  --title-x: #c8ccd4;
+  /* Dark: soft chrome vertical fill (same look as the light-mode reference) */
+  --metallic-title: linear-gradient(180deg, #f4f5f7 0%, #c8ccd4 45%, #8b93a8 100%);
+  --metallic-footer: linear-gradient(175deg, #ffffff 0%, #c8ccd4 40%, #a8adb6 100%);
+
+  --btn-primary-bg: linear-gradient(
+    155deg,
+    #ffffff 0%,
+    #e8eaee 18%,
+    #b8bec8 42%,
+    #8b919c 58%,
+    #d4d8e0 78%,
+    #f2f3f5 100%
+  );
+  --btn-primary-color: #0e0e10;
+  --btn-primary-border: rgba(255, 255, 255, 0.35);
+  --btn-primary-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --term-prompt: #6b707a;
+  --term-cmd: #e8eaee;
+  --term-muted: #6b707a;
+  --term-ok: #22C55E;
+  --term-err: #EF4444;
+  --term-status: #4ADE80;
+  --term-status-err: #F87171;
+  --term-time: #6b707a;
+
+  --overlay: rgba(8, 8, 10, 0.72);
+
+  /* Product UI mocks (landing) */
+  --mock-bg: #060606;
+  --mock-panel: #0a0a0a;
+  --mock-surface: #111111;
+  --mock-sidebar: #080808;
+  --mock-rail: #050505;
+  --mock-input: #030303;
+  --mock-response: #080808;
+  --mock-line: rgba(255, 255, 255, 0.07);
+  --mock-text: #e8ecf4;
+  --mock-muted: #8b93a8;
+  --mock-faint: #5c6370;
+  --mock-code: #7dd3fc;
+  --mock-wash: rgba(255, 255, 255, 0.04);
+  --mock-active: rgba(255, 255, 255, 0.06);
+  --mock-chrome: #c8cdd8;
+  --mock-canvas: #070707;
+  --mock-canvas-dot: rgba(255, 255, 255, 0.045);
+  --mock-node-bg: rgba(12, 12, 12, 0.94);
+  --mock-node-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  --mock-edge: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .metallic-app-name {
+  filter: drop-shadow(0 2px 4px rgba(18, 18, 20, 0.1));
+}
+
+[data-theme="dark"] .metallic-app-name {
+  filter: drop-shadow(0 2px 12px rgba(200, 205, 215, 0.12));
+}

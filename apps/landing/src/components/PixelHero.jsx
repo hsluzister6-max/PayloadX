@@ -43,7 +43,7 @@ function PlatformLinks({ platforms }) {
             className={[styles.platformLink, isComingSoon ? styles.platformDisabled : ""]
               .filter(Boolean)
               .join(" ")}
-            title={isComingSoon ? `${p.os} — Coming Soon` : `Download for ${p.os} (${p.arch})`}
+            title={isComingSoon ? `${p.os}: Coming Soon` : `Download for ${p.os} (${p.arch})`}
           >
             <span className={styles.platformIcon}>{p.icon}</span>
             <span>{p.os}</span>
@@ -77,7 +77,7 @@ function TechMarquee() {
 }
 
 export default function PixelHero({
-  description = "The modern, lightweight alternative to Postman — built for developers who move fast.",
+  description = "The modern, lightweight alternative to Postman, built for developers who move fast.",
   platforms = [],
   userOS,
   githubUrl = "https://github.com/hsluzister6-max/PayloadX",

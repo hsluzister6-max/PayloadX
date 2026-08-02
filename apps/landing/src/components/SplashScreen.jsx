@@ -129,7 +129,7 @@ export default function SplashScreen({ onDone }) {
       </div>
 
       <div className={styles.center}>
-        <p className={`${styles.eyebrow} splash-eye`}>Open source · Local-first</p>
+        <p className={`${styles.eyebrow} splash-eye`}>Open source · Local first</p>
         <h1 className={`${styles.title} splash-title`} aria-label={title}>
           {title.split("").map((ch, i) => (
             <span key={i} className="ch">
