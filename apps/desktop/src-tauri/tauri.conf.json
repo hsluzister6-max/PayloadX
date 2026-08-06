@@ -31,6 +31,10 @@
         "message": true,
         "confirm": true,
         "ask": true
+      },
+      "process": {
+        "relaunch": true,
+        "exit": true
       }
     },
     "bundle": {
@@ -70,10 +74,15 @@
       }
     },
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 http://localhost:4000 https://payload-x-884697093779.europe-west1.run.app wss://payload-x-884697093779.europe-west1.run.app ws: wss: https: http:; img-src 'self' data: https:; media-src 'self' blob: mediastream: data:"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3001 http://localhost:4000 https://payload-x-884697093779.europe-west1.run.app wss://payload-x-884697093779.europe-west1.run.app https://github.com https://*.githubusercontent.com ws: wss: https: http:; img-src 'self' data: https:; media-src 'self' blob: mediastream: data:"
     },
     "updater": {
-      "active": false
+      "active": true,
+      "dialog": false,
+      "endpoints": [
+        "https://github.com/hsluzister6-max/PayloadX/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVGNEY1NUIwMzRCMEY0NEUKUldSTzlMQTBzRlZQNzgxaE52ZTRjQWRCRmp0RFRZUDNSR0lxbjluTXNFaWkyT21JaVJoWlpRQ0cK"
     },
     "windows": [
       {

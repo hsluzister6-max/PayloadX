@@ -32,6 +32,7 @@ import UnsavedChangesModal from '@/components/Modals/UnsavedChangesModal';
 import McpTokenModal from '@/components/Modals/McpTokenModal';
 import SyncStatusTag from '@/components/SyncStatusTag/SyncStatusTag';
 import OfflineSyncManager from '@/components/OfflineSyncManager/OfflineSyncManager';
+import AppUpdateNotifier from '@/components/Update/AppUpdateNotifier';
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore, defaultWorkflow } from '@/store/workflowStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -317,6 +318,7 @@ export default function App() {
     return (
       <>
         <OfflineSyncManager />
+        <AppUpdateNotifier enabled={!!user} />
         <LayoutV2
           onShowTeamModal={() => useUIStore.getState().setShowTeamModal(true)}
           onShowProjectModal={() => useUIStore.getState().setShowProjectModal(true)}
@@ -362,6 +364,7 @@ export default function App() {
   return (
     <>
       <OfflineSyncManager />
+      <AppUpdateNotifier enabled={!!user} />
       <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
         {/* Sidebar */}
         <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full overflow-hidden flex flex-col">

@@ -15,7 +15,8 @@ target/
 .DS_Store
 ._*
 *.log
-.vercel/
+apps/desktop/.tauri/*.key
+apps/desktop/.tauri/*.key.pub
 apps/backend/*.json
 !apps/backend/package.json
 !apps/backend/tsconfig.json

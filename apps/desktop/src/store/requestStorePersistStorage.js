@@ -51,38 +51,67 @@ export function shrinkPersistedRequestBlob(blob) {
   };
 }
 
+/** Avoid writing localStorage on every keystroke in the body editor (freezes WebView). */
+const PERSIST_DEBOUNCE_MS = 400;
+const pendingPersist = new Map();
+
+function writePersistItem(name, value) {
+  try {
+    localStorage.setItem(name, value);
+  } catch (err) {
+    if (!isQuotaError(err)) throw err;
+    try {
+      const parsed = JSON.parse(value);
+      localStorage.setItem(name, JSON.stringify(shrinkPersistedRequestBlob(parsed)));
+    } catch {
+      try {
+        const parsed = JSON.parse(value);
+        const nuked = shrinkPersistedRequestBlob(parsed);
+        nuked.state = {
+          ...nuked.state,
+          history: [],
+          openTabs: [],
+        };
+        localStorage.setItem(name, JSON.stringify(nuked));
+      } catch {
+        try {
+          localStorage.removeItem(name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
+}
+
 /**
  * JSON storage for `useRequestStore` that retries with a minimal blob on quota errors.
+ * setItem is debounced so typing/pasting in request body does not freeze the app.
  */
 export const requestStorePersistStorage = createJSONStorage(() => ({
   getItem: (name) => localStorage.getItem(name),
   setItem: (name, value) => {
-    try {
-      localStorage.setItem(name, value);
-    } catch (err) {
-      if (!isQuotaError(err)) throw err;
-      try {
-        const parsed = JSON.parse(value);
-        localStorage.setItem(name, JSON.stringify(shrinkPersistedRequestBlob(parsed)));
-      } catch {
-        try {
-          const parsed = JSON.parse(value);
-          const nuked = shrinkPersistedRequestBlob(parsed);
-          nuked.state = {
-            ...nuked.state,
-            history: [],
-            openTabs: [],
-          };
-          localStorage.setItem(name, JSON.stringify(nuked));
-        } catch {
-          try {
-            localStorage.removeItem(name);
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-    }
+    const prev = pendingPersist.get(name);
+    if (prev?.timer) clearTimeout(prev.timer);
+    const timer = setTimeout(() => {
+      pendingPersist.delete(name);
+      writePersistItem(name, value);
+    }, PERSIST_DEBOUNCE_MS);
+    pendingPersist.set(name, { timer, value });
   },
-  removeItem: (name) => localStorage.removeItem(name),
+  removeItem: (name) => {
+    const prev = pendingPersist.get(name);
+    if (prev?.timer) clearTimeout(prev.timer);
+    pendingPersist.delete(name);
+    localStorage.removeItem(name);
+  },
 }));
+
+/** Flush pending request-store persist (call before Send / Save / unload). */
+export function flushRequestStorePersist() {
+  for (const [name, entry] of pendingPersist.entries()) {
+    if (entry?.timer) clearTimeout(entry.timer);
+    pendingPersist.delete(name);
+    if (entry?.value != null) writePersistItem(name, entry.value);
+  }
+}

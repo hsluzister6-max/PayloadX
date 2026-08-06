@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Braces, AlignLeft, Copy, Check, FileJson, FileCode, FileText, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { validateJsonc, tryParseJsoncValue } from '@/utils/jsonc';
@@ -6,6 +14,11 @@ import { toggleJsonLineComment } from '@/utils/jsonLineComment';
 import { useEnvironmentStore } from '@/store/environmentStore';
 import VariableValueTooltip from '../VariableValueTooltip';
 import { useVariablePopoverHover } from '../useVariablePopoverHover';
+
+/** Above this, skip expensive token highlighting while typing (plain escape only). */
+const HEAVY_HIGHLIGHT_CHARS = 24_000;
+/** Debounce pushing body text into Zustand (persist + sidebar sync). */
+const STORE_SYNC_MS = 200;
 
 // ── Syntax Highlighter (JSONC: faded full-line //, /* */, trailing // outside strings) ──
 function escapeHtml(s) {
@@ -380,13 +393,52 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   const preRef = useRef(null);
   const lnRef = useRef(null);
   const pendingSelectionRef = useRef(null);
+  const restoreSelectionRef = useRef(false);
+  const selectionRafRef = useRef(0);
   const suppressInputRef = useRef(false);
   const isFocusedRef = useRef(false);
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
+  const storeSyncTimerRef = useRef(null);
+  const pendingStoreValueRef = useRef(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   const [localValue, setLocalValue] = useState(value ?? '');
+  const deferredValue = useDeferredValue(localValue);
   const activeEnvironment = useEnvironmentStore((s) => s.activeEnvironment);
   const { popover, openPopover, scheduleClose, closePopover, clearCloseTimer } = useVariablePopoverHover();
+
+  const cancelSelectionRestore = useCallback(() => {
+    if (selectionRafRef.current) {
+      cancelAnimationFrame(selectionRafRef.current);
+      selectionRafRef.current = 0;
+    }
+    restoreSelectionRef.current = false;
+    pendingSelectionRef.current = null;
+  }, []);
+
+  const flushStore = useCallback(() => {
+    if (storeSyncTimerRef.current) {
+      clearTimeout(storeSyncTimerRef.current);
+      storeSyncTimerRef.current = null;
+    }
+    if (pendingStoreValueRef.current != null) {
+      const v = pendingStoreValueRef.current;
+      pendingStoreValueRef.current = null;
+      onChangeRef.current?.(v);
+    }
+  }, []);
+
+  const scheduleStoreSync = useCallback((text) => {
+    pendingStoreValueRef.current = text;
+    if (storeSyncTimerRef.current) clearTimeout(storeSyncTimerRef.current);
+    storeSyncTimerRef.current = setTimeout(() => {
+      storeSyncTimerRef.current = null;
+      const v = pendingStoreValueRef.current;
+      pendingStoreValueRef.current = null;
+      if (v != null) onChangeRef.current?.(v);
+    }, STORE_SYNC_MS);
+  }, []);
 
   // Sync external value when editor is not focused (format, minify, tab switch)
   useEffect(() => {
@@ -395,29 +447,46 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     }
   }, [value]);
 
-  useEffect(() => () => clearTimeout(typingTimeoutRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(typingTimeoutRef.current);
+    if (selectionRafRef.current) cancelAnimationFrame(selectionRafRef.current);
+    flushStore();
+  }, [flushStore]);
+
+  // Send / Save must see latest body — flush any debounced store write.
+  useEffect(() => {
+    const onFlush = () => flushStore();
+    window.addEventListener('payloadx:flush-editors', onFlush);
+    return () => window.removeEventListener('payloadx:flush-editors', onFlush);
+  }, [flushStore]);
 
   const applyEdit = useCallback(({ text, selStart, selEnd }) => {
     pendingSelectionRef.current = { start: selStart, end: selEnd };
+    restoreSelectionRef.current = true;
     suppressInputRef.current = true;
     setLocalValue(text);
-    onChange(text);
-  }, [onChange]);
+    scheduleStoreSync(text);
+  }, [scheduleStoreSync]);
 
+  // Only restore caret after *our* edits — never fight arrow-key / mouse navigation.
   useLayoutEffect(() => {
     const ta = taRef.current;
     const pending = pendingSelectionRef.current;
-    if (!ta || !pending) return;
+    if (!ta || !pending || !restoreSelectionRef.current) return;
 
-    const len = ta.value.length;
-    const start = Math.min(pending.start, len);
-    const end = Math.min(pending.end, len);
-    ta.selectionStart = start;
-    ta.selectionEnd = end;
+    restoreSelectionRef.current = false;
     pendingSelectionRef.current = null;
 
-    // WebView2 (Windows) may reset selection after layout — restore once more next frame
-    requestAnimationFrame(() => {
+    const len = ta.value.length;
+    const start = Math.min(Math.max(0, pending.start), len);
+    const end = Math.min(Math.max(0, pending.end), len);
+    ta.selectionStart = start;
+    ta.selectionEnd = end;
+
+    if (selectionRafRef.current) cancelAnimationFrame(selectionRafRef.current);
+    // One frame only for WebView2; cancel if user moves caret before it fires.
+    selectionRafRef.current = requestAnimationFrame(() => {
+      selectionRafRef.current = 0;
       if (document.activeElement !== ta) return;
       if (ta.selectionStart !== start || ta.selectionEnd !== end) {
         ta.selectionStart = start;
@@ -440,10 +509,14 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
   };
 
   const highlighted = useMemo(() => {
-    const v = localValue || '';
+    const v = deferredValue || '';
+    // Large paste/type: escape only — full JSON tokenizer on every keystroke freezes WebView.
+    if (v.length > HEAVY_HIGHLIGHT_CHARS) {
+      return wrapEnvVarsHtml(highlightPlain(v), activeEnvironment);
+    }
     const base = language === 'json' ? highlightJsonc(v) : highlightPlain(v);
     return wrapEnvVarsHtml(base, activeEnvironment);
-  }, [localValue, language, activeEnvironment]);
+  }, [deferredValue, language, activeEnvironment]);
 
   const openTipForVar = useCallback(
     (hit, clientX, clientY) => {
@@ -517,6 +590,21 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     const ta = e.target;
     const mod = e.ctrlKey || e.metaKey;
 
+    // Arrow / Home / End / Page — never fight browser caret movement with rAF restore.
+    if (
+      e.key === 'ArrowLeft'
+      || e.key === 'ArrowRight'
+      || e.key === 'ArrowUp'
+      || e.key === 'ArrowDown'
+      || e.key === 'Home'
+      || e.key === 'End'
+      || e.key === 'PageUp'
+      || e.key === 'PageDown'
+    ) {
+      cancelSelectionRestore();
+      return;
+    }
+
     // Block Insert key — prevents browser from toggling overwrite mode
     if (e.key === 'Insert') {
       e.preventDefault();
@@ -580,7 +668,7 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
 
       applyEdit({ text: v.slice(0, s) + '  ' + v.slice(end), selStart: s + 2, selEnd: s + 2 });
     }
-  }, [applyEdit, readOnly, language]);
+  }, [applyEdit, cancelSelectionRestore, readOnly, language]);
 
   const handleChange = useCallback((e) => {
     const ta = e.target;
@@ -597,16 +685,17 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
       start: ta.selectionStart,
       end: ta.selectionEnd,
     };
-    setLocalValue(ta.value);
-    onChange(ta.value);
+    restoreSelectionRef.current = true;
+    const next = ta.value;
+    setLocalValue(next);
+    // Keep typing smooth — do not write Zustand/localStorage on every character.
+    scheduleStoreSync(next);
     syncScroll();
-  }, [onChange, scheduleClose]);
+  }, [scheduleClose, scheduleStoreSync]);
 
-  const handleSelect = useCallback((e) => {
-    pendingSelectionRef.current = {
-      start: e.target.selectionStart,
-      end: e.target.selectionEnd,
-    };
+  const handleSelect = useCallback(() => {
+    // Intentionally empty: do not cache selection here.
+    // Caching + rAF restore was pulling the caret backward after ArrowRight past commas.
   }, []);
 
   // ── Toolbar actions ─────────────────────────────────────────────────────────
@@ -615,26 +704,36 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     if (!raw.trim()) return;
     const v = tryParseJsoncValue(raw);
     if (v === undefined) {
-      toast.error('Invalid JSON');
+      toast.error('Invalid JSON — fix syntax first (e.g. missing value after a key)');
       return;
     }
     const formatted = JSON.stringify(v, null, 2);
-    applyEdit({ text: formatted, selStart: 0, selEnd: 0 });
+    pendingSelectionRef.current = { start: 0, end: 0 };
+    restoreSelectionRef.current = true;
+    suppressInputRef.current = true;
+    setLocalValue(formatted);
+    pendingStoreValueRef.current = formatted;
+    flushStore();
     toast.success('JSON formatted');
-  }, [localValue, applyEdit]);
+  }, [localValue, flushStore]);
 
   const handleMinify = useCallback(() => {
     const raw = localValue || '';
     if (!raw.trim()) return;
     const v = tryParseJsoncValue(raw);
     if (v === undefined) {
-      toast.error('Invalid JSON');
+      toast.error('Invalid JSON — fix syntax first (e.g. missing value after a key)');
       return;
     }
     const minified = JSON.stringify(v);
-    applyEdit({ text: minified, selStart: 0, selEnd: 0 });
+    pendingSelectionRef.current = { start: 0, end: 0 };
+    restoreSelectionRef.current = true;
+    suppressInputRef.current = true;
+    setLocalValue(minified);
+    pendingStoreValueRef.current = minified;
+    flushStore();
     toast.success('JSON minified');
-  }, [localValue, applyEdit]);
+  }, [localValue, flushStore]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(localValue || '');
@@ -642,14 +741,23 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
     toast.success('Copied');
   }, [localValue]);
 
-  // ── Validation ──────────────────────────────────────────────────────────────
+  // ── Validation (deferred so paste/type stays responsive) ─────────────────────
   const validStatus = useMemo(() => {
-    if (!localValue?.trim()) return null;
-    const { ok } = validateJsonc(localValue);
+    if (!deferredValue?.trim()) return null;
+    if (deferredValue.length > HEAVY_HIGHLIGHT_CHARS) return null;
+    const { ok } = validateJsonc(deferredValue);
     return ok;
-  }, [localValue]);
+  }, [deferredValue]);
 
   const lineCount = useMemo(() => (localValue || '').split('\n').length, [localValue]);
+  // One text node instead of thousands of <div>s — large payloads must not mount N DOM nodes.
+  const lineNumberText = useMemo(() => {
+    const n = lineCount;
+    if (n <= 1) return '1';
+    let s = '1';
+    for (let i = 2; i <= n; i += 1) s += `\n${i}`;
+    return s;
+  }, [lineCount]);
 
   const getLangIcon = () => {
     if (language === 'json') return <FileJson size={14} style={{ color: '#F7DF1E' }} />;
@@ -671,7 +779,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
         .jc-comment .jk, .jc-comment .js, .jc-comment .jn, .jc-comment .jb, .jc-comment .jnu, .jc-comment .jbk { color: inherit !important; opacity: 1; }
         .jenv {
           border-radius: 3px;
-          padding: 0 1px;
+          /* No horizontal padding — extra px desyncs caret from highlight layer */
+          padding: 0;
           font-weight: 600;
         }
         .jenv--set {
@@ -692,7 +801,8 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           padding: 12px 12px 12px 0; white-space: pre; overflow: auto;
           tab-size: 2; z-index: 2; -webkit-text-fill-color: transparent;
           word-break: normal; overflow-wrap: normal;
-          direction: ltr; unicode-bidi: plaintext;
+          /* bidi-override: Arabic/RTL in JSON must not reverse arrow-key caret motion */
+          direction: ltr; unicode-bidi: bidi-override;
           letter-spacing: normal; font-variant-ligatures: none;
         }
         .editor-pre {
@@ -700,17 +810,18 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
           font: 12px/1.7 'JetBrains Mono','Fira Code',monospace;
           padding: 12px 12px 12px 0; white-space: pre;
           word-break: normal; overflow-wrap: normal;
-          direction: ltr; unicode-bidi: plaintext;
+          direction: ltr; unicode-bidi: bidi-override;
           pointer-events: none; z-index: 1;
           letter-spacing: normal; font-variant-ligatures: none;
         }
         .editor-wrap { position: relative; flex: 1; overflow: hidden; }
         .ln-col {
-          width: 44px; min-width: 44px; padding: 12px 8px 12px 0;
+          width: 48px; min-width: 48px; padding: 12px 8px 12px 0;
           text-align: right; font: 11px/1.7 'JetBrains Mono',monospace;
           color: var(--text-muted); border-right: 0.5px solid var(--border-1);
           overflow: hidden; user-select: none; flex-shrink: 0;
           height: 100%; box-sizing: border-box;
+          white-space: pre; line-height: 1.7;
         }
         .tb-btn {
           display: flex; align-items: center; gap: 4px; padding: 4px 8px;
@@ -753,11 +864,9 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
 
       {/* Editor Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-        {/* Line numbers */}
-        <div ref={lnRef} className="ln-col">
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i}>{i + 1}</div>
-          ))}
+        {/* Line numbers — single text node (not N divs) for large payloads */}
+        <div ref={lnRef} className="ln-col" aria-hidden="true">
+          {lineNumberText}
         </div>
 
         {/* Code area */}
@@ -788,11 +897,15 @@ export default function JsonEditor({ value, onChange, language = 'json', readOnl
             onChange={handleChange}
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}
+            onMouseDown={cancelSelectionRestore}
             onScroll={() => { syncScroll(); scheduleClose(); }}
             onMouseMove={handleVarMouseMove}
             onMouseLeave={handleVarMouseLeave}
             onFocus={() => { isFocusedRef.current = true; }}
-            onBlur={() => { isFocusedRef.current = false; }}
+            onBlur={() => {
+              isFocusedRef.current = false;
+              flushStore();
+            }}
             placeholder={language === 'json' ? '{\n  "email": "{{email}}",\n  "token": "{{token}}"\n}' : ''}
           />
         </div>

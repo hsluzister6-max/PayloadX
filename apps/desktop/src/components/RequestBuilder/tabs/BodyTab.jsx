@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import JsonEditor from './JsonEditor';
 import FormMultipartEditor from './FormMultipartEditor.jsx';
@@ -12,12 +13,17 @@ const BODY_MODES = [
 const RAW_LANGUAGES = ['json', 'text', 'xml', 'html'];
 
 export default function BodyTab() {
-  const { currentRequest, updateBody } = useRequestStore();
-  const body = currentRequest.body || { mode: 'none', raw: '', rawLanguage: 'json' };
+  const body = useRequestStore((s) => s.currentRequest?.body) || {
+    mode: 'none',
+    raw: '',
+    rawLanguage: 'json',
+  };
+  const updateBody = useRequestStore((s) => s.updateBody);
 
   const setMode = (mode) => updateBody({ mode });
   const setLanguage = (lang) => updateBody({ rawLanguage: lang });
-  const setRaw = (raw) => updateBody({ raw });
+  // Stable callback so JsonEditor debounce timers are not reset every render
+  const setRaw = useCallback((raw) => updateBody({ raw }), [updateBody]);
 
   return (
     <div className="flex flex-col h-full">

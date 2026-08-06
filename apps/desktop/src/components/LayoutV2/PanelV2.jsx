@@ -4,6 +4,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useCollectionStore } from '@/store/collectionStore';
 import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
+import AppUpdateSection from '@/components/Update/AppUpdateSection';
 import { getMethodClass } from '@/utils/helpers';
 
 const METHOD_DOTS = {
@@ -113,6 +114,9 @@ function SettingsPanel() {
           </svg>
           <span>Switch to Classic Layout</span>
         </button>
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <AppUpdateSection />
       </div>
     </div>
   );

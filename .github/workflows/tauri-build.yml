@@ -58,6 +58,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -86,6 +88,21 @@ jobs:
             const release = await github.rest.repos.getRelease({ owner, repo, release_id });
             
             for (const asset of release.data.assets) {
+              // Keep OTA updater artifacts unchanged (latest.json, signatures, update bundles)
+              if (
+                asset.name === 'latest.json' ||
+                asset.name.endsWith('.sig') ||
+                asset.name.endsWith('.tar.gz') ||
+                asset.name.endsWith('.tar.gz.sig') ||
+                asset.name.endsWith('.msi.zip') ||
+                asset.name.endsWith('.msi.zip.sig') ||
+                asset.name.endsWith('.app.tar.gz') ||
+                asset.name.includes('.nsis.zip')
+              ) {
+                console.log(`Skipping OTA asset: ${asset.name}`);
+                continue;
+              }
+
               // 1. Remove version patterns like _1.0.0 or -1.0.0
               let newName = asset.name.replace(/[_-]v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?/, '');
               

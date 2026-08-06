@@ -17,6 +17,7 @@ import { useUIStore, isLightTheme } from '@/store/uiStore';
 import { getServerBaseUrl, useServerConfigStore } from '@/store/serverConfigStore';
 import api from '@/lib/api';
 import McpTokenSection from './McpTokenSection';
+import AppUpdateSection from '@/components/Update/AppUpdateSection';
 
 function MetaTile({ icon, label, value, mono = false }) {
   return (
@@ -195,6 +196,8 @@ export default function ProfilePage() {
             />
           </div>
         </section>
+
+        <AppUpdateSection />
 
         <section className="profile-panel profile-panel--wide">
           <div className="profile-panel__head profile-panel__head--row">

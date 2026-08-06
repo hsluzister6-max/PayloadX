@@ -20,6 +20,9 @@ function rebuildTabsById(openTabs) {
   return m;
 }
 
+/** Debounce collectionStore mirror while typing request body (avoids UI freeze). */
+let bodyCollectionSyncTimer = null;
+
 const isTempRequestId = isTempId;
 const stripTempRequestId = stripTempIds;
 
@@ -415,10 +418,17 @@ export const useRequestStore = create(
             openTabs[tIdx] = updatedTab;
             newTabsById.set(state.activeTabId, updatedTab);
           }
+          // Debounce sidebar/localStorage mirror — syncing every keystroke freezes the UI.
           if (req._id) {
-            import('@/store/collectionStore').then(({ useCollectionStore }) => {
-              useCollectionStore.getState().updateRequest(req);
-            });
+            const id = req._id;
+            clearTimeout(bodyCollectionSyncTimer);
+            bodyCollectionSyncTimer = setTimeout(() => {
+              const latest = get().currentRequest;
+              if (!latest?._id || latest._id !== id) return;
+              import('@/store/collectionStore').then(({ useCollectionStore }) => {
+                useCollectionStore.getState().updateRequest(latest);
+              });
+            }, 450);
           }
           return { currentRequest: req, openTabs, _tabsById: newTabsById };
         }),
@@ -552,6 +562,14 @@ export const useRequestStore = create(
       // `tabId` is optional — defaults to the active tab, but callers (e.g. closing a
       // background dirty tab) can pass a specific id to save without switching to it.
       saveRequest: async (tabId) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('payloadx:flush-editors'));
+        }
+        try {
+          const { flushRequestStorePersist } = await import('@/store/requestStorePersistStorage');
+          flushRequestStorePersist();
+        } catch { /* ignore */ }
+
         const start = get();
         const savingTabId = tabId || start.activeTabId;
 

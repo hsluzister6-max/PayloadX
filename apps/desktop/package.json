@@ -14,7 +14,9 @@
     "tauri:build:dmg": "tauri build -b app && bash scripts/make-dmg.sh",
     "tauri:build:mac-publish": "bash scripts/build-macos-publish.sh",
     "signing:setup": "bash scripts/setup-local-signing.sh",
-    "signing:import": "bash scripts/import-developer-id-cert.sh"
+    "signing:import": "bash scripts/import-developer-id-cert.sh",
+    "updater:generate-keys": "bash scripts/generate-updater-keys.sh",
+    "updater:print-private-key": "bash scripts/print-updater-private-key.sh"
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.0.0",

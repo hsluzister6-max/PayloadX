@@ -38,6 +38,13 @@ export default function RESTRequestBuilder() {
   const [showMethodDropdown, setShowMethodDropdown] = useState(false);
 
   const executeRequest = useCallback(async () => {
+    // Flush debounced body editor + persist so Send uses the latest JSON.
+    window.dispatchEvent(new Event('payloadx:flush-editors'));
+    try {
+      const { flushRequestStorePersist } = await import('@/store/requestStorePersistStorage');
+      flushRequestStorePersist();
+    } catch { /* ignore */ }
+
     const store = useRequestStore.getState;
 
     const runTabId = store().activeTabId;
