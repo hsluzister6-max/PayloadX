@@ -2469,6 +2469,60 @@ textarea,
   color: var(--text-secondary);
 }
 
+.app-update-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-1);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.app-update-status svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.app-update-status--ok {
+  background: color-mix(in srgb, var(--success, #22c55e) 10%, transparent);
+  border-color: color-mix(in srgb, var(--success, #22c55e) 28%, var(--border-1));
+  color: var(--text-primary);
+}
+
+.app-update-status--available {
+  background: color-mix(in srgb, var(--accent, #6366f1) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #6366f1) 24%, var(--border-1));
+}
+
+.app-update-status--progress {
+  background: var(--surface-2);
+}
+
+.app-update-status--error {
+  background: color-mix(in srgb, var(--error, #ef4444) 10%, transparent);
+  border-color: color-mix(in srgb, var(--error, #ef4444) 28%, var(--border-1));
+  color: var(--error);
+}
+
+.app-update-progress {
+  margin-top: 10px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.app-update-progress__bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent, #6366f1), color-mix(in srgb, var(--accent, #6366f1) 70%, white));
+  transition: width 0.2s ease;
+}
+
 @media (max-width: 960px) {
   .profile-grid,
   .profile-meta-grid {

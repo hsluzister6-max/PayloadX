@@ -35,12 +35,20 @@ export default function AppUpdateNotifier({ enabled = true }) {
                 onClick={async () => {
                   if (installingRef.current) return;
                   installingRef.current = true;
-                  const loadingId = toast.loading('Downloading update…');
+                  const loadingId = toast.loading('Downloading update… 0%');
                   try {
-                    await downloadAndInstallUpdate(({ chunkLength, contentLength }) => {
-                      if (!contentLength) return;
-                      const pct = Math.min(100, Math.round((chunkLength / contentLength) * 100));
-                      toast.loading(`Downloading update… ${pct}%`, { id: loadingId });
+                    await downloadAndInstallUpdate(({ phase, percent }) => {
+                      if (phase === 'Progress' && typeof percent === 'number') {
+                        toast.loading(`Downloading update… ${percent}%`, { id: loadingId });
+                        return;
+                      }
+                      if (phase === 'Finished') {
+                        toast.loading('Installing update…', { id: loadingId });
+                        return;
+                      }
+                      if (phase === 'Restarting') {
+                        toast.success('Update installed. Restarting…', { id: loadingId });
+                      }
                     });
                   } catch (err) {
                     installingRef.current = false;
@@ -48,7 +56,7 @@ export default function AppUpdateNotifier({ enabled = true }) {
                   }
                 }}
               >
-                Install
+                Download & restart
               </button>
               <button
                 type="button"

@@ -14,7 +14,7 @@ import styles from "./LandingPage.module.css";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const REPO_URL = "https://github.com/hsluzister6-max/PayloadX";
-const RELEASE_TAG = "v1.0.9";
+const RELEASE_TAG = "v1.0.10";
 const RELEASE_DL = `${REPO_URL}/releases/download/${RELEASE_TAG}`;
 // Filenames match GitHub Actions rename step (version stripped)
 const MAC_DMG = `${RELEASE_DL}/PayloadX_aarch64.dmg`;

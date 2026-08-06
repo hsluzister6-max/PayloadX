@@ -41,14 +41,49 @@ export async function checkForAppUpdate(options = {}) {
 }
 
 /**
+ * @typedef {'Started'|'Progress'|'Finished'|'Restarting'} UpdateInstallPhase
+ * @typedef {{ phase: UpdateInstallPhase, percent?: number, chunkLength?: number, contentLength?: number }} UpdateInstallProgress
+ */
+
+/**
  * Download, install update bundle, and relaunch the app.
- * @param {(event: { chunkLength: number, contentLength?: number }) => void} [onProgress]
+ * @param {(progress: UpdateInstallProgress) => void} [onProgress]
  */
 export async function downloadAndInstallUpdate(onProgress) {
   if (!isTauri()) {
     throw new Error('Updates are only available in the desktop app');
   }
 
-  await installUpdate(onProgress);
+  let contentLength;
+  let downloaded = 0;
+
+  await installUpdate((event) => {
+    if (event.status === 'Started') {
+      contentLength = event.data?.contentLength;
+      downloaded = 0;
+      onProgress?.({ phase: 'Started', contentLength });
+      return;
+    }
+
+    if (event.status === 'Progress') {
+      downloaded += event.data?.chunkLength ?? 0;
+      const percent = contentLength
+        ? Math.min(100, Math.round((downloaded / contentLength) * 100))
+        : undefined;
+      onProgress?.({
+        phase: 'Progress',
+        percent,
+        chunkLength: downloaded,
+        contentLength,
+      });
+      return;
+    }
+
+    if (event.status === 'Finished') {
+      onProgress?.({ phase: 'Finished', percent: 100, contentLength });
+    }
+  });
+
+  onProgress?.({ phase: 'Restarting' });
   await relaunch();
 }

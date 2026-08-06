@@ -21,7 +21,7 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const isDocs = location.pathname.startsWith("/docs");
   const [open, setOpen] = useState(false);
-  const VERSION = "1.0.9";
+  const VERSION = "1.0.10";
 
   useEffect(() => {
     setOpen(false);
