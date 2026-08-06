@@ -396,7 +396,7 @@ impl WorkflowExecutor {
                         .map(|kv| (kv.key.clone(), kv.value.clone()))
                         .collect())
                     .unwrap_or_default(),
-                body: mapped_node.data.body.clone(),
+                body: if allows_body { mapped_node.data.body.clone() } else { None },
             }),
             response: Some(response_details),
             validations,
@@ -510,15 +510,41 @@ impl WorkflowExecutor {
             url,
         );
 
-        if let Some(params) = &mapped_node.data.params {
-            let query_params: Vec<(&str, &str)> = params
-                .iter()
-                .filter(|p| p.enabled && !p.key.trim().is_empty())
-                .map(|p| (p.key.as_str(), p.value.as_str()))
-                .collect();
-            if !query_params.is_empty() {
-                request = request.query(&query_params);
+        let mut query_params: Vec<(String, String)> = mapped_node
+            .data
+            .params
+            .as_ref()
+            .map(|params| {
+                params
+                    .iter()
+                    .filter(|p| p.enabled && !p.key.trim().is_empty())
+                    .map(|p| (p.key.clone(), p.value.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // GET/HEAD/DELETE cannot carry a body — promote JSON body fields to query params.
+        if !allows_body {
+            if let Some(serde_json::Value::Object(map)) = &mapped_node.data.body {
+                for (key, value) in map {
+                    if !key.trim().is_empty() {
+                        let val = match value {
+                            serde_json::Value::String(s) => s.clone(),
+                            serde_json::Value::Null => String::new(),
+                            other => other.to_string(),
+                        };
+                        query_params.push((key.clone(), val));
+                    }
+                }
             }
+        }
+
+        if !query_params.is_empty() {
+            let refs: Vec<(&str, &str)> = query_params
+                .iter()
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
+            request = request.query(&refs);
         }
 
         request = request.headers(header_map.clone());

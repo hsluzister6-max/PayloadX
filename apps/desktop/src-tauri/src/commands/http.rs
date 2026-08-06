@@ -217,8 +217,11 @@ pub async fn execute_request(
         .headers(header_map)
         .timeout(std::time::Duration::from_secs(timeout_secs.max(5).min(60)));
 
-    // 7. Body
-    if !matches!(method, Method::GET | Method::HEAD) {
+    // 7. Body — never attach a body for methods that must not have one (RFC 7231).
+    if !matches!(
+        method,
+        Method::GET | Method::HEAD | Method::DELETE | Method::OPTIONS | Method::TRACE
+    ) {
         if let Some(body) = &payload.body {
             if body.mode.as_deref() == Some("raw") {
                 let raw = body.raw.clone().unwrap_or_default();

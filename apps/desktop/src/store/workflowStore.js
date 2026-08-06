@@ -8,11 +8,6 @@ import { calculateLayers, deepClone } from '@/utils/perf';
 
 // calculateLayers is imported from @/utils/perf (memoized BFS)
 
-const workflowHasManualInputs = (workflow) =>
-  workflow.nodes.some(
-    (n) => n.type === 'api' && !n.data?.skipped && (n.data?.manual_inputs?.length ?? 0) > 0
-  );
-
 const isNodeSatisfied = (nodeId, edges, nodeResults) => {
   const incoming = edges.filter((e) => e.target === nodeId);
   if (incoming.length === 0) return true;
@@ -152,7 +147,9 @@ const resolveNodeForExecution = (node, resolveVariables, runtimeVariables = {}) 
     body = bodyObj;
   }
 
+  const bodyParamEntries = [];
   let resolvedBody = null;
+
   if (body && allowsBody) {
     if (typeof body === 'string') {
       resolvedBody = resolveVariables(body);
@@ -163,6 +160,34 @@ const resolveNodeForExecution = (node, resolveVariables, runtimeVariables = {}) 
         resolvedBody = body;
       }
     }
+  } else if (body) {
+    // GET/HEAD/DELETE must not send a body — promote JSON fields to query params instead.
+    let bodyObj = null;
+    if (typeof body === 'string') {
+      try {
+        bodyObj = JSON.parse(resolveVariables(body));
+      } catch {
+        bodyObj = null;
+      }
+    } else if (typeof body === 'object' && !Array.isArray(body)) {
+      try {
+        bodyObj = JSON.parse(resolveVariables(JSON.stringify(body)));
+      } catch {
+        bodyObj = body;
+      }
+    }
+    if (bodyObj && typeof bodyObj === 'object' && !Array.isArray(bodyObj)) {
+      Object.entries(bodyObj).forEach(([key, value]) => {
+        if (key?.trim()) {
+          bodyParamEntries.push({
+            id: `body_${key}`,
+            key,
+            value: value == null ? '' : String(value),
+            enabled: true,
+          });
+        }
+      });
+    }
   }
 
   return {
@@ -171,7 +196,7 @@ const resolveNodeForExecution = (node, resolveVariables, runtimeVariables = {}) 
       ...baseNode.data,
       url: resolveVariables(node.data.url),
       headers: mergedHeaders,
-      params: mergedParams,
+      params: [...mergedParams, ...bodyParamEntries],
       body: resolvedBody,
     },
   };
@@ -798,130 +823,9 @@ export const useWorkflowStore = create(
         }
       },
 
-      executeWorkflow: async () => {
-        const workflow = { ...get().currentWorkflow };
-
-        if (workflowHasManualInputs(workflow)) {
-          return get().executeWorkflowInteractive();
-        }
-        
-        // Backend expects id to be a string, not null
-        if (!workflow.id) {
-          workflow.id = `temp_${uuidv4()}`;
-        }
-        
-        const { resolveVariables: resolveEnvVars } = (await import('./environmentStore')).useEnvironmentStore.getState();
-        const resolveVariables = (str) => {
-          if (!str) return str;
-          return resolveEnvVars(str);
-        };
-
-        if (workflow.nodes.length === 0) {
-          toast.error('Workflow must contain at least one node');
-          return;
-        }
-
-        // Clear previous results and set loading state
-        const clearedNodes = workflow.nodes.map(n => ({
-          ...n,
-          data: { ...n.data, executionStatus: null, executionDuration: null }
-        }));
-
-        set({ 
-          isExecuting: true, 
-          isPaused: false,
-          executingNodeIds: new Set(),
-          executionResult: null, 
-          currentWorkflow: { ...workflow, nodes: clearedNodes },
-          executionProgress: { completed: 0, total: workflow.nodes.length, percentage: 0 } 
-        });
-
-        try {
-          const resolvedNodes = workflow.nodes.map(node => {
-            const baseNode = {
-              ...node,
-              data: {
-                ...node.data,
-                timeout: typeof node.data.timeout === 'string' 
-                  ? parseInt(resolveVariables(node.data.timeout)) 
-                  : node.data.timeout
-              }
-            };
-
-            if (node.type === 'api') {
-              return {
-                ...baseNode,
-                data: {
-                  ...baseNode.data,
-                  url: resolveVariables(node.data.url),
-                  headers: (node.data.headers || []).map(h => ({ ...h, value: resolveVariables(h.value) })),
-                  params: (node.data.params || []).map(p => ({ ...p, value: resolveVariables(p.value) })),
-                  body: node.data.body ? (
-                    typeof node.data.body === 'string'
-                      ? resolveVariables(node.data.body)
-                      : JSON.parse(resolveVariables(JSON.stringify(node.data.body)))
-                  ) : null,
-                }
-              };
-            }
-            return baseNode;
-          });
-
-          const resolvedWorkflow = {
-            ...workflow,
-            nodes: resolvedNodes,
-            created_at: workflow.createdAt || new Date().toISOString(),
-            updated_at: workflow.updatedAt || new Date().toISOString(),
-            project_id: workflow.projectId || '',
-            team_id: workflow.teamId || '',
-          };
-
-          const result = await invoke('execute_workflow', {
-            workflowJson: JSON.stringify(resolvedWorkflow),
-          });
-
-          set({ executionResult: result, isExecuting: false, executingNodeIds: new Set() });
-          
-          if (result.status === 'success') {
-            toast.success(`Workflow completed successfully! ${result.success_count}/${result.total_nodes} nodes passed`);
-          } else if (result.status === 'partial') {
-            toast.error(`Workflow partially completed. ${result.failed_count} nodes failed`);
-          } else {
-            toast.error('Workflow execution failed');
-          }
-
-          queueMicrotask(async () => {
-            try {
-              const { writeWorkflowTestSheet } = await import('@/utils/workflowTestReport');
-              const exported = writeWorkflowTestSheet(result, workflow.name);
-              if (exported.ok) {
-                toast.success(`Test sheet generated: ${exported.fileName}`);
-              } else if (exported.reason === 'no_api_nodes') {
-                toast('This run had no API nodes to include in the Excel test sheet.', {
-                  icon: 'ℹ️',
-                });
-              } else if (exported.reason === 'error') {
-                toast.error(exported.message || 'Could not generate test sheet');
-              }
-            } catch (e) {
-              console.error('[executeWorkflow] test sheet:', e);
-              toast.error('Could not generate test sheet');
-            }
-          });
-
-          // Save execution to backend
-          if (navigator.onLine && workflow.id) {
-            await get().saveExecution(result);
-          }
-
-          return result;
-        } catch (error) {
-          console.error('Workflow execution error:', error);
-          toast.error(`Execution failed: ${error}`);
-          set({ isExecuting: false, executingNodeIds: new Set() });
-          throw error;
-        }
-      },
+      // Always use the interactive per-node path so release builds match dev:
+      // correct GET/HEAD/DELETE body handling, manual input modals, and env resolution.
+      executeWorkflow: async () => get().executeWorkflowInteractive(),
 
       updateExecutionProgress: (progress) => {
         set({ executionProgress: progress });

@@ -232,7 +232,8 @@ function normalizePayload(payload) {
 
   const method = (payload.method || 'GET').toUpperCase();
   const headers = normalizeHeaderList(payload.headers, payload.url);
-  const body = normalizeBody(payload.body);
+  const noBodyMethods = new Set(['GET', 'HEAD', 'DELETE', 'OPTIONS', 'TRACE']);
+  const body = noBodyMethods.has(method) ? { mode: 'none' } : normalizeBody(payload.body);
   const timeoutMs = clampTimeout(payload.timeoutMs);
 
   return {
