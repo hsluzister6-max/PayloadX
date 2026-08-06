@@ -6,6 +6,7 @@ PayloadX uses [Tauri's built-in updater](https://v1.tauri.app/v1/guides/distribu
 
 1. You push a **version tag** (e.g. `v1.0.7`) to GitHub.
 2. The **Release** workflow builds signed installers **and** updater bundles (`latest.json`, `.tar.gz`, `.sig`, etc.).
+   - `tauri.conf.json` → `bundle.targets` **must include `"updater"`** or CI will skip generating `latest.json`.
 3. Installed desktop apps check:
    `https://github.com/hsluzister6-max/PayloadX/releases/latest/download/latest.json`
 4. If a newer version exists, users see an in-app prompt (or can check under **Account → App updates**).

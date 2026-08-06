@@ -28,7 +28,11 @@ export async function checkForAppUpdate(options = {}) {
       manifest,
     };
   } catch (err) {
-    const message = err?.message || String(err);
+    let message = err?.message || String(err);
+    if (/valid release JSON|404|Not Found/i.test(message)) {
+      message =
+        'Update metadata is not available yet (latest.json missing from GitHub release). Install the newest build from the website or try again after the release finishes.';
+    }
     if (!options.silent) {
       console.error('[PayloadX Updater]', err);
     }

@@ -338,7 +338,7 @@ fn main() {
         .timeout(std::time::Duration::from_secs(120))
         .connect_timeout(std::time::Duration::from_secs(10))
         .pool_max_idle_per_host(10)
-        .user_agent("PayloadX-API-Studio/1.0.8")
+        .user_agent("PayloadX-API-Studio/1.0.9")
         .http1_only()
         .build()
         .expect("Failed to build HTTP client");
