@@ -1,6 +1,6 @@
 [package]
 name = "payloadx-api-studio-dev"
-version = "1.0.7"
+version = "1.0.8"
 description = "PayloadX API Studio"
 authors = ["PayloadX Team"]
 license = ""
