@@ -154,6 +154,18 @@ function parseBody(body) {
         raw: '',
         rawLanguage: 'json',
       };
+    case 'file':
+      return {
+        mode: 'binary',
+        binary: {
+          fileName: Array.isArray(body.file) ? (body.file[0] || '') : (body.file || ''),
+          mimeType: 'application/octet-stream',
+          base64: '',
+          size: 0,
+        },
+        raw: '',
+        rawLanguage: 'json',
+      };
     default:
       return { mode: 'none', raw: '', rawLanguage: 'json' };
   }

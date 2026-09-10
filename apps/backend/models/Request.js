@@ -53,13 +53,19 @@ const RequestSchema = new mongoose.Schema(
     body: {
       mode: {
         type: String,
-        enum: ['none', 'raw', 'form-data', 'urlencoded'],
+        enum: ['none', 'raw', 'form-data', 'urlencoded', 'binary'],
         default: 'none',
       },
       raw: { type: String, default: '' },
       rawLanguage: { type: String, enum: ['json', 'text', 'xml', 'html', 'javascript'], default: 'json' },
       formData: [FormDataPartSchema],
       urlencoded: [{ key: String, value: String, enabled: Boolean }],
+      binary: {
+        fileName: { type: String, default: '' },
+        mimeType: { type: String, default: '' },
+        base64: { type: String, default: '' },
+        size: { type: Number, default: 0 },
+      },
     },
     auth: {
       type: {

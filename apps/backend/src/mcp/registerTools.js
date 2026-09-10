@@ -434,7 +434,7 @@ export function registerPayloadXTools(server, user) {
           )
           .optional()
           .describe('Query params'),
-        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded']).optional(),
+        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded', 'binary']).optional(),
         bodyRaw: z.string().optional().describe('Raw body (JSON/text) when bodyMode is raw'),
         bodyRawLanguage: z.enum(['json', 'text', 'xml', 'html', 'javascript']).optional(),
       },
@@ -574,7 +574,7 @@ export function registerPayloadXTools(server, user) {
             })
           )
           .optional(),
-        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded']).optional(),
+        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded', 'binary']).optional(),
         bodyRaw: z.string().optional(),
         bodyRawLanguage: z.enum(['json', 'text', 'xml', 'html', 'javascript']).optional(),
       },

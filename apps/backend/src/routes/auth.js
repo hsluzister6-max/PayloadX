@@ -3,7 +3,7 @@ import axios from 'axios';
 import User from '../../models/User.js';
 import OtpSession from '../../models/OtpSession.js';
 import ApiToken, { generateApiToken, decryptApiToken } from '../../models/ApiToken.js';
-import { signToken, authenticate } from '../middleware/auth.js';
+import { authenticate, issueAuthSession, rotateRefreshToken, revokeRefreshToken } from '../middleware/auth.js';
 import { requireObjectId } from '../middleware/validateObjectId.js';
 
 /** Cursor remote MCP — no local repo path; any user can paste this. */
@@ -94,7 +94,7 @@ const router = express.Router();
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -141,9 +141,12 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const token = signToken({ id: user._id, email: user.email, name: user.name });
+    const session = await issueAuthSession(user, {
+      rememberMe: Boolean(rememberMe),
+      userAgent: req.get('user-agent') || '',
+    });
 
-    res.json({ user: user.toSafeObject(), token });
+    res.json({ user: user.toSafeObject(), ...session });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed. Please try again later.' });
@@ -190,8 +193,11 @@ router.post('/google', async (req, res) => {
       { upsert: true, new: true, runValidators: true }
     );
 
-    const token = signToken({ id: user._id, email: user.email, name: user.name });
-    res.json({ user: user.toSafeObject(), token });
+    const session = await issueAuthSession(user, {
+      rememberMe: true,
+      userAgent: req.get('user-agent') || '',
+    });
+    res.json({ user: user.toSafeObject(), ...session });
   } catch (error) {
     console.error('Google Auth error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Failed to authenticate with Google' });
@@ -336,13 +342,51 @@ router.post('/verify-signup', async (req, res) => {
       console.error('Firebase user creation failed:', fbError.message);
     }
 
-    // 4. Delete the session
+    // 4. Delete the OTP session
     await OtpSession.deleteOne({ _id: session._id });
 
-    const token = signToken({ id: user._id, email: user.email, name: user.name });
-    res.json({ message: 'Email verified successfully', user: user.toSafeObject(), token });
+    const authSession = await issueAuthSession(user, {
+      rememberMe: true,
+      userAgent: req.get('user-agent') || '',
+    });
+    res.json({ message: 'Email verified successfully', user: user.toSafeObject(), ...authSession });
   } catch (error) {
     res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// POST /api/auth/refresh — silent session renew
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
+    }
+
+    const session = await rotateRefreshToken(refreshToken, {
+      userAgent: req.get('user-agent') || '',
+    });
+
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    res.json(session);
+  } catch (error) {
+    console.error('[POST /api/auth/refresh]', error);
+    res.status(500).json({ error: 'Failed to refresh session' });
+  }
+});
+
+// POST /api/auth/logout — revoke refresh token for this device
+router.post('/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.body || {};
+    await revokeRefreshToken(refreshToken);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[POST /api/auth/logout]', error);
+    res.json({ success: true });
   }
 });
 

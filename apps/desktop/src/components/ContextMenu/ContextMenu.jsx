@@ -35,8 +35,8 @@ export default function ContextMenu() {
 
   // Adjust position to keep menu within viewport
   const adjustPosition = () => {
-    const menuWidth = 180;
-    const menuHeight = items.length * 36 + 8;
+    const menuWidth = 200;
+    const menuHeight = items.length * 26 + 12;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
@@ -47,7 +47,7 @@ export default function ContextMenu() {
       adjustedX = x - menuWidth;
     }
     if (y + menuHeight > viewportHeight) {
-      adjustedY = y - menuHeight;
+      adjustedY = Math.max(8, y - menuHeight);
     }
 
     return { left: adjustedX, top: adjustedY };
@@ -64,28 +64,72 @@ export default function ContextMenu() {
         top: position.top,
       }}
     >
-      {items.map((item, index) => (
-        <div key={index}>
-          {item.divider ? (
-            <div className="v2-context-menu-divider" />
-          ) : (
-            <button
+      {items.map((item, index) => {
+        if (item.divider) {
+          return <div key={item.id || index} className="v2-context-menu-divider" />;
+        }
+
+        if (item.section) {
+          return (
+            <div key={item.id || index} className="v2-context-menu-section">
+              {item.label}
+            </div>
+          );
+        }
+
+        if (item.creatable || item.soon) {
+          return (
+            <div
+              key={item.id || index}
+              className={`v2-context-menu-item v2-context-menu-item--row ${
+                item.soon ? 'v2-context-menu-item--soon' : 'v2-context-menu-item--creatable'
+              }`}
               onClick={() => {
+                if (item.soon || !item.onClick) return;
                 item.onClick();
                 closeContextMenu();
               }}
-              className={`v2-context-menu-item ${item.danger ? 'v2-context-menu-item--danger' : ''}`}
             >
-              {item.icon && (
-                <span className="v2-context-menu-icon">
-                  {item.icon}
-                </span>
+              {item.icon && <span className="v2-context-menu-icon">{item.icon}</span>}
+              <span className="v2-context-menu-label">{item.label}</span>
+              {item.soon ? (
+                <span className="v2-context-menu-soon">Soon</span>
+              ) : (
+                <button
+                  type="button"
+                  className="v2-context-menu-create"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    item.onClick?.();
+                    closeContextMenu();
+                  }}
+                >
+                  Create
+                </button>
               )}
-              <span>{item.label}</span>
-            </button>
-          )}
-        </div>
-      ))}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={item.id || index}
+            type="button"
+            onClick={() => {
+              item.onClick?.();
+              closeContextMenu();
+            }}
+            className={`v2-context-menu-item ${item.danger ? 'v2-context-menu-item--danger' : ''}`}
+          >
+            {item.icon && (
+              <span className="v2-context-menu-icon">
+                {item.icon}
+              </span>
+            )}
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

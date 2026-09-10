@@ -4,15 +4,26 @@
 
 import jwt from 'jsonwebtoken';
 import ApiToken, { hashApiToken } from '../../models/ApiToken.js';
+import RefreshToken, {
+  generateRefreshToken,
+  hashRefreshToken,
+} from '../../models/RefreshToken.js';
 import User from '../../models/User.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'syncnest-secret-change-in-production';
 
+/** Short-lived access JWT — refreshed silently by the desktop client. */
+export const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || '1h';
+/** Refresh session without "Remember me". */
+export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Refresh session with "Remember me". */
+export const REFRESH_TOKEN_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 /**
- * Sign a JWT token
+ * Sign a short-lived access JWT
  */
-export function signToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+export function signToken(payload, expiresIn = ACCESS_TOKEN_TTL) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 
 /**
@@ -24,6 +35,101 @@ export function verifyToken(token) {
   } catch {
     return null;
   }
+}
+
+function accessExpiresInSeconds() {
+  const ttl = String(ACCESS_TOKEN_TTL).trim();
+  const match = ttl.match(/^(\d+)([smhd])$/i);
+  if (!match) return 3600;
+  const n = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === 's') return n;
+  if (unit === 'm') return n * 60;
+  if (unit === 'h') return n * 3600;
+  if (unit === 'd') return n * 86400;
+  return 3600;
+}
+
+/**
+ * Issue access + refresh tokens for a user session.
+ * @param {{ _id: any, email: string, name: string }} user
+ * @param {{ rememberMe?: boolean, userAgent?: string }} [options]
+ */
+export async function issueAuthSession(user, options = {}) {
+  const rememberMe = Boolean(options.rememberMe);
+  const accessToken = signToken({
+    id: user._id,
+    email: user.email,
+    name: user.name,
+  });
+
+  const { raw, hash, prefix } = generateRefreshToken();
+  const ttlMs = rememberMe ? REFRESH_TOKEN_REMEMBER_TTL_MS : REFRESH_TOKEN_TTL_MS;
+  const expiresAt = new Date(Date.now() + ttlMs);
+
+  await RefreshToken.create({
+    userId: user._id,
+    tokenHash: hash,
+    tokenPrefix: prefix,
+    rememberMe,
+    expiresAt,
+    userAgent: String(options.userAgent || '').slice(0, 300),
+  });
+
+  return {
+    token: accessToken,
+    refreshToken: raw,
+    expiresIn: accessExpiresInSeconds(),
+    rememberMe,
+  };
+}
+
+/**
+ * Rotate a refresh token → new access + refresh pair.
+ * @returns {Promise<{ token: string, refreshToken: string, expiresIn: number, rememberMe: boolean, user: any } | null>}
+ */
+export async function rotateRefreshToken(rawRefreshToken, options = {}) {
+  if (!rawRefreshToken) return null;
+  const hash = hashRefreshToken(rawRefreshToken);
+  const existing = await RefreshToken.findOne({ tokenHash: hash, revokedAt: null });
+  if (!existing) return null;
+  if (existing.expiresAt && existing.expiresAt < new Date()) {
+    existing.revokedAt = new Date();
+    await existing.save();
+    return null;
+  }
+
+  const user = await User.findById(existing.userId);
+  if (!user) {
+    existing.revokedAt = new Date();
+    await existing.save();
+    return null;
+  }
+
+  const session = await issueAuthSession(user, {
+    rememberMe: existing.rememberMe,
+    userAgent: options.userAgent || existing.userAgent,
+  });
+
+  existing.revokedAt = new Date();
+  existing.replacedByHash = hashRefreshToken(session.refreshToken);
+  existing.lastUsedAt = new Date();
+  await existing.save();
+
+  return {
+    ...session,
+    user: user.toSafeObject(),
+  };
+}
+
+/** Revoke a single refresh token (logout this device). */
+export async function revokeRefreshToken(rawRefreshToken) {
+  if (!rawRefreshToken) return;
+  const hash = hashRefreshToken(rawRefreshToken);
+  await RefreshToken.updateOne(
+    { tokenHash: hash, revokedAt: null },
+    { $set: { revokedAt: new Date() } },
+  );
 }
 
 /**

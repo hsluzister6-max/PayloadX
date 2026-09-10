@@ -112,6 +112,9 @@ export default function RESTRequestBuilder() {
             })),
           };
         }
+        if (mode === 'binary') {
+          return body;
+        }
         return body;
       };
 

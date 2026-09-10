@@ -2,12 +2,14 @@ import { useCallback } from 'react';
 import { useRequestStore } from '@/store/requestStore';
 import JsonEditor from './JsonEditor';
 import FormMultipartEditor from './FormMultipartEditor.jsx';
+import BinaryBodyEditor from './BinaryBodyEditor.jsx';
 
 const BODY_MODES = [
   { id: 'none',        label: 'None' },
   { id: 'raw',         label: 'Raw' },
   { id: 'form-data',   label: 'Form Data' },
   { id: 'urlencoded',  label: 'URL Encoded' },
+  { id: 'binary',      label: 'Binary' },
 ];
 
 const RAW_LANGUAGES = ['json', 'text', 'xml', 'html'];
@@ -24,6 +26,7 @@ export default function BodyTab() {
   const setLanguage = (lang) => updateBody({ rawLanguage: lang });
   // Stable callback so JsonEditor debounce timers are not reset every render
   const setRaw = useCallback((raw) => updateBody({ raw }), [updateBody]);
+  const setBinary = useCallback((binary) => updateBody({ binary }), [updateBody]);
 
   return (
     <div className="flex flex-col h-full">
@@ -91,6 +94,13 @@ export default function BodyTab() {
             items={body.urlencoded || []}
             onChange={(urlencoded) => updateBody({ urlencoded })}
             label="URL Encoded Parameters"
+          />
+        )}
+
+        {body.mode === 'binary' && (
+          <BinaryBodyEditor
+            value={body.binary || null}
+            onChange={setBinary}
           />
         )}
       </div>

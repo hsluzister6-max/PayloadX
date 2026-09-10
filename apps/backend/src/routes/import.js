@@ -116,6 +116,19 @@ function buildRequest(item, collectionId, projectId, teamId, folderId) {
           enabled: !u.disabled,
         })),
       };
+    } else if (r.body.mode === 'file') {
+      const src = Array.isArray(r.body.file) ? r.body.file[0] : r.body.file;
+      body = {
+        mode: 'binary',
+        raw: '',
+        rawLanguage: 'json',
+        binary: {
+          fileName: typeof src === 'string' ? src : '',
+          mimeType: 'application/octet-stream',
+          base64: '',
+          size: 0,
+        },
+      };
     }
   }
 

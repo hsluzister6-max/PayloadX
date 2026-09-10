@@ -355,7 +355,7 @@ export function registerPayloadXToolsViaApi(server, api) {
             })
           )
           .optional(),
-        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded']).optional(),
+        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded', 'binary']).optional(),
         bodyRaw: z.string().optional(),
         bodyRawLanguage: z.enum(['json', 'text', 'xml', 'html', 'javascript']).optional(),
       },
@@ -421,7 +421,7 @@ export function registerPayloadXToolsViaApi(server, api) {
         params: z
           .array(z.object({ key: z.string(), value: z.string(), enabled: z.boolean().optional() }))
           .optional(),
-        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded']).optional(),
+        bodyMode: z.enum(['none', 'raw', 'form-data', 'urlencoded', 'binary']).optional(),
         bodyRaw: z.string().optional(),
         bodyRawLanguage: z.enum(['json', 'text', 'xml', 'html', 'javascript']).optional(),
       },

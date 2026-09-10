@@ -22,7 +22,12 @@ export default function AuthPage() {
   const [isTestingUrl, setIsTestingUrl] = useState(false);
   const [isTestingCloud, setIsTestingCloud] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Only true after browser returns with the OAuth code (signing in)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const storedRememberMe = useAuthStore((s) => s.rememberMe);
+  const [rememberMe, setRememberMe] = useState(
+    storedRememberMe !== false,
+  );
   const { login, signup, loginWithGoogle, isLoading } = useAuthStore();
 
   const handleSelectCloud = async () => {
@@ -103,6 +108,7 @@ export default function AuthPage() {
         const redirectUri = `http://localhost:${port}/`;
 
         if (code) {
+          // User returned from browser — now show loading while we exchange the code
           setIsGoogleLoading(true);
           const result = await loginWithGoogle({ code, redirectUri });
           setIsGoogleLoading(false);
@@ -127,7 +133,6 @@ export default function AuthPage() {
     if (isLoading || isGoogleLoading) return;
 
     try {
-      setIsGoogleLoading(true);
       processingOAuth.current = false; // Reset for new attempt
       // 1. Start the local listener via Rust and get the port
       const port = await invoke('start_oauth_flow');
@@ -140,7 +145,7 @@ export default function AuthPage() {
         `response_type=code&` +
         `scope=${encodeURIComponent('openid email profile')}`;
 
-      // 3. Open in System Browser
+      // 3. Open in System Browser — keep the normal Google button until the user returns
       await invoke('system_open', { url: authUrl });
     } catch (error) {
       console.error('[Google Auth] Initialiation Failed:', error);
@@ -192,7 +197,7 @@ export default function AuthPage() {
     if (!validateForm()) return;
 
     if (mode === 'login') {
-      const result = await login(form.email, form.password);
+      const result = await login(form.email, form.password, rememberMe);
       if (!result.success) toast.error(result.error);
     } else {
       const result = await signup(form.name, form.email, form.password);
@@ -475,7 +480,16 @@ export default function AuthPage() {
                     </button>
                   </div>
                   {mode === 'login' && (
-                    <div className="flex justify-end pr-0.5">
+                    <div className="flex items-center justify-between pr-0.5 pl-0.5">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded border-white/20 bg-white/[0.03] accent-white"
+                        />
+                        <span className="text-[10px] text-slate-500 font-medium">Remember me</span>
+                      </label>
                       <button
                         type="button"
                         onClick={() => setMode('forgot-password')}
@@ -516,7 +530,7 @@ export default function AuthPage() {
                   {isGoogleLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span className="text-sm font-medium italic opacity-80">Check your browser...</span>
+                      <span className="text-sm font-medium italic opacity-80">Signing in…</span>
                     </div>
                   ) : (
                     <>

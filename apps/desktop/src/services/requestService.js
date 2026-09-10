@@ -90,6 +90,12 @@ export function getImplicitRequestHeadersPreview({
         value: 'application/x-www-form-urlencoded',
         source: 'Set for URL-encoded form bodies when Content-Type is unset',
       });
+    } else if (mode === 'binary') {
+      rows.push({
+        key: 'Content-Type',
+        value: body?.binary?.mimeType || 'application/octet-stream',
+        source: 'Set from binary file MIME when Content-Type is unset',
+      });
     }
   }
 
@@ -219,6 +225,22 @@ function normalizeBody(body = {}) {
     return {
       mode,
       urlencoded: (body.urlencoded || []).filter((item) => item?.enabled !== false && item?.key),
+    };
+  }
+
+  if (mode === 'binary') {
+    const binary = body.binary || {};
+    if (!binary.base64) {
+      throw 'Binary body selected but no file is attached.';
+    }
+    return {
+      mode,
+      binary: {
+        fileName: binary.fileName || 'upload.bin',
+        mimeType: binary.mimeType || 'application/octet-stream',
+        base64: binary.base64,
+        size: binary.size,
+      },
     };
   }
 

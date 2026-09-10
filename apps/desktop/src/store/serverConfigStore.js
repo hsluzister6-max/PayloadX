@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 /** Cloud backend + Socket.IO (same host on Cloud Run). */
 export const PAYLOADX_SERVER_URL = 'https://payload-x-884697093779.europe-west1.run.app';
 
+// export const PAYLOADX_SERVER_URL = 'http://localhost:3001'  ;
 export const useServerConfigStore = create(
   persist(
     (set, get) => ({

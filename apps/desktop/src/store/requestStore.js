@@ -73,16 +73,36 @@ function responseForPersist(response) {
 }
 
 function requestForPersist(req) {
-  if (!req?.body || req.body.mode !== 'raw' || typeof req.body.raw !== 'string') return req;
-  const raw = req.body.raw;
-  if (raw.length <= MAX_PERSIST_REQUEST_RAW_CHARS) return req;
-  return {
-    ...req,
-    body: {
-      ...req.body,
-      raw: truncateForPersist(raw, MAX_PERSIST_REQUEST_RAW_CHARS, 'Request body'),
-    },
-  };
+  if (!req?.body) return req;
+
+  let next = req;
+  if (req.body.mode === 'raw' && typeof req.body.raw === 'string' && req.body.raw.length > MAX_PERSIST_REQUEST_RAW_CHARS) {
+    next = {
+      ...next,
+      body: {
+        ...next.body,
+        raw: truncateForPersist(req.body.raw, MAX_PERSIST_REQUEST_RAW_CHARS, 'Request body'),
+      },
+    };
+  }
+
+  // Keep binary metadata in localStorage, but drop the base64 payload (too large for quota).
+  if (next.body?.binary?.base64) {
+    next = {
+      ...next,
+      body: {
+        ...next.body,
+        binary: {
+          fileName: next.body.binary.fileName || '',
+          mimeType: next.body.binary.mimeType || '',
+          size: next.body.binary.size || 0,
+          base64: '',
+        },
+      },
+    };
+  }
+
+  return next;
 }
 
 function openTabForPersist(tab) {
@@ -102,7 +122,7 @@ const defaultRequest = () => ({
   url: '',
   headers: [{ id: uuidv4(), key: '', value: '', description: '', enabled: true }],
   params: [{ id: uuidv4(), key: '', value: '', description: '', enabled: true }],
-  body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] },
+  body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [], binary: null },
   auth: { type: 'none', bearer: { token: '' }, basic: { username: '', password: '' }, apikey: { key: '', value: '', in: 'header' } },
   collectionId: null,
   projectId: null,
@@ -800,7 +820,7 @@ export const useRequestStore = create(
           folderId: overrides.folderId !== undefined ? overrides.folderId : (src.folderId || null),
           headers: deepClone(src.headers || [{ id: uuidv4(), key: '', value: '', enabled: true }]),
           params: deepClone(src.params || [{ id: uuidv4(), key: '', value: '', enabled: true }]),
-          body: deepClone(src.body || { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] }),
+          body: deepClone(src.body || { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [], binary: null }),
           auth: deepClone(src.auth || { type: 'none' }),
         };
 

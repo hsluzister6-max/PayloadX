@@ -123,6 +123,19 @@ function buildTargetBody(payload, headers, method) {
     return searchParams.toString();
   }
 
+  if (body.mode === 'binary') {
+    const binary = body.binary || {};
+    if (!binary.base64) {
+      throw new Error('Binary body selected but no file is attached.');
+    }
+
+    const buf = Buffer.from(String(binary.base64).trim(), 'base64');
+    if (!headers.has('content-type')) {
+      headers.set('content-type', binary.mimeType || 'application/octet-stream');
+    }
+    return buf;
+  }
+
   return undefined;
 }
 

@@ -40,12 +40,22 @@ pub struct RequestParam {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct BinaryBody {
+    pub file_name: Option<String>,
+    pub mime_type: Option<String>,
+    pub base64: Option<String>,
+    pub size: Option<u64>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BodyConfig {
     pub mode: Option<String>,
     pub raw: Option<String>,
     pub raw_language: Option<String>,
     pub form_data: Option<Vec<RequestParam>>,
     pub urlencoded: Option<Vec<RequestParam>>,
+    pub binary: Option<BinaryBody>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -281,6 +291,28 @@ pub async fn execute_request(
                 }
 
                 req = req.form(&fields);
+            } else if body.mode.as_deref() == Some("binary") {
+                let Some(bin) = &body.binary else {
+                    return Err("Binary body selected but no file is attached.".to_string());
+                };
+                let Some(b64_raw) = bin.base64.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) else {
+                    return Err("Binary body selected but no file is attached.".to_string());
+                };
+                let bytes = STANDARD.decode(b64_raw).map_err(|e| {
+                    format!("binary body: invalid base64 ({})", e)
+                })?;
+
+                if !has_content_type {
+                    let content_type = bin
+                        .mime_type
+                        .as_ref()
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or("application/octet-stream");
+                    req = req.header("Content-Type", content_type);
+                }
+
+                req = req.body(bytes);
             }
         }
     }

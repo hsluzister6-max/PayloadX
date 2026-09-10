@@ -14,6 +14,8 @@ import RefreshButton from '@/components/RefreshButton/RefreshButton';
 import PayloadX from '@/components/core/logo';
 import { localStorageService } from '@/services/localStorageService';
 import { useConnectivityStore } from '@/store/connectivityStore';
+import RequestTypeFilter, { matchesRequestTypeFilter, REQUEST_TYPE_FILTERS, TypeIcon } from '@/components/LayoutV2/RequestTypeFilter';
+import CollectionPickerModal from '@/components/LayoutV2/CollectionPickerModal';
 
 const NAV_ITEMS = [
     {
@@ -202,6 +204,8 @@ export default function SidebarV2({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
+    const [requestTypeFilter, setRequestTypeFilter] = useState('all');
+    const [pendingTypeCreate, setPendingTypeCreate] = useState(null);
     const [initializedCollections, setInitializedCollections] = useState(new Set());
 
     const [expandedProjects, setExpandedProjects] = useState(() => {
@@ -333,6 +337,27 @@ export default function SidebarV2({
             return acc;
         }, {});
     }, [collections]);
+
+    const requestTypeCounts = useMemo(() => {
+        const scoped = currentProject
+            ? requests.filter((r) => r.projectId === currentProject._id || (collectionsByProject[currentProject._id] || []).some((c) => c._id === r.collectionId))
+            : requests;
+        return scoped.reduce((acc, r) => {
+            const key = r.protocol || 'http';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+    }, [requests, currentProject?._id, collectionsByProject]);
+
+    const filteredRequests = useMemo(
+        () => requests.filter((r) => matchesRequestTypeFilter(r, requestTypeFilter)),
+        [requests, requestTypeFilter],
+    );
+
+    const filteredSearchResults = useMemo(() => {
+        if (!searchResults) return null;
+        return searchResults.filter((r) => matchesRequestTypeFilter(r, requestTypeFilter));
+    }, [searchResults, requestTypeFilter]);
 
     const { syncAll } = useCollectionStore();
 
@@ -514,92 +539,101 @@ export default function SidebarV2({
         });
     };
 
+    const createTypedRequestInCollection = async (collectionId, protocol, label) => {
+        if (isOffline) {
+            toast.error('Cannot create requests while offline');
+            return;
+        }
+        if (!currentProject || !currentTeam) {
+            toast.error('Select a project and team first');
+            return;
+        }
+
+        const defaultsByProtocol = {
+            http: {
+                name: 'New HTTP Request',
+                method: 'GET',
+                protocol: 'http',
+                url: '',
+                headers: [{ id: uuidv4(), key: '', value: '', enabled: true }],
+                params: [{ id: uuidv4(), key: '', value: '', enabled: true }],
+                body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [], binary: null },
+                auth: { type: 'none' },
+            },
+            ws: {
+                name: 'New WebSocket',
+                protocol: 'ws',
+                url: 'wss://',
+            },
+            socketio: {
+                name: 'New Socket.IO',
+                protocol: 'socketio',
+                url: 'http://localhost:3000',
+            },
+        };
+
+        const defaults = defaultsByProtocol[protocol] || {
+            name: `New ${label}`,
+            protocol,
+            url: '',
+        };
+
+        const result = await createRequest({
+            ...defaults,
+            collectionId,
+            projectId: currentProject._id,
+            teamId: currentTeam._id,
+        });
+
+        if (result.success) {
+            setCurrentRequest(result.request);
+            setRequestTypeFilter(protocol);
+            setActiveV2Nav('collections');
+            if (!expandedCollections.has(collectionId)) {
+                const next = new Set(expandedCollections);
+                next.add(collectionId);
+                setExpandedCollections(next);
+                localStorage.setItem('sidebar_expanded_collections', JSON.stringify([...next]));
+            }
+            toast.success(`${label} request created`);
+            return true;
+        }
+
+        toast.error(result.error || 'Failed to create request');
+        return false;
+    };
+
     const showCollectionContextMenu = (e, collection) => {
         e.preventDefault();
         e.stopPropagation();
+
+        const typeItems = REQUEST_TYPE_FILTERS
+            .filter((t) => t.id !== 'all')
+            .map((type) => ({
+                id: `type-${type.id}`,
+                label: type.label,
+                icon: <TypeIcon id={type.id} color={type.color} />,
+                creatable: type.available,
+                soon: !type.available,
+                onClick: type.available
+                    ? () => createTypedRequestInCollection(collection._id, type.protocol, type.label)
+                    : undefined,
+            }));
 
         setContextMenu({
             x: e.clientX,
             y: e.clientY,
             items: [
-                {
-                    id: 'add-request',
-                    label: 'New HTTP Request',
-                    icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="9" strokeWidth={1.8} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v8M8 12h8" /></svg>,
-                    onClick: async () => {
-                        const newRequest = {
-                            name: 'New HTTP Request',
-                            method: 'GET',
-                            protocol: 'http',
-                            url: '',
-                            collectionId: collection._id,
-                            projectId: currentProject._id,
-                            teamId: currentTeam._id,
-                            headers: [{ id: uuidv4(), key: '', value: '', enabled: true }],
-                            params: [{ id: uuidv4(), key: '', value: '', enabled: true }],
-                            body: { mode: 'none', raw: '', rawLanguage: 'json', formData: [], urlencoded: [] },
-                            auth: { type: 'none' }
-                        };
-                        const result = await createRequest(newRequest);
-                        if (result.success) {
-                            setCurrentRequest(result.request);
-                            toast.success('HTTP Request created');
-                        } else {
-                            toast.error(result.error);
-                        }
-                    }
-                },
-                {
-                    id: 'add-ws-request',
-                    label: 'New WebSocket',
-                    icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
-                    onClick: async () => {
-                        const newRequest = {
-                            name: 'New WebSocket',
-                            protocol: 'ws',
-                            url: 'wss://',
-                            collectionId: collection._id,
-                            projectId: currentProject._id,
-                            teamId: currentTeam._id,
-                        };
-                        const result = await createRequest(newRequest);
-                        if (result.success) {
-                            setCurrentRequest(result.request);
-                            toast.success('WebSocket created');
-                        } else {
-                            toast.error(result.error);
-                        }
-                    }
-                },
-                {
-                    id: 'add-sio-request',
-                    label: 'New Socket.IO',
-                    icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>,
-                    onClick: async () => {
-                        const newRequest = {
-                            name: 'New Socket.IO',
-                            protocol: 'socketio',
-                            url: 'http://localhost:3000',
-                            collectionId: collection._id,
-                            projectId: currentProject._id,
-                            teamId: currentTeam._id,
-                        };
-                        const result = await createRequest(newRequest);
-                        if (result.success) {
-                            setCurrentRequest(result.request);
-                            toast.success('Socket.IO created');
-                        } else {
-                            toast.error(result.error);
-                        }
-                    }
-                },
+                { id: 'section-types', section: true, label: 'Request types' },
+                ...typeItems,
+                { id: 'divider-1', divider: true },
                 {
                     id: 'add-folder',
                     label: 'New Folder',
                     icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>,
                     onClick: () => setShowFolderModal(true, { collectionId: collection._id })
                 },
-                { id: 'divider', divider: true },
+                { id: 'divider-2', divider: true },
                 {
                     id: 'edit',
                     label: 'Edit Name',
@@ -615,7 +649,7 @@ export default function SidebarV2({
                         }
                     })
                 },
-                { id: 'divider', divider: true },
+                { id: 'divider-3', divider: true },
                 {
                     id: 'export',
                     label: 'Export as Postman',
@@ -633,7 +667,7 @@ export default function SidebarV2({
                         }
                     }
                 },
-                { id: 'divider', divider: true },
+                { id: 'divider-4', divider: true },
                 {
                     id: 'delete',
                     label: 'Delete Collection',
@@ -732,6 +766,38 @@ export default function SidebarV2({
                 setExpandedFolders(next);
             }
         }
+    };
+
+    const handleTypeFilterCreateRequest = (type) => {
+        if (!currentProject || !currentTeam) {
+            toast.error('Select a project and team first');
+            return;
+        }
+        if (isOffline) {
+            toast.error('Cannot create requests while offline');
+            return;
+        }
+
+        const projectCollections = collectionsByProject[currentProject._id] || [];
+        if (projectCollections.length === 0) {
+            toast.error('Create a collection first');
+            return;
+        }
+
+        setPendingTypeCreate({
+            protocol: type.protocol,
+            label: type.label,
+        });
+    };
+
+    const handleCreateTypedRequestInCollection = async (collectionId) => {
+        if (!pendingTypeCreate) return;
+        const ok = await createTypedRequestInCollection(
+            collectionId,
+            pendingTypeCreate.protocol || 'http',
+            pendingTypeCreate.label || 'Request',
+        );
+        if (ok) setPendingTypeCreate(null);
     };
 
 
@@ -1043,7 +1109,7 @@ export default function SidebarV2({
                     </div>
                 </div>
 
-                {/* Search */}
+                {/* Search + compact type filter */}
                 <div className="sdbv2-search-wrap">
                     <svg className="sdbv2-search-icon" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1070,6 +1136,13 @@ export default function SidebarV2({
                             </svg>
                         </button>
                     )}
+                    <div className="sdbv2-search-divider" aria-hidden />
+                    <RequestTypeFilter
+                        value={requestTypeFilter}
+                        onChange={setRequestTypeFilter}
+                        counts={requestTypeCounts}
+                        onCreateRequestType={handleTypeFilterCreateRequest}
+                    />
                 </div>
 
                 <div className="sdbv2-tree-body">
@@ -1080,12 +1153,16 @@ export default function SidebarV2({
                             </div>
                             {isSearching ? (
                                 <p className="sdbv2-empty-note">Searching database...</p>
-                            ) : searchResults?.length > 0 ? (
-                                searchResults.map((req) => (
+                            ) : filteredSearchResults?.length > 0 ? (
+                                filteredSearchResults.map((req) => (
                                     <SidebarRequest key={`search-${req._id}`} request={req} onSelect={handleRequestSelect} />
                                 ))
                             ) : (
-                                <p className="sdbv2-empty-note">No matches found in project</p>
+                                <p className="sdbv2-empty-note">
+                                    {requestTypeFilter !== 'all'
+                                        ? 'No matches for this request type'
+                                        : 'No matches found in project'}
+                                </p>
                             )}
                         </div>
                     ) : activeV2Nav === 'profile' ? (
@@ -1252,9 +1329,10 @@ export default function SidebarV2({
                                             return projectCollections.map((col) => {
                                                 // Load requests for this collection from storage if not already in store
                                                 const storeRequests = requests.filter(r => r.collectionId === col._id);
-                                                const localRequests = storeRequests.length > 0
+                                                const localRequests = (storeRequests.length > 0
                                                     ? storeRequests
-                                                    : localStorageService.getRequests(col._id);
+                                                    : localStorageService.getRequests(col._id)
+                                                ).filter((r) => matchesRequestTypeFilter(r, requestTypeFilter));
 
                                                 if (localRequests.length === 0) return null;
 
@@ -1397,7 +1475,7 @@ export default function SidebarV2({
                                                                     <>
                                                                         <RecursiveFolderListV2
                                                                             folders={col.folders || []}
-                                                                            requests={requests.filter(r => r.collectionId === col._id)}
+                                                                            requests={filteredRequests.filter(r => r.collectionId === col._id)}
                                                                             parentId={null}
                                                                             collectionId={col._id}
                                                                             expandedFolders={expandedFolders}
@@ -1409,8 +1487,13 @@ export default function SidebarV2({
                                                                             onAddRequest={handleQuickCreateRequest}
                                                                             onFolderContextMenu={showFolderContextMenu}
                                                                         />
-                                                                        {requests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length === 0 && (
-                                                                            <div className="sdbv2-empty-note py-1 pl-4 opacity-50">Empty collection</div>
+                                                                        {filteredRequests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length === 0 && (
+                                                                            <div className="sdbv2-empty-note py-1 pl-4 opacity-50">
+                                                                                {requestTypeFilter !== 'all' ? 'No requests of this type' : 'Empty collection'}
+                                                                            </div>
+                                                                        )}
+                                                                        {filteredRequests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length > 0 && requestTypeFilter !== 'all' && (
+                                                                            <div className="sdbv2-empty-note py-1 pl-4 opacity-50">No requests of this type</div>
                                                                         )}
                                                                     </>
                                                                 )}
@@ -1443,6 +1526,14 @@ export default function SidebarV2({
                     <strong>Sundan Sharma</strong>
                 </div>
             </aside>
+
+            <CollectionPickerModal
+                open={!!pendingTypeCreate}
+                protocolLabel={pendingTypeCreate?.label || 'Request'}
+                collections={currentProject ? (collectionsByProject[currentProject._id] || []) : []}
+                onClose={() => setPendingTypeCreate(null)}
+                onSelect={handleCreateTypedRequestInCollection}
+            />
         </div>
     );
 }

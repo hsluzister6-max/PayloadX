@@ -98,7 +98,7 @@ const mapRequestToPostman = (req) => {
         };
       }),
     };
-  } else if (bodyData.mode === 'url-encoded') {
+  } else if (bodyData.mode === 'url-encoded' || bodyData.mode === 'urlencoded') {
     body = {
       mode: 'urlencoded',
       urlencoded: (bodyData.urlencoded || []).filter(f => f.key).map(f => ({
@@ -106,6 +106,11 @@ const mapRequestToPostman = (req) => {
         value: f.value,
         disabled: !f.enabled,
       })),
+    };
+  } else if (bodyData.mode === 'binary' && bodyData.binary?.fileName) {
+    body = {
+      mode: 'file',
+      file: bodyData.binary.fileName,
     };
   }
 

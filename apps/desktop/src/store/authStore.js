@@ -1,21 +1,53 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import api from '@/lib/api';
+import api, {
+  clearAuthTokens,
+  persistAuthTokens,
+  getStoredRefreshToken,
+} from '@/lib/api';
+
+function applySession(set, data, extras = {}) {
+  const rememberMe = Boolean(
+    extras.rememberMe ?? data.rememberMe ?? true,
+  );
+  persistAuthTokens(
+    {
+      token: data.token,
+      refreshToken: data.refreshToken,
+    },
+    { rememberMe },
+  );
+  set({
+    user: data.user,
+    token: data.token,
+    refreshToken: data.refreshToken || null,
+    rememberMe,
+    isLoading: false,
+    error: null,
+    ...extras,
+    rememberMe,
+  });
+}
 
 export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
       token: null,
+      refreshToken: null,
+      rememberMe: true,
       isLoading: false,
       error: null,
 
-      login: async (email, password) => {
+      login: async (email, password, rememberMe = true) => {
         set({ isLoading: true, error: null });
         try {
-          const { data } = await api.post('/api/auth/login', { email, password });
-          localStorage.setItem('payloadx_token', data.token);
-          set({ user: data.user, token: data.token, isLoading: false });
+          const { data } = await api.post('/api/auth/login', {
+            email,
+            password,
+            rememberMe: Boolean(rememberMe),
+          });
+          applySession(set, data, { rememberMe: Boolean(rememberMe) });
           return { success: true };
         } catch (err) {
           const error = err.response?.data?.error || 'Login failed';
@@ -31,8 +63,7 @@ export const useAuthStore = create(
           const body = typeof payload === 'string' ? { accessToken: payload } : payload;
           const { data } = await api.post('/api/auth/google', body);
 
-          localStorage.setItem('payloadx_token', data.token);
-          set({ user: data.user, token: data.token, isLoading: false });
+          applySession(set, data, { rememberMe: true });
           return { success: true };
         } catch (err) {
           const error = err.response?.data?.error || 'Google login failed';
@@ -45,9 +76,13 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
         try {
           const { data } = await api.post('/api/auth/signup', { name, email, password });
-          localStorage.setItem('payloadx_token', data.token);
-          set({ user: data.user, token: data.token, isLoading: false });
-          return { success: true };
+          // Signup stages OTP — may not return tokens yet
+          if (data?.token) {
+            applySession(set, data, { rememberMe: true });
+          } else {
+            set({ isLoading: false });
+          }
+          return { success: true, ...data };
         } catch (err) {
           const error = err.response?.data?.error || 'Signup failed';
           set({ isLoading: false, error });
@@ -56,6 +91,17 @@ export const useAuthStore = create(
       },
 
       logout: async () => {
+        const refreshToken = get().refreshToken || getStoredRefreshToken();
+
+        // Best-effort server revoke so the refresh token can't be reused
+        try {
+          if (refreshToken) {
+            await api.post('/api/auth/logout', { refreshToken });
+          }
+        } catch {
+          /* ignore network errors during logout */
+        }
+
         // 1. Disconnect Sockets first to clear presence on server
         try {
           const { useSocketStore } = await import('@/store/socketStore');
@@ -80,7 +126,8 @@ export const useAuthStore = create(
           console.error('[Logout] Sync cleanup failed:', e);
         }
 
-        // 4. Clear all LocalStorage/SessionStorage
+        // 4. Clear auth tokens + storage
+        clearAuthTokens();
         localStorage.clear();
         sessionStorage.clear();
 
@@ -111,12 +158,12 @@ export const useAuthStore = create(
           console.error('[Logout] Store reset failed:', e);
         }
 
-        set({ user: null, token: null });
+        set({ user: null, token: null, refreshToken: null });
       },
 
       fetchMe: async () => {
         const token = localStorage.getItem('payloadx_token');
-        if (!token) return;
+        if (!token && !getStoredRefreshToken()) return;
 
         if (!navigator.onLine) {
           // App initialized without an internet connection,
@@ -126,15 +173,20 @@ export const useAuthStore = create(
 
         try {
           const { data } = await api.get('/api/auth/me');
-          set({ user: data.user, token });
+          set({
+            user: data.user,
+            token: localStorage.getItem('payloadx_token'),
+            refreshToken: getStoredRefreshToken(),
+          });
         } catch (err) {
           // If the internet drops the instant the request fires
           if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !navigator.onLine) {
             return;
           }
 
-          localStorage.removeItem('payloadx_token');
-          set({ user: null, token: null });
+          // api interceptor already attempted refresh; if still failing, clear session
+          clearAuthTokens();
+          set({ user: null, token: null, refreshToken: null });
         }
       },
 
@@ -181,10 +233,7 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
         try {
           const { data } = await api.post('/api/auth/verify-signup', { email, otp });
-          const { user, token } = data;
-
-          localStorage.setItem('payloadx_token', token);
-          set({ user, token, isLoading: false });
+          applySession(set, data, { rememberMe: true });
           return { success: true };
         } catch (err) {
           const error = err.response?.data?.error || 'Invalid or expired verification code';
@@ -195,7 +244,27 @@ export const useAuthStore = create(
     }),
     {
       name: 'syncnest-auth',
-      partialize: (state) => ({ user: state.user, token: state.token }),
+      // Only persist session across restarts when "Remember me" is on
+      partialize: (state) =>
+        state.rememberMe
+          ? {
+              user: state.user,
+              token: state.token,
+              refreshToken: state.refreshToken,
+              rememberMe: true,
+            }
+          : { rememberMe: false },
+      onRehydrateStorage: () => (state) => {
+        if (state?.rememberMe && (state?.token || state?.refreshToken)) {
+          persistAuthTokens(
+            {
+              token: state.token,
+              refreshToken: state.refreshToken,
+            },
+            { rememberMe: true },
+          );
+        }
+      },
     }
   )
 );

@@ -87,6 +87,7 @@ git push origin v1.0.7
 
 ## User experience
 
-- **On launch:** check after login → toast with **Install** / **Later**
-- **Account page:** **App updates** section
+- **On launch (after login):** checks for updates → **top-right toast** with **Install now** / **Remind me later**
+- **Remind me later:** snoozes for **1 hour**, then shows the same toast again (and keeps reminding hourly until installed)
+- **Account page:** **App updates** section for manual check / install
 - **Classic layout:** Settings panel in the icon rail
