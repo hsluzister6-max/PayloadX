@@ -426,7 +426,7 @@ fn main() {
         .timeout(std::time::Duration::from_secs(120))
         .connect_timeout(std::time::Duration::from_secs(10))
         .pool_max_idle_per_host(10)
-        .user_agent("PayloadX-API-Studio/1.0.10")
+        .user_agent("PayloadX-API-Studio/1.0.12")
         .http1_only()
         .cookie_store(false)
         .build()
