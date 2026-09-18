@@ -61,7 +61,7 @@ export const useCookieStore = create((set, get) => ({
     }
   },
 
-  addDomain: async (domain) => {
+      addDomain: async (domain) => {
     if (!domain) return;
     if (get().domains.includes(domain)) {
       toast.error('Domain already exists');
@@ -73,5 +73,15 @@ export const useCookieStore = create((set, get) => ({
     } catch (error) {
       toast.error('Failed to add domain');
     }
-  }
+  },
+
+  clearSession: async () => {
+    try {
+      await invoke('clear_cookies');
+      set({ domains: [], currentCookies: {}, selectedDomain: null });
+      toast.success('This window\'s API session cookies were cleared');
+    } catch (error) {
+      toast.error('Failed to clear session cookies');
+    }
+  },
 }));

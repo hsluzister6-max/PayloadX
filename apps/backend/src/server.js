@@ -66,6 +66,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+import { trackHttpMetrics } from './lib/platformMetrics.js';
+app.use(trackHttpMetrics);
+
 // Attach DB to requests
 app.use(async (req, res, next) => {
   try {
@@ -129,6 +132,8 @@ import commentRoutes from './routes/comment.js';
 import workflowRoutes from './routes/workflow.js';
 import workflowExecutionRoutes from './routes/workflowExecution.js';
 import dashboardRoutes from './routes/dashboard.js';
+import adminRoutes from './routes/admin.js';
+import analyticsRoutes from './routes/analytics.js';
 import mcpHttpRouter from './mcp/httpRouter.js';
 
 app.use('/api/auth', authRoutes);
@@ -143,6 +148,8 @@ app.use('/api/comment', commentRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/workflow-execution', workflowExecutionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Free MCP server (Cursor / Claude) — Streamable HTTP
 app.use('/mcp', mcpHttpRouter);
@@ -197,8 +204,28 @@ const io = new Server(server, {
 const roomMembers = new Map();
 const requestViewers = new Map();
 
+import {
+  registerLiveSocket,
+  updateLiveSection,
+  unregisterLiveSocket,
+} from './lib/platformMetrics.js';
+
 io.on('connection', (socket) => {
   console.log(`[Socket] Client connected: ${socket.id}`);
+
+  // ── PLATFORM PRESENCE (admin live users) ─────────────────────────────────
+  socket.on('platform_presence', ({ user, section } = {}) => {
+    registerLiveSocket(socket.id, {
+      userId: user?.id || user?._id,
+      email: user?.email,
+      name: user?.name,
+      section: section || 'app',
+    });
+  });
+
+  socket.on('platform_section', ({ section } = {}) => {
+    if (section) updateLiveSection(socket.id, section);
+  });
 
   // ── JOIN TEAM ROOM ───────────────────────────────────────────────────────
   socket.on('join_team', ({ teamId, user }) => {
@@ -208,6 +235,14 @@ io.on('connection', (socket) => {
 
     if (!roomMembers.has(room)) roomMembers.set(room, new Map());
     roomMembers.get(room).set(socket.id, { ...user, socketId: socket.id });
+
+    // Also count toward platform live users
+    registerLiveSocket(socket.id, {
+      userId: user?.id || user?._id,
+      email: user?.email,
+      name: user?.name,
+      section: 'collections',
+    });
 
     const members = Array.from(roomMembers.get(room).values());
     socket.to(room).emit('member_joined', { user, members });
@@ -349,6 +384,7 @@ io.on('connection', (socket) => {
   // ── DISCONNECT ───────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected: ${socket.id}`);
+    unregisterLiveSocket(socket.id);
 
     // Clean from all team rooms
     for (const [room, members] of roomMembers.entries()) {

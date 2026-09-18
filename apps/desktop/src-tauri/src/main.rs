@@ -6,8 +6,13 @@ use tauri::Manager;
 mod commands;
 mod security;
 mod workflow;
+mod native_menu;
 
-use commands::http::{execute_request, get_cookies, set_cookie, delete_cookie, list_cookie_domains, clear_cookies};
+#[cfg(target_os = "macos")]
+mod macos_dock;
+
+use commands::http::{execute_request, get_cookies, set_cookie, delete_cookie, list_cookie_domains, clear_cookies, clear_all_cookie_sessions};
+use commands::window::create_workspace_window;
 use commands::files::{save_local_file, read_local_file, list_local_files};
 use commands::json::{parse_json, flatten_json_pro};
 use commands::workflow::{execute_workflow, execute_single_node, validate_workflow, cancel_workflow_execution};
@@ -18,8 +23,91 @@ use commands::postman::parse_postman_collection;
 use std::sync::Mutex;
 use std::collections::HashMap;
 
+/// Per-window API cookie sessions: window_label -> host -> cookie_name -> value.
+/// PayloadX platform login is not stored here and stays shared across windows.
+pub type HostCookies = HashMap<String, String>;
+pub type SessionCookies = HashMap<String, HostCookies>;
+
 #[derive(Default, Clone)]
-pub struct AppCookieJar(pub std::sync::Arc<Mutex<HashMap<String, HashMap<String, String>>>>);
+pub struct AppCookieJar(pub std::sync::Arc<Mutex<HashMap<String, SessionCookies>>>);
+
+pub fn cookie_session_id(window: &tauri::Window) -> String {
+    window.label().to_string()
+}
+
+/// Same host bucket as JS `tryRequestUrlCookieKey` (lowercase, loopback → localhost, non-default port).
+pub fn cookie_storage_key(url: &url::Url) -> String {
+    let mut host = url.host_str().unwrap_or("").to_lowercase();
+    if host == "127.0.0.1" || host == "::1" {
+        host = "localhost".to_string();
+    }
+    if host.is_empty() {
+        return host;
+    }
+    match (url.scheme(), url.port()) {
+        (_, None) => host,
+        ("https", Some(443)) | ("http", Some(80)) => host,
+        (_, Some(port)) => format!("{host}:{port}"),
+    }
+}
+
+impl AppCookieJar {
+    pub fn cookies_for(&self, session: &str, host: &str) -> HostCookies {
+        self.0
+            .lock()
+            .ok()
+            .and_then(|jar| jar.get(session).and_then(|s| s.get(host)).cloned())
+            .unwrap_or_default()
+    }
+
+    pub fn put_cookie(&self, session: &str, host: &str, key: String, value: String) -> Result<(), String> {
+        let mut jar = self.0
+            .lock()
+            .map_err(|_| "Failed to lock cookie jar".to_string())?;
+        jar.entry(session.to_string())
+            .or_default()
+            .entry(host.to_string())
+            .or_default()
+            .insert(key, value);
+        Ok(())
+    }
+
+    pub fn delete_cookie(&self, session: &str, host: &str, key: &str) -> Result<(), String> {
+        let mut jar = self.0
+            .lock()
+            .map_err(|_| "Failed to lock cookie jar".to_string())?;
+        if let Some(host_jar) = jar.get_mut(session).and_then(|s| s.get_mut(host)) {
+            host_jar.remove(key);
+        }
+        Ok(())
+    }
+
+    pub fn list_domains(&self, session: &str) -> Result<Vec<String>, String> {
+        let jar = self.0
+            .lock()
+            .map_err(|_| "Failed to lock cookie jar".to_string())?;
+        Ok(jar
+            .get(session)
+            .map(|s| s.keys().cloned().collect())
+            .unwrap_or_default())
+    }
+
+    pub fn clear_session(&self, session: &str) -> Result<(), String> {
+        let mut jar = self.0
+            .lock()
+            .map_err(|_| "Failed to lock cookie jar".to_string())?;
+        jar.remove(session);
+        Ok(())
+    }
+
+    pub fn clear_all(&self) -> Result<(), String> {
+        let mut jar = self.0
+            .lock()
+            .map_err(|_| "Failed to lock cookie jar".to_string())?;
+        jar.clear();
+        Ok(())
+    }
+}
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -340,6 +428,7 @@ fn main() {
         .pool_max_idle_per_host(10)
         .user_agent("PayloadX-API-Studio/1.0.10")
         .http1_only()
+        .cookie_store(false)
         .build()
         .expect("Failed to build HTTP client");
 
@@ -348,13 +437,31 @@ fn main() {
         .manage(AppCookieJar::default())
         .manage(WorkflowState::default())
         .plugin(tauri_plugin_oauth::init())
+        .menu(native_menu::native_menu())
+        .on_menu_event(|event| {
+            if event.menu_item_id() == native_menu::NEW_WINDOW_MENU_ID {
+                let app = event.window().app_handle();
+                let window = event.window();
+                let _ = commands::window::open_workspace_window(&app, Some(&window), None);
+            }
+        })
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            macos_dock::install(&app.handle());
             #[cfg(debug_assertions)]
             {
                 let window = app.get_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())
+        })
+        .on_window_event(|event| {
+            if let tauri::WindowEvent::Destroyed = event.event() {
+                let label = event.window().label().to_string();
+                if let Some(jar) = event.window().try_state::<AppCookieJar>() {
+                    let _ = jar.clear_session(&label);
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             execute_request,
@@ -363,6 +470,8 @@ fn main() {
             delete_cookie,
             list_cookie_domains,
             clear_cookies,
+            clear_all_cookie_sessions,
+            create_workspace_window,
             save_local_file,
             read_local_file,
             list_local_files,

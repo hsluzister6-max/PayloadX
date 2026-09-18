@@ -27,6 +27,7 @@ const cmdOrCtrl = (e) => (isMac() ? e.metaKey : e.ctrlKey);
  *  Send Request             ⌘ + Enter   Ctrl + Enter
  *  Save Request             ⌘ + S       Ctrl + S
  *  New Request              ⌘ + N       Ctrl + N
+ *  New Window               ⌘ + ⇧ + N  Ctrl + Shift + N
  *  Close Tab                ⌘ + W       Ctrl + W
  *  Next Tab                 ⌘ + ]       Ctrl + ]
  *  Prev Tab                 ⌘ + [       Ctrl + [
@@ -72,10 +73,12 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Native File menu / dock already handles New Window (Cmd/Ctrl + Shift + N).
+
       // ── Skip remaining shortcuts when inside an input ──
       if (isEditable) return;
 
-      // ── 3. New Request (Cmd/Ctrl + N) ──
+      // ── 4. New Request (Cmd/Ctrl + N) ──
       if (mod && e.key === 'n') {
         e.preventDefault();
         useRequestStore.getState().newRequest();

@@ -18,6 +18,7 @@ import RightSidebar from './RightSidebar';
 import WorkflowBuilder from '@/components/WorkflowBuilder/WorkflowBuilder';
 import HistoryPanel from '@/components/History/HistoryPanel.jsx';
 import ProfilePage from '@/components/Profile/ProfilePage';
+import useAnalyticsTracker from '@/hooks/useAnalyticsTracker';
 import toast from 'react-hot-toast';
 import SyncSidebar from '@/components/Sync/SyncSidebar';
 import api from '@/lib/api';
@@ -58,6 +59,8 @@ export default function LayoutV2({
   const [splitPercent, setSplitPercent] = useState(50);
   const [syncDiff, setSyncDiff] = useState(null);
   const [showSyncSidebar, setShowSyncSidebar] = useState(false);
+
+  useAnalyticsTracker();
   const [hasNewSync, setHasNewSync] = useState(false);
 
   const { teams, currentTeam } = useTeamStore();

@@ -116,6 +116,7 @@ pub struct ExecuteResponse {
 #[tauri::command]
 pub async fn execute_request(
     payload: ExecuteRequestPayload,
+    window: tauri::Window,
     client: tauri::State<'_, reqwest::Client>,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<ExecuteResponse, String> {
@@ -196,26 +197,24 @@ pub async fn execute_request(
         }
     }
 
-    // Extract Host for Cookie Jar
-    let host = url.host_str().unwrap_or("").to_string();
+    // Cookie jar is scoped to this window's API session (not PayloadX login).
+    let host = crate::cookie_storage_key(&url);
+    let cookie_session = crate::cookie_session_id(&window);
 
     // Attach saved cookies for this host
     if !host.is_empty() {
-        if let Ok(jar) = cookie_jar.0.lock() {
-            if let Some(cookies) = jar.get(&host) {
-                if !cookies.is_empty() {
-                    let mut cookie_components = Vec::new();
-                    for (k, v) in cookies.iter() {
-                        if v.is_empty() {
-                            cookie_components.push(k.clone());
-                        } else {
-                            cookie_components.push(format!("{}={}", k, v));
-                        }
-                    }
-                    if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
-                        header_map.insert(reqwest::header::COOKIE, val);
-                    }
+        let cookies = cookie_jar.cookies_for(&cookie_session, &host);
+        if !cookies.is_empty() {
+            let mut cookie_components = Vec::new();
+            for (k, v) in cookies.iter() {
+                if v.is_empty() {
+                    cookie_components.push(k.clone());
+                } else {
+                    cookie_components.push(format!("{}={}", k, v));
                 }
+            }
+            if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
+                header_map.insert(reqwest::header::COOKIE, val);
             }
         }
     }
@@ -344,12 +343,9 @@ pub async fn execute_request(
                 let parts: Vec<&str> = c_str.split(';').collect();
                 if let Some(first_part) = parts.first() {
                     let kv: Vec<&str> = first_part.splitn(2, '=').collect();
-                    if let Ok(mut jar) = cookie_jar.0.lock() {
-                        let host_jar = jar.entry(host.clone()).or_insert_with(HashMap::new);
-                        let key = kv[0].trim().to_string();
-                        let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
-                        host_jar.insert(key, val);
-                    }
+                    let key = kv[0].trim().to_string();
+                    let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
+                    let _ = cookie_jar.put_cookie(&cookie_session, &host, key, val);
                 }
             }
         }
@@ -387,26 +383,26 @@ pub async fn execute_request(
 
 #[tauri::command]
 pub async fn clear_cookies(
+    window: tauri::Window,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<(), String> {
-    if let Ok(mut jar) = cookie_jar.0.lock() {
-        jar.clear();
-        Ok(())
-    } else {
-        Err("Failed to lock cookie jar".to_string())
-    }
+    cookie_jar.clear_session(&crate::cookie_session_id(&window))
+}
+
+#[tauri::command]
+pub async fn clear_all_cookie_sessions(
+    cookie_jar: tauri::State<'_, crate::AppCookieJar>,
+) -> Result<(), String> {
+    cookie_jar.clear_all()
 }
 
 #[tauri::command]
 pub async fn get_cookies(
     host: String,
+    window: tauri::Window,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<HashMap<String, String>, String> {
-    if let Ok(jar) = cookie_jar.0.lock() {
-        Ok(jar.get(&host).cloned().unwrap_or_default())
-    } else {
-        Err("Failed to lock cookie jar".to_string())
-    }
+    Ok(cookie_jar.cookies_for(&crate::cookie_session_id(&window), &host))
 }
 
 #[tauri::command]
@@ -414,42 +410,28 @@ pub async fn set_cookie(
     host: String,
     key: String,
     value: String,
+    window: tauri::Window,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<(), String> {
-    if let Ok(mut jar) = cookie_jar.0.lock() {
-        let host_jar = jar.entry(host).or_insert_with(HashMap::new);
-        host_jar.insert(key, value);
-        Ok(())
-    } else {
-        Err("Failed to lock cookie jar".to_string())
-    }
+    cookie_jar.put_cookie(&crate::cookie_session_id(&window), &host, key, value)
 }
 
 #[tauri::command]
 pub async fn delete_cookie(
     host: String,
     key: String,
+    window: tauri::Window,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<(), String> {
-    if let Ok(mut jar) = cookie_jar.0.lock() {
-        if let Some(host_jar) = jar.get_mut(&host) {
-            host_jar.remove(&key);
-        }
-        Ok(())
-    } else {
-        Err("Failed to lock cookie jar".to_string())
-    }
+    cookie_jar.delete_cookie(&crate::cookie_session_id(&window), &host, &key)
 }
 
 #[tauri::command]
 pub async fn list_cookie_domains(
+    window: tauri::Window,
     cookie_jar: tauri::State<'_, crate::AppCookieJar>,
 ) -> Result<Vec<String>, String> {
-    if let Ok(jar) = cookie_jar.0.lock() {
-        Ok(jar.keys().cloned().collect())
-    } else {
-        Err("Failed to lock cookie jar".to_string())
-    }
+    cookie_jar.list_domains(&crate::cookie_session_id(&window))
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

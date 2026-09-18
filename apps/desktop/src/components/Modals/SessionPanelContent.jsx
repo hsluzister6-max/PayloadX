@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCookieStore } from '@/store/cookieStore';
+import { getWorkspaceSessionName } from '@/lib/workspaceWindow';
 import toast from 'react-hot-toast';
 import {
   Cookie,
@@ -22,7 +23,8 @@ export default function SessionPanelContent() {
     currentCookies,
     addCookie,
     removeCookie,
-    loading
+    loading,
+    clearSession,
   } = useCookieStore();
 
   const [view, setView] = useState('list'); // 'list' | 'cookies' | 'allowlist'
@@ -75,12 +77,27 @@ export default function SessionPanelContent() {
               {domains.length}
             </span>
           </div>
-          <button
-            onClick={() => setView('allowlist')}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--surface-2)] transition-colors"
-          >
-            <ShieldCheck size={12} /> Allowlist
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={clearSession}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] text-[color:var(--text-muted)] hover:text-red-400 hover:bg-[color:var(--surface-2)] transition-colors"
+              title="Clear API cookies for this window only"
+            >
+              <Trash2 size={12} /> Clear
+            </button>
+            <button
+              onClick={() => setView('allowlist')}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--surface-2)] transition-colors"
+            >
+              <ShieldCheck size={12} /> Allowlist
+            </button>
+          </div>
+        </div>
+        <div className="px-4 py-2 border-b border-[color:var(--border-1)] bg-[color:var(--bg-primary)]">
+          <p className="text-[10px] text-[color:var(--text-muted)] leading-relaxed">
+            <span className="font-semibold text-[color:var(--text-secondary)]">{getWorkspaceSessionName()}</span>
+            {' '}keeps its own API cookies. PayloadX login stays shared across windows.
+          </p>
         </div>
 
         {/* Add Domain Form */}

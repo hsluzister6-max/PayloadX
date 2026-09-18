@@ -36,6 +36,11 @@ import AppUpdateNotifier from '@/components/Update/AppUpdateNotifier';
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore, defaultWorkflow } from '@/store/workflowStore';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import {
+  consumeOpenRequestId,
+  findLocalRequestById,
+  installWorkspaceWindowCleanup,
+} from '@/lib/workspaceWindow';
 
 
 export default function App() {
@@ -129,6 +134,37 @@ export default function App() {
       window.removeEventListener('online', attemptAuthCheck);
       window.removeEventListener('dragover', preventDefault);
       window.removeEventListener('drop', preventDefault);
+    };
+  }, []);
+
+  useEffect(() => {
+    installWorkspaceWindowCleanup();
+    const requestId = consumeOpenRequestId();
+    if (!requestId) return undefined;
+
+    const openBootRequest = () => {
+      const fromCollections = useCollectionStore.getState().requests?.find((r) => r._id === requestId);
+      const local = fromCollections || findLocalRequestById(requestId);
+      if (!local) return false;
+      useRequestStore.getState().setCurrentRequest(local);
+      return true;
+    };
+
+    if (openBootRequest()) return undefined;
+
+    const persistApi = useRequestStore.persist;
+    let unsub;
+    if (persistApi?.hasHydrated?.()) {
+      openBootRequest();
+    } else if (persistApi?.onFinishHydration) {
+      unsub = persistApi.onFinishHydration(() => {
+        openBootRequest();
+      });
+    }
+    const timer = setTimeout(openBootRequest, 500);
+    return () => {
+      unsub?.();
+      clearTimeout(timer);
     };
   }, []);
 

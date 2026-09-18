@@ -113,7 +113,7 @@ export const useAuthStore = create(
         // 2. Clear Rust-side data (Cookies, etc)
         try {
           const { invoke } = await import('@tauri-apps/api/tauri');
-          await invoke('clear_cookies');
+          await invoke('clear_all_cookie_sessions');
         } catch (e) {
           console.error('[Logout] Tauri cleanup failed:', e);
         }

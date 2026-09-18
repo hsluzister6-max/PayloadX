@@ -7,6 +7,7 @@
     "apps/realtime",
     "apps/desktop",
     "apps/landing",
+    "apps/admin",
     "apps/client-doc",
     "packages/*"
   ],
@@ -15,6 +16,7 @@
     "realtime": "cd apps/realtime && npm start",
     "desktop": "cd apps/desktop && npm run tauri dev",
     "landing": "cd apps/landing && npm run dev",
+    "admin": "cd apps/admin && npm run dev",
     "client-doc": "cd apps/client-doc && npm run dev",
     "dev": "concurrently \"npm run backend\" \"npm run realtime\""
   },

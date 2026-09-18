@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { isPlatformAdminEmail } from '../src/lib/platformAdmin.js';
 
 const UserSchema = new mongoose.Schema(
   {
@@ -60,6 +61,9 @@ UserSchema.methods.comparePassword = async function (candidatePassword) {
 UserSchema.methods.toSafeObject = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.otp;
+  delete obj.otpExpires;
+  obj.isPlatformAdmin = isPlatformAdminEmail(obj.email);
   return obj;
 };
 

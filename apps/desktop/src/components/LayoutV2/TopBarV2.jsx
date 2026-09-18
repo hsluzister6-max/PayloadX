@@ -8,6 +8,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useRequestStore } from '@/store/requestStore';
 import { Cookie, Variable } from 'lucide-react';
 import { isTauri } from '@/lib/executor';
+import { getWorkspaceSessionName, isMainWorkspaceWindow } from '@/lib/workspaceWindow';
 import api from '@/lib/api';
 import EnvironmentSelector from '@/components/EnvironmentSelector/EnvironmentSelector';
 import SyncStatusTag from '@/components/SyncStatusTag/SyncStatusTag';
@@ -231,6 +232,15 @@ export default function TopBarV2({
             </svg>
             Browser
           </div>
+        )}
+
+        {!isMainWorkspaceWindow() && (
+          <span
+            className="px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide bg-[color:var(--surface-2)] text-[color:var(--text-secondary)] border border-[color:var(--border-1)]"
+            title="This window has its own API cookie session. PayloadX login is shared."
+          >
+            {getWorkspaceSessionName()}
+          </span>
         )}
 
         {/* Orientation toggle */}

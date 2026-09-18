@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { requestStorePersistStorage } from './requestStorePersistStorage';
+import { getRequestStorePersistName } from '@/lib/workspaceWindow';
 import api from '@/lib/api';
 import { localStorageService } from '@/services/localStorageService';
 import { syncService } from '@/services/syncService';
@@ -1139,7 +1140,7 @@ export const useRequestStore = create(
       }
     }),
     {
-      name: 'syncnest-request',
+      name: getRequestStorePersistName(),
       partialize: (state) => ({
         currentRequest: requestForPersist(state.currentRequest),
         history: state.history

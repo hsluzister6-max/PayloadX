@@ -25,6 +25,13 @@ pub struct WorkflowExecutor {
 }
 
 impl WorkflowExecutor {
+    fn cookie_session_id(&self) -> String {
+        self.window
+            .as_ref()
+            .map(|w| crate::cookie_session_id(w))
+            .unwrap_or_else(|| "main".to_string())
+    }
+
     pub fn new(workflow: Workflow, client: Client, cookie_jar: Option<AppCookieJar>, window: Option<Window>) -> Self {
         Self {
             workflow,
@@ -243,7 +250,7 @@ impl WorkflowExecutor {
             .context("API node missing URL")?;
 
         let url_obj = ::url::Url::parse(url).context("Invalid URL format")?;
-        let host = url_obj.host_str().unwrap_or("").to_string();
+        let host = crate::cookie_storage_key(&url_obj);
         let timeout_secs = mapped_node.data.timeout.unwrap_or(60);
         let allows_body = Self::method_allows_body(method);
 
@@ -422,9 +429,8 @@ impl WorkflowExecutor {
 
         if !host.is_empty() {
             if let Some(jar_wrapper) = &self.cookie_jar {
-                if let Ok(jar) = jar_wrapper.0.lock() {
-                    jar_has_cookies = jar.get(host).map(|c| !c.is_empty()).unwrap_or(false);
-                }
+                let cookies = jar_wrapper.cookies_for(&self.cookie_session_id(), host);
+                jar_has_cookies = !cookies.is_empty();
             }
         }
 
@@ -447,20 +453,19 @@ impl WorkflowExecutor {
 
         if jar_has_cookies {
             if let Some(jar_wrapper) = &self.cookie_jar {
-                if let Ok(jar) = jar_wrapper.0.lock() {
-                    if let Some(cookies) = jar.get(host) {
-                        println!("DEBUG: Attaching {} cookies from jar for host {}", cookies.len(), host);
-                        let mut cookie_components = Vec::new();
-                        for (k, v) in cookies.iter() {
-                            if v.is_empty() {
-                                cookie_components.push(k.clone());
-                            } else {
-                                cookie_components.push(format!("{}={}", k, v));
-                            }
+                let cookies = jar_wrapper.cookies_for(&self.cookie_session_id(), host);
+                if !cookies.is_empty() {
+                    println!("DEBUG: Attaching {} cookies from jar for host {}", cookies.len(), host);
+                    let mut cookie_components = Vec::new();
+                    for (k, v) in cookies.iter() {
+                        if v.is_empty() {
+                            cookie_components.push(k.clone());
+                        } else {
+                            cookie_components.push(format!("{}={}", k, v));
                         }
-                        if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
-                            header_map.insert(reqwest::header::COOKIE, val);
-                        }
+                    }
+                    if let Ok(val) = HeaderValue::from_str(&cookie_components.join("; ")) {
+                        header_map.insert(reqwest::header::COOKIE, val);
                     }
                 }
             }
@@ -480,13 +485,10 @@ impl WorkflowExecutor {
                     let parts: Vec<&str> = c_str.split(';').collect();
                     if let Some(first_part) = parts.first() {
                         let kv: Vec<&str> = first_part.splitn(2, '=').collect();
-                        if let Ok(mut jar) = jar_wrapper.0.lock() {
-                            let host_jar = jar.entry(host.to_string()).or_insert_with(HashMap::new);
-                            let key = kv[0].trim().to_string();
-                            let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
-                            println!("DEBUG: Saving cookie {}={} for host {}", key, val, host);
-                            host_jar.insert(key, val);
-                        }
+                        let key = kv[0].trim().to_string();
+                        let val = if kv.len() > 1 { kv[1].trim().to_string() } else { "".to_string() };
+                        println!("DEBUG: Saving cookie {}={} for host {}", key, val, host);
+                        let _ = jar_wrapper.put_cookie(&self.cookie_session_id(), host, key, val);
                     }
                 }
             }
