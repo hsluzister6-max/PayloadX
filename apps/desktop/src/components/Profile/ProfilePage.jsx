@@ -305,7 +305,7 @@ export default function ProfilePage() {
               </div>
               <a
                 className="settings-link"
-                href="https://payloadx.in/docs/mcp"
+                href="https://payloadx.in/docs"
                 target="_blank"
                 rel="noreferrer"
               >
