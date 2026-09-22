@@ -94,43 +94,56 @@ export default function App() {
     toggleLayout,
   } = useUIStore();
 
-  // Fetch user on mount and initialize data from localStorage
+  // Restore session on mount; wait for zustand hydration first
   useEffect(() => {
+    let cancelled = false;
+
     const attemptAuthCheck = async () => {
-      if (navigator.onLine) {
-        try {
-          // Wrap in a small timeout to avoid long hangs on unreliable connections
-          await Promise.race([
-            fetchMe(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Auth Timeout')), 5000))
-          ]);
-        } catch (e) {
-          console.log('[App] Auth check skipped or timed out:', e.message);
-        }
+      if (!navigator.onLine) return;
+      try {
+        await Promise.race([
+          fetchMe(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Auth Timeout')), 8000)),
+        ]);
+      } catch (e) {
+        // Timeout / network — keep persisted session; never force logout here
+        console.log('[App] Auth check skipped or timed out:', e.message);
       }
     };
 
     const initData = async () => {
-      await attemptAuthCheck();
+      // Wait briefly for auth persist rehydration so tokens are restored
+      const { useAuthStore } = await import('@/store/authStore');
+      if (!useAuthStore.getState().hydrated) {
+        await new Promise((resolve) => {
+          const start = Date.now();
+          const tick = () => {
+            if (cancelled) return resolve();
+            if (useAuthStore.getState().hydrated || Date.now() - start > 1500) return resolve();
+            setTimeout(tick, 40);
+          };
+          tick();
+        });
+      }
 
-      // Initialize stores from localStorage for offline-first experience
+      if (cancelled) return;
+      await attemptAuthCheck();
+      if (cancelled) return;
+
       initTeams();
       initProjects();
       initCollections();
     };
 
-    // Check on initial load
     initData();
-
-    // Re-check auth immediately when network comes back online
     window.addEventListener('online', attemptAuthCheck);
 
-    // Global drag/drop prevention to stop Webview navigation
     const preventDefault = (e) => e.preventDefault();
     window.addEventListener('dragover', preventDefault);
     window.addEventListener('drop', preventDefault);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('online', attemptAuthCheck);
       window.removeEventListener('dragover', preventDefault);
       window.removeEventListener('drop', preventDefault);
@@ -216,6 +229,7 @@ export default function App() {
     if (!isConnected) return;
 
     const offRequest = onRequestUpdated(({ request }) => {
+      if (!request) return;
       updateRequest(request);
 
       const reqStore = useRequestStore.getState();
@@ -229,7 +243,7 @@ export default function App() {
     const offCollectionCreatedListener = onCollectionCreated(({ collection }) => {
       // Only add if not already present (prevent duplicates)
       const { collections } = useCollectionStore.getState();
-      if (!collections.find(c => c._id === collection._id)) {
+      if (!collections.find((c) => String(c._id) === String(collection._id))) {
         useCollectionStore.setState({ collections: [...collections, collection] });
       }
     });
@@ -331,6 +345,7 @@ export default function App() {
   if (!user) {
     return (
       <>
+        <AppUpdateNotifier />
         <AuthPage />
         <Toaster
           position="bottom-right"
@@ -354,7 +369,7 @@ export default function App() {
     return (
       <>
         <OfflineSyncManager />
-        <AppUpdateNotifier enabled={!!user} />
+        <AppUpdateNotifier />
         <LayoutV2
           onShowTeamModal={() => useUIStore.getState().setShowTeamModal(true)}
           onShowProjectModal={() => useUIStore.getState().setShowProjectModal(true)}
@@ -400,7 +415,7 @@ export default function App() {
   return (
     <>
       <OfflineSyncManager />
-      <AppUpdateNotifier enabled={!!user} />
+      <AppUpdateNotifier />
       <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
         {/* Sidebar */}
         <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full overflow-hidden flex flex-col">

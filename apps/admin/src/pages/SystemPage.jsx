@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { Server, Cpu, HardDrive, Clock, Copy } from 'lucide-react';
+import { Server, Cpu, HardDrive, Clock } from 'lucide-react';
 import { useAdminStore } from '../store/adminStore';
-import { getApiBaseUrl } from '../lib/api';
 import {
   PageHeader,
   Panel,
@@ -19,7 +18,7 @@ import {
 } from '../components/ui';
 
 export default function SystemPage() {
-  const { data, days, fetchOverview, pollLive, flash } = useAdminStore();
+  const { data, days, fetchOverview, pollLive } = useAdminStore();
 
   useEffect(() => {
     if (!data) fetchOverview(days);
@@ -31,23 +30,9 @@ export default function SystemPage() {
   const load = data?.load || {};
   const stats = data?.stats || {};
 
-  const copyEndpoint = async () => {
-    try {
-      await navigator.clipboard.writeText(getApiBaseUrl());
-      flash('API URL copied');
-    } catch {
-      flash('Clipboard unavailable');
-    }
-  };
-
   return (
     <div className="page">
-      <PageHeader title="System" description="API load, memory, and runtime health">
-        <button type="button" className="btn-ghost" onClick={copyEndpoint}>
-          <Copy size={14} />
-          Copy API URL
-        </button>
-      </PageHeader>
+      <PageHeader title="System" description="API load, memory, and runtime health" />
 
       <div className="kpi-grid kpi-grid--4">
         <Kpi
@@ -117,10 +102,6 @@ export default function SystemPage() {
             <div>
               <dt>Heap total</dt>
               <dd className="mono">{load.memory ? `${load.memory.heapTotalMb} MB` : '—'}</dd>
-            </div>
-            <div>
-              <dt>API base</dt>
-              <dd className="mono truncate">{getApiBaseUrl()}</dd>
             </div>
             <div>
               <dt>Activity today</dt>

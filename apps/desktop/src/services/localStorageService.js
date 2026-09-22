@@ -87,13 +87,37 @@ export const localStorageService = {
 
   saveRequests(collectionId, requests) {
     const allRequests = this.get(KEYS.REQUESTS) || {};
-    allRequests[collectionId] = requests;
+    const cid = String(collectionId || '');
+    if (!cid || cid === '[object Object]') return false;
+    const unique = [];
+    const seen = new Set();
+    for (const request of requests || []) {
+      const id = request?._id != null ? String(request._id) : request?.id != null ? String(request.id) : '';
+      if (id) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      unique.push(request);
+    }
+    allRequests[cid] = unique;
     return this.set(KEYS.REQUESTS, allRequests);
   },
 
   getRequests(collectionId) {
     const allRequests = this.get(KEYS.REQUESTS) || {};
-    return allRequests[collectionId] || [];
+    const cid = String(collectionId || '');
+    const list = allRequests[cid] || [];
+    const unique = [];
+    const seen = new Set();
+    for (const request of list) {
+      const id = request?._id != null ? String(request._id) : request?.id != null ? String(request.id) : '';
+      if (id) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      unique.push(request);
+    }
+    return unique;
   },
 
   saveUser(user) {

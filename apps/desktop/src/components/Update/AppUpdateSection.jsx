@@ -7,7 +7,7 @@ import { checkForAppUpdate, downloadAndInstallUpdate } from '@/lib/appUpdater';
 
 /** @typedef {'idle'|'checking'|'current'|'available'|'downloading'|'restarting'|'error'} UpdateUiState */
 
-export default function AppUpdateSection() {
+export default function AppUpdateSection({ variant = 'panel' }) {
   const [currentVersion, setCurrentVersion] = useState('—');
   const [availableVersion, setAvailableVersion] = useState(null);
   const [uiState, setUiState] = useState(/** @type {UpdateUiState} */ ('idle'));
@@ -37,14 +37,12 @@ export default function AppUpdateSection() {
         setAvailableVersion(nextVersion);
         setUiState('available');
         setStatusMessage(`Version ${nextVersion} is available. Download and restart to update.`);
-        toast.success(`Update ${nextVersion} is available`);
         return;
       }
 
       if (result.status === 'current') {
         setUiState('current');
         setStatusMessage(`Already up to date. You're running the latest version (${result.currentVersion}).`);
-        toast.success('Already up to date');
         return;
       }
 
@@ -110,12 +108,17 @@ export default function AppUpdateSection() {
 
   if (!desktop) {
     return (
-      <section className="profile-panel">
-        <div className="profile-panel__head">
-          <h3>App updates</h3>
-          <p>Install the PayloadX desktop app to receive automatic updates.</p>
-        </div>
-      </section>
+      <div className={variant === 'settings' ? 'settings-empty' : 'profile-panel'}>
+        {variant !== 'settings' && (
+          <div className="profile-panel__head">
+            <h3>App updates</h3>
+            <p>Install the PayloadX desktop app to receive automatic updates.</p>
+          </div>
+        )}
+        {variant === 'settings' && (
+          <p className="settings-note">Install the PayloadX desktop app to receive automatic updates.</p>
+        )}
+      </div>
     );
   }
 
@@ -129,6 +132,66 @@ export default function AppUpdateSection() {
           : uiState === 'downloading' || uiState === 'restarting'
             ? 'app-update-status app-update-status--progress'
             : null;
+
+  if (variant === 'settings') {
+    return (
+      <div className="settings-update">
+        <div className="settings-table">
+          <div className="settings-table__row">
+            <span className="settings-table__key">Installed version</span>
+            <span className="settings-table__val settings-table__val--mono">{currentVersion}</span>
+          </div>
+          {availableVersion && (
+            <div className="settings-table__row">
+              <span className="settings-table__key">Available</span>
+              <span className="settings-table__val settings-table__val--mono">{availableVersion}</span>
+            </div>
+          )}
+        </div>
+
+        {statusMessage && statusClass && (
+          <div className={statusClass}>
+            {uiState === 'current' && <CheckCircle2 size={14} aria-hidden />}
+            <span>{statusMessage}</span>
+          </div>
+        )}
+
+        {uiState === 'downloading' && typeof downloadPercent === 'number' && (
+          <div className="app-update-progress" aria-hidden>
+            <div className="app-update-progress__bar" style={{ width: `${downloadPercent}%` }} />
+          </div>
+        )}
+
+        {lastError && uiState === 'error' && (
+          <p className="settings-error">{lastError}</p>
+        )}
+
+        <div className="settings-section__actions">
+          <button
+            type="button"
+            className="settings-primary-btn"
+            onClick={runCheck}
+            disabled={busy}
+          >
+            {uiState === 'checking' ? 'Checking…' : 'Check for updates'}
+          </button>
+
+          {availableVersion && (uiState === 'available' || uiState === 'downloading') && (
+            <button
+              type="button"
+              className="settings-ghost-btn"
+              onClick={handleDownloadAndRestart}
+              disabled={busy}
+            >
+              {uiState === 'downloading'
+                ? (typeof downloadPercent === 'number' ? `Downloading… ${downloadPercent}%` : 'Downloading…')
+                : `Download & restart (${availableVersion})`}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="profile-panel">

@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useTeamStore } from '@/store/teamStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useAuthStore } from '@/store/authStore';
+import UserAvatar from '@/components/Profile/UserAvatar';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import './swagger-theme.css'; // We'll create this to make it dark
@@ -261,7 +262,11 @@ export default function InlineDocViewer() {
             <span className="text-[9px] text-tx-muted uppercase tracking-[0.2em] font-bold">Maintainer</span>
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-surface-3 flex items-center justify-center border border-border-1 text-[8px] font-bold overflow-hidden">
-                {user?.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : user?.name?.[0] || 'U'}
+                <UserAvatar
+                  user={user}
+                  className="w-full h-full flex items-center justify-center overflow-hidden"
+                  imgClassName="w-full h-full object-cover"
+                />
               </div>
               <span className="text-xs text-tx-secondary font-medium">{user?.name || 'Administrator'}</span>
             </div>

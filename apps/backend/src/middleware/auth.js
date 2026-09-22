@@ -1,5 +1,11 @@
 /**
  * JWT + PayloadX API token authentication
+ *
+ * Session model:
+ * - Short-lived access JWT (default 1h)
+ * - Long-lived opaque refresh token (7d / 30d with rememberMe)
+ * - Refresh silently renews access; refresh token is only rotated
+ *   when it is past halfway through its lifetime (avoids multi-tab races)
  */
 
 import jwt from 'jsonwebtoken';
@@ -12,12 +18,14 @@ import User from '../../models/User.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'syncnest-secret-change-in-production';
 
-/** Short-lived access JWT — refreshed silently by the desktop client. */
+/** Short-lived access JWT — refreshed silently by the client. */
 export const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || '1h';
 /** Refresh session without "Remember me". */
 export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Refresh session with "Remember me". */
 export const REFRESH_TOKEN_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Grace window for a just-rotated refresh token (multi-tab race). */
+const REFRESH_REUSE_GRACE_MS = 30_000;
 
 /**
  * Sign a short-lived access JWT
@@ -50,6 +58,14 @@ function accessExpiresInSeconds() {
   return 3600;
 }
 
+function signAccessForUser(user) {
+  return signToken({
+    id: user._id,
+    email: user.email,
+    name: user.name,
+  });
+}
+
 /**
  * Issue access + refresh tokens for a user session.
  * @param {{ _id: any, email: string, name: string }} user
@@ -57,11 +73,7 @@ function accessExpiresInSeconds() {
  */
 export async function issueAuthSession(user, options = {}) {
   const rememberMe = Boolean(options.rememberMe);
-  const accessToken = signToken({
-    id: user._id,
-    email: user.email,
-    name: user.name,
-  });
+  const accessToken = signAccessForUser(user);
 
   const { raw, hash, prefix } = generateRefreshToken();
   const ttlMs = rememberMe ? REFRESH_TOKEN_REMEMBER_TTL_MS : REFRESH_TOKEN_TTL_MS;
@@ -85,14 +97,44 @@ export async function issueAuthSession(user, options = {}) {
 }
 
 /**
- * Rotate a refresh token → new access + refresh pair.
- * @returns {Promise<{ token: string, refreshToken: string, expiresIn: number, rememberMe: boolean, user: any } | null>}
+ * Renew session from a refresh token.
+ * Normally keeps the same refresh token and only mints a new access JWT.
+ * Rotates the refresh token only when it is past halfway through its TTL.
+ *
+ * @returns {Promise<{
+ *   token: string,
+ *   refreshToken: string,
+ *   expiresIn: number,
+ *   rememberMe: boolean,
+ *   user: any
+ * } | null>}
  */
 export async function rotateRefreshToken(rawRefreshToken, options = {}) {
   if (!rawRefreshToken) return null;
   const hash = hashRefreshToken(rawRefreshToken);
-  const existing = await RefreshToken.findOne({ tokenHash: hash, revokedAt: null });
+
+  let existing = await RefreshToken.findOne({ tokenHash: hash });
   if (!existing) return null;
+
+  // Multi-tab race: a just-rotated token was presented again within grace.
+  // Issue a fresh access token for the same user instead of forcing logout.
+  if (existing.revokedAt) {
+    const revokedAge = Date.now() - new Date(existing.revokedAt).getTime();
+    if (revokedAge <= REFRESH_REUSE_GRACE_MS) {
+      const user = await User.findById(existing.userId);
+      if (!user) return null;
+      return {
+        token: signAccessForUser(user),
+        refreshToken: rawRefreshToken,
+        expiresIn: accessExpiresInSeconds(),
+        rememberMe: Boolean(existing.rememberMe),
+        user: user.toSafeObject(),
+        reused: true,
+      };
+    }
+    return null;
+  }
+
   if (existing.expiresAt && existing.expiresAt < new Date()) {
     existing.revokedAt = new Date();
     await existing.save();
@@ -106,6 +148,27 @@ export async function rotateRefreshToken(rawRefreshToken, options = {}) {
     return null;
   }
 
+  const createdAt = existing.createdAt ? new Date(existing.createdAt).getTime() : Date.now();
+  const expiresAt = existing.expiresAt ? new Date(existing.expiresAt).getTime() : createdAt;
+  const lifetime = Math.max(expiresAt - createdAt, 1);
+  const age = Date.now() - createdAt;
+  const shouldRotateRefresh = age >= lifetime * 0.5;
+
+  existing.lastUsedAt = new Date();
+
+  // Common path: keep refresh token, only mint new access JWT
+  if (!shouldRotateRefresh) {
+    await existing.save();
+    return {
+      token: signAccessForUser(user),
+      refreshToken: rawRefreshToken,
+      expiresIn: accessExpiresInSeconds(),
+      rememberMe: Boolean(existing.rememberMe),
+      user: user.toSafeObject(),
+    };
+  }
+
+  // Mid-life rotation: issue a new refresh token and revoke the old one
   const session = await issueAuthSession(user, {
     rememberMe: existing.rememberMe,
     userAgent: options.userAgent || existing.userAgent,
@@ -113,7 +176,6 @@ export async function rotateRefreshToken(rawRefreshToken, options = {}) {
 
   existing.revokedAt = new Date();
   existing.replacedByHash = hashRefreshToken(session.refreshToken);
-  existing.lastUsedAt = new Date();
   await existing.save();
 
   return {
@@ -149,7 +211,6 @@ export async function resolveAuthToken(rawToken) {
     const user = await User.findById(doc.userId).select('name email').lean();
     if (!user) return null;
 
-    // Fire-and-forget last used
     ApiToken.updateOne({ _id: doc._id }, { $set: { lastUsedAt: new Date() } }).catch(() => {});
 
     return {
@@ -180,19 +241,19 @@ export async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized', code: 'ACCESS_MISSING' });
     }
 
     const user = await resolveAuthToken(authHeader.slice(7));
     if (!user?.id) {
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Invalid token', code: 'ACCESS_INVALID' });
     }
 
     req.user = user;
     next();
   } catch (err) {
     console.error('[authenticate]', err.message);
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Unauthorized', code: 'ACCESS_INVALID' });
   }
 }
 

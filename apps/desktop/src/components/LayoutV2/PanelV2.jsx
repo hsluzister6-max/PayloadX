@@ -6,6 +6,7 @@ import { useRequestStore } from '@/store/requestStore';
 import { useUIStore } from '@/store/uiStore';
 import AppUpdateSection from '@/components/Update/AppUpdateSection';
 import { getMethodClass } from '@/utils/helpers';
+import { filterRequestsForCollection } from '@/utils/ids';
 
 const METHOD_DOTS = {
   GET:     '#3FB950',
@@ -151,9 +152,7 @@ function CollectionsPanel({ onShowTeamModal, onShowProjectModal, onShowCollectio
   };
 
   const filteredRequests = (collectionId) =>
-    requests.filter(
-      (r) => {
-        if (r.collectionId !== collectionId) return false;
+    filterRequestsForCollection(requests, collectionId).filter((r) => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.trim().toLowerCase();
         const name = (r.name || '').toLowerCase();

@@ -78,7 +78,7 @@ export function findLocalRequestById(requestId) {
   try {
     const all = localStorageService.get(localStorageService.KEYS.REQUESTS) || {};
     for (const list of Object.values(all)) {
-      const found = (list || []).find((req) => req?._id === requestId);
+      const found = (list || []).find((req) => String(req?._id) === String(requestId));
       if (found) return found;
     }
   } catch {

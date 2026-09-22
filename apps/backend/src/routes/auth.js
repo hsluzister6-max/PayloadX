@@ -360,7 +360,10 @@ router.post('/refresh', async (req, res) => {
   try {
     const { refreshToken } = req.body || {};
     if (!refreshToken) {
-      return res.status(400).json({ error: 'Refresh token is required' });
+      return res.status(400).json({
+        error: 'Refresh token is required',
+        code: 'REFRESH_MISSING',
+      });
     }
 
     const session = await rotateRefreshToken(refreshToken, {
@@ -368,13 +371,19 @@ router.post('/refresh', async (req, res) => {
     });
 
     if (!session) {
-      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      return res.status(401).json({
+        error: 'Invalid or expired refresh token',
+        code: 'REFRESH_INVALID',
+      });
     }
 
     res.json(session);
   } catch (error) {
     console.error('[POST /api/auth/refresh]', error);
-    res.status(500).json({ error: 'Failed to refresh session' });
+    res.status(500).json({
+      error: 'Failed to refresh session',
+      code: 'REFRESH_SERVER_ERROR',
+    });
   }
 });
 
@@ -423,12 +432,41 @@ router.get('/me', authenticate, async (req, res) => {
 router.put('/me', authenticate, async (req, res) => {
   try {
     const { name, avatar } = req.body;
+    const patch = {};
+
+    if (name !== undefined) {
+      const trimmed = String(name || '').trim();
+      if (!trimmed) {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      if (trimmed.length > 100) {
+        return res.status(400).json({ error: 'Name cannot exceed 100 characters' });
+      }
+      patch.name = trimmed;
+    }
+
+    if (avatar !== undefined) {
+      if (!isValidAvatar(avatar)) {
+        return res.status(400).json({
+          error: 'Avatar must be an image URL or a compressed image under ~400KB',
+        });
+      }
+      patch.avatar = avatar === null ? '' : String(avatar);
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'No changes provided' });
+    }
 
     const updated = await User.findByIdAndUpdate(
       req.user.id,
-      { ...(name && { name }), ...(avatar !== undefined && { avatar }) },
+      patch,
       { new: true, runValidators: true }
     );
+
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     res.json({ user: updated.toSafeObject() });
   } catch (err) {
@@ -436,6 +474,16 @@ router.put('/me', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+function isValidAvatar(avatar) {
+  if (avatar === '' || avatar === null) return true;
+  if (typeof avatar !== 'string') return false;
+  if (avatar.length > 600_000) return false;
+  if (avatar.startsWith('data:image/jpeg') || avatar.startsWith('data:image/png') || avatar.startsWith('data:image/webp') || avatar.startsWith('data:image/gif')) {
+    return true;
+  }
+  return /^https?:\/\/.+/i.test(avatar);
+}
 
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {

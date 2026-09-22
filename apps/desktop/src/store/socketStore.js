@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { io } from 'socket.io-client';
 import { localStorageService } from '@/services/localStorageService';
 import { getServerBaseUrl } from '@/store/serverConfigStore';
+import { idStr, idsEqual } from '@/utils/ids';
+
+function onSocketEvent(socket, event, handler) {
+  if (!socket) return () => { };
+  socket.on(event, handler);
+  return () => socket.off(event, handler);
+}
 
 export const useSocketStore = create((set, get) => ({
   socket: null,
@@ -214,162 +221,134 @@ export const useSocketStore = create((set, get) => ({
 
   onRequestUpdated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('request_updated', callback);
-    return () => socket.off('request_updated', callback);
-  },
-
-  onCollectionUpdated: (callback) => {
-    const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('collection_updated', callback);
-    return () => socket.off('collection_updated', callback);
+    const handler = (data) => {
+      const request = data?.request;
+      if (request?.collectionId) {
+        const cid = idStr(request.collectionId);
+        const key = idStr(request._id);
+        const requests = localStorageService.getRequests(cid);
+        const exists = requests.some((r) => idStr(r._id) === key);
+        const updated = exists
+          ? requests.map((r) => (idStr(r._id) === key ? request : r))
+          : [...requests, request];
+        localStorageService.saveRequests(cid, updated);
+      }
+      callback(data);
+    };
+    return onSocketEvent(socket, 'request_updated', handler);
   },
 
   onCollectionImported: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('collection_imported', callback);
-    return () => socket.off('collection_imported', callback);
+    return onSocketEvent(socket, 'collection_imported', callback);
   },
 
-  // Listen for real-time data updates and sync to localStorage
   onTeamUpdated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('team_updated', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const teams = localStorageService.get(localStorageService.KEYS.TEAMS) || [];
-      const updated = teams.map(t => t._id === data.team._id ? data.team : t);
+      const updated = teams.map((t) => (idsEqual(t._id, data.team?._id) ? data.team : t));
       localStorageService.saveTeams(updated);
       callback(data);
-    });
-    return () => socket.off('team_updated', callback);
+    };
+    return onSocketEvent(socket, 'team_updated', handler);
   },
 
   onTeamDeleted: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('team_deleted', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const teams = localStorageService.get(localStorageService.KEYS.TEAMS) || [];
-      const updated = teams.filter(t => t._id !== data.teamId);
+      const updated = teams.filter((t) => !idsEqual(t._id, data.teamId));
       localStorageService.saveTeams(updated);
       callback(data);
-    });
-    return () => socket.off('team_deleted', callback);
+    };
+    return onSocketEvent(socket, 'team_deleted', handler);
   },
 
   onProjectUpdated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('project_updated', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const projects = localStorageService.get(localStorageService.KEYS.PROJECTS) || [];
-      const updated = projects.map(p => p._id === data.project._id ? data.project : p);
+      const updated = projects.map((p) => (idsEqual(p._id, data.project?._id) ? data.project : p));
       localStorageService.saveProjects(updated);
       callback(data);
-    });
-    return () => socket.off('project_updated', callback);
+    };
+    return onSocketEvent(socket, 'project_updated', handler);
   },
 
   onProjectDeleted: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('project_deleted', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const projects = localStorageService.get(localStorageService.KEYS.PROJECTS) || [];
-      const updated = projects.filter(p => p._id !== data.projectId);
+      const updated = projects.filter((p) => !idsEqual(p._id, data.projectId));
       localStorageService.saveProjects(updated);
       callback(data);
-    });
-    return () => socket.off('project_deleted', callback);
+    };
+    return onSocketEvent(socket, 'project_deleted', handler);
   },
 
   onCollectionUpdated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('collection_updated', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const collections = localStorageService.get(localStorageService.KEYS.COLLECTIONS) || [];
-      const updated = collections.map(c => c._id === data.collection._id ? data.collection : c);
+      const updated = collections.map((c) => (idsEqual(c._id, data.collection?._id) ? data.collection : c));
       localStorageService.saveCollections(updated);
       callback(data);
-    });
-    return () => socket.off('collection_updated', callback);
+    };
+    return onSocketEvent(socket, 'collection_updated', handler);
   },
 
   onCollectionCreated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('collection_created', (data) => {
-      // Update localStorage - add new collection if not exists
+    const handler = (data) => {
       const collections = localStorageService.get(localStorageService.KEYS.COLLECTIONS) || [];
-      if (!collections.find(c => c._id === data.collection._id)) {
-        const updated = [...collections, data.collection];
-        localStorageService.saveCollections(updated);
+      if (!collections.find((c) => idsEqual(c._id, data.collection?._id))) {
+        localStorageService.saveCollections([...collections, data.collection]);
       }
       callback(data);
-    });
-    return () => socket.off('collection_created', callback);
+    };
+    return onSocketEvent(socket, 'collection_created', handler);
   },
 
   onCollectionDeleted: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('collection_deleted', (data) => {
-      // Update localStorage
+    const handler = (data) => {
       const collections = localStorageService.get(localStorageService.KEYS.COLLECTIONS) || [];
-      const updated = collections.filter(c => c._id !== data.collectionId);
+      const updated = collections.filter((c) => !idsEqual(c._id, data.collectionId));
       localStorageService.saveCollections(updated);
       callback(data);
-    });
-    return () => socket.off('collection_deleted', callback);
-  },
-
-  onRequestUpdated: (callback) => {
-    const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('request_updated', (data) => {
-      // Update localStorage requests for this collection
-      if (data.request?.collectionId) {
-        const requests = localStorageService.getRequests(data.request.collectionId);
-        const updated = requests.map(r => r._id === data.request._id ? data.request : r);
-        localStorageService.saveRequests(data.request.collectionId, updated);
-      }
-      callback(data);
-    });
-    return () => socket.off('request_updated', callback);
+    };
+    return onSocketEvent(socket, 'collection_deleted', handler);
   },
 
   onRequestDeleted: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('request_deleted', (data) => {
-      // Update localStorage requests for this collection
+    const handler = (data) => {
       if (data.collectionId) {
         const requests = localStorageService.getRequests(data.collectionId);
-        const updated = requests.filter(r => r._id !== data.requestId);
-        localStorageService.saveRequests(data.collectionId, updated);
+        const updated = requests.filter((r) => !idsEqual(r._id, data.requestId));
+        localStorageService.saveRequests(idStr(data.collectionId), updated);
       }
       callback(data);
-    });
-    return () => socket.off('request_deleted', callback);
+    };
+    return onSocketEvent(socket, 'request_deleted', handler);
   },
 
   onRequestCreated: (callback) => {
     const socket = get().socket;
-    if (!socket) return () => { };
-    socket.on('request_created', (data) => {
-      // Update localStorage requests for this collection
-      if (data.request?.collectionId) {
-        const requests = localStorageService.getRequests(data.request.collectionId);
-        const updated = [...requests, data.request];
-        localStorageService.saveRequests(data.request.collectionId, updated);
+    const handler = (data) => {
+      const request = data?.request;
+      if (request?.collectionId) {
+        const cid = idStr(request.collectionId);
+        const key = idStr(request._id);
+        const requests = localStorageService.getRequests(cid);
+        if (!requests.some((r) => idStr(r._id) === key)) {
+          localStorageService.saveRequests(cid, [...requests, request]);
+        }
       }
       callback(data);
-    });
-    return () => socket.off('request_created', callback);
+    };
+    return onSocketEvent(socket, 'request_created', handler);
   },
 
   onWorkflowUpdated: (callback) => {

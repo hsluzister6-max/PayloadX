@@ -3,13 +3,12 @@ import { persist } from 'zustand/middleware';
 import api, {
   clearAuthTokens,
   persistAuthTokens,
+  getStoredAccessToken,
   getStoredRefreshToken,
 } from '@/lib/api';
 
 function applySession(set, data, extras = {}) {
-  const rememberMe = Boolean(
-    extras.rememberMe ?? data.rememberMe ?? true,
-  );
+  const rememberMe = Boolean(extras.rememberMe ?? data.rememberMe ?? true);
   persistAuthTokens(
     {
       token: data.token,
@@ -38,6 +37,7 @@ export const useAuthStore = create(
       rememberMe: true,
       isLoading: false,
       error: null,
+      hydrated: false,
 
       login: async (email, password, rememberMe = true) => {
         set({ isLoading: true, error: null });
@@ -59,10 +59,8 @@ export const useAuthStore = create(
       loginWithGoogle: async (payload) => {
         set({ isLoading: true, error: null });
         try {
-          // payload can be { accessToken } or { code, redirectUri }
           const body = typeof payload === 'string' ? { accessToken: payload } : payload;
           const { data } = await api.post('/api/auth/google', body);
-
           applySession(set, data, { rememberMe: true });
           return { success: true };
         } catch (err) {
@@ -76,7 +74,6 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
         try {
           const { data } = await api.post('/api/auth/signup', { name, email, password });
-          // Signup stages OTP — may not return tokens yet
           if (data?.token) {
             applySession(set, data, { rememberMe: true });
           } else {
@@ -102,7 +99,6 @@ export const useAuthStore = create(
           /* ignore network errors during logout */
         }
 
-        // 1. Disconnect Sockets first to clear presence on server
         try {
           const { useSocketStore } = await import('@/store/socketStore');
           useSocketStore.getState().disconnect();
@@ -110,7 +106,6 @@ export const useAuthStore = create(
           console.error('[Logout] Socket disconnect failed:', e);
         }
 
-        // 2. Clear Rust-side data (Cookies, etc)
         try {
           const { invoke } = await import('@tauri-apps/api/tauri');
           await invoke('clear_all_cookie_sessions');
@@ -118,7 +113,6 @@ export const useAuthStore = create(
           console.error('[Logout] Tauri cleanup failed:', e);
         }
 
-        // 3. Clear Sync mappings
         try {
           const { syncService } = await import('@/services/syncService');
           syncService.clearIdMappings();
@@ -126,12 +120,14 @@ export const useAuthStore = create(
           console.error('[Logout] Sync cleanup failed:', e);
         }
 
-        // 4. Clear auth tokens + storage
+        // Clear auth keys only — never wipe entire localStorage
         clearAuthTokens();
-        localStorage.clear();
-        sessionStorage.clear();
+        try {
+          localStorage.removeItem('syncnest-auth');
+        } catch {
+          /* ignore */
+        }
 
-        // 5. Reset all memory stores to initial state
         try {
           const { useCollectionStore } = await import('@/store/collectionStore');
           const { useProjectStore } = await import('@/store/projectStore');
@@ -158,16 +154,22 @@ export const useAuthStore = create(
           console.error('[Logout] Store reset failed:', e);
         }
 
-        set({ user: null, token: null, refreshToken: null });
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          rememberMe: true,
+          error: null,
+        });
       },
 
       fetchMe: async () => {
-        const token = localStorage.getItem('payloadx_token');
-        if (!token && !getStoredRefreshToken()) return;
+        const access = getStoredAccessToken();
+        const refresh = getStoredRefreshToken();
+        if (!access && !refresh) return;
 
         if (!navigator.onLine) {
-          // App initialized without an internet connection,
-          // simply rely on persisted zustand state rather than kicking them out.
+          // Offline: keep persisted session; do not force logout
           return;
         }
 
@@ -175,18 +177,26 @@ export const useAuthStore = create(
           const { data } = await api.get('/api/auth/me');
           set({
             user: data.user,
-            token: localStorage.getItem('payloadx_token'),
+            token: getStoredAccessToken(),
             refreshToken: getStoredRefreshToken(),
           });
         } catch (err) {
-          // If the internet drops the instant the request fires
-          if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !navigator.onLine) {
+          // Network / timeout — keep session
+          if (
+            !err.response ||
+            err.message === 'Network Error' ||
+            err.code === 'ERR_NETWORK' ||
+            err.code === 'ECONNABORTED' ||
+            !navigator.onLine
+          ) {
             return;
           }
 
-          // api interceptor already attempted refresh; if still failing, clear session
-          clearAuthTokens();
-          set({ user: null, token: null, refreshToken: null });
+          // Interceptor already tried refresh. If refresh token still exists,
+          // keep UI session (transient server error). Only clear when both gone.
+          if (!getStoredRefreshToken() && !getStoredAccessToken()) {
+            set({ user: null, token: null, refreshToken: null });
+          }
         }
       },
 
@@ -244,7 +254,7 @@ export const useAuthStore = create(
     }),
     {
       name: 'syncnest-auth',
-      // Only persist session across restarts when "Remember me" is on
+      // Persist session across restarts when "Remember me" is on (default)
       partialize: (state) =>
         state.rememberMe
           ? {
@@ -264,6 +274,7 @@ export const useAuthStore = create(
             { rememberMe: true },
           );
         }
+        useAuthStore.setState({ hydrated: true });
       },
     }
   )

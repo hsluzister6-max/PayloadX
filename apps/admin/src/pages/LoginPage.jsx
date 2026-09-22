@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../store/authStore';
-import { DEFAULT_API_URL } from '../config';
-import { getApiBaseUrl, setApiBaseUrl } from '../lib/api';
 
 function GoogleIcon() {
   return (
@@ -33,7 +31,6 @@ export default function LoginPage() {
   const { login, loginWithGoogle, isLoading, error, user, token } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrl] = useState(getApiBaseUrl() || DEFAULT_API_URL);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
@@ -44,15 +41,14 @@ export default function LoginPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    const result = await login(email.trim(), password, apiUrl.trim());
+    const result = await login(email.trim(), password);
     if (result.success) navigate('/', { replace: true });
   };
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       setGoogleLoading(true);
-      if (apiUrl.trim()) setApiBaseUrl(apiUrl.trim());
-      const result = await loginWithGoogle(tokenResponse.access_token, apiUrl.trim());
+      const result = await loginWithGoogle(tokenResponse.access_token);
       setGoogleLoading(false);
       if (result.success) navigate('/', { replace: true });
     },
@@ -79,24 +75,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <label className="field">
-          <span>API base URL</span>
-          <input
-            value={apiUrl}
-            onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="https://… or http://localhost:3001"
-            autoComplete="url"
-          />
-        </label>
-
         <button
           type="button"
           className="btn-google"
           disabled={busy}
-          onClick={() => {
-            if (apiUrl.trim()) setApiBaseUrl(apiUrl.trim());
-            googleLogin();
-          }}
+          onClick={() => googleLogin()}
         >
           {googleLoading ? (
             <span className="btn-spinner" />

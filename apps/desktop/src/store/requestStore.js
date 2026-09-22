@@ -17,7 +17,10 @@ import { isTempId, stripTempIds } from '@/utils/tempId';
 
 function rebuildTabsById(openTabs) {
   const m = new Map();
-  (openTabs || []).forEach((t) => m.set(t.id, t));
+  (openTabs || []).forEach((t) => {
+    const id = t?.id != null ? String(t.id) : '';
+    if (id) m.set(id, t);
+  });
   return m;
 }
 
@@ -173,10 +176,11 @@ export const useRequestStore = create(
         };
 
         set((state) => {
-          const tabId = newReq._id;
-          // O(1) lookup via Map
-          if (tabId && state._tabsById.has(tabId)) {
-            const existingTab = state._tabsById.get(tabId);
+          const tabId = newReq._id != null ? String(newReq._id) : '';
+          const existingTab = tabId
+            ? (state._tabsById.get(tabId) || state.openTabs.find((t) => String(t.id) === tabId))
+            : null;
+          if (existingTab) {
 
             // Guard against clobbering unsaved local edits: re-opening the same
             // request (sidebar click) or a server push (socket update / collection
@@ -197,7 +201,7 @@ export const useRequestStore = create(
             const updatedTab = { ...existingTab, request: newReq, originalRequest: deepClone(newReq) };
             const newTabsById = new Map(state._tabsById);
             newTabsById.set(tabId, updatedTab);
-            const openTabs = state.openTabs.map((t) => (t.id === tabId ? updatedTab : t));
+            const openTabs = state.openTabs.map((t) => (String(t.id) === tabId ? updatedTab : t));
             localStorageService.saveCurrentRequest(newReq);
             return {
               currentRequest: newReq,
@@ -1066,15 +1070,25 @@ export const useRequestStore = create(
 
         const merged = [...reconciledServerRequests];
         tempIdRequests.forEach(tempRequest => {
-          if (!merged.find(r => r._id === tempRequest._id)) {
+          if (!merged.find(r => String(r._id) === String(tempRequest._id))) {
             merged.push(tempRequest);
           }
         });
 
-        // Save merged to localStorage
-        localStorageService.saveRequests(collectionId, merged);
+        const unique = [];
+        const seen = new Set();
+        for (const request of merged) {
+          const id = request?._id != null ? String(request._id) : '';
+          if (id) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+          }
+          unique.push(request);
+        }
 
-        return merged;
+        localStorageService.saveRequests(collectionId, unique);
+
+        return unique;
       },
 
       // Syncs all requests for a project or team at once
@@ -1166,7 +1180,8 @@ export const useRequestStore = create(
         if (persistedState?.openTabs) {
           const tabsById = new Map();
           persistedState.openTabs.forEach(tab => {
-            tabsById.set(tab.id, tab);
+            const id = tab?.id != null ? String(tab.id) : '';
+            if (id) tabsById.set(id, { ...tab, id });
           });
           // Top-level `activeTab` (Params/Body/Auth sub-tab) isn't persisted directly —
           // restore it from the active tab's own `activeTab` so reload doesn't reset to Params.

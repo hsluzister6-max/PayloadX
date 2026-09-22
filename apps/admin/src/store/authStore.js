@@ -1,23 +1,35 @@
 import { create } from 'zustand';
-import api, { setToken, getToken, setApiBaseUrl, getApiBaseUrl } from '../lib/api';
+import api, {
+  setToken,
+  getToken,
+  setRefreshToken,
+  getRefreshToken,
+  clearAuth,
+  setApiBaseUrl,
+  getApiBaseUrl,
+} from '../lib/api';
 
 function applyAdminSession(set, data) {
   if (!data?.user?.isPlatformAdmin) {
-    setToken(null);
+    clearAuth();
     set({
       isLoading: false,
       error:
         'This account is not a platform admin. Only sundansharma600@gmail.com (and ADMIN_EMAILS) can access.',
       user: null,
       token: null,
+      refreshToken: null,
     });
     return { success: false };
   }
 
   setToken(data.token);
+  if (data.refreshToken) setRefreshToken(data.refreshToken);
+
   set({
     user: data.user,
     token: data.token,
+    refreshToken: data.refreshToken || getRefreshToken(),
     apiUrl: getApiBaseUrl(),
     isLoading: false,
     error: null,
@@ -28,6 +40,7 @@ function applyAdminSession(set, data) {
 export const useAuthStore = create((set) => ({
   user: null,
   token: getToken(),
+  refreshToken: getRefreshToken(),
   apiUrl: getApiBaseUrl(),
   isLoading: false,
   error: null,
@@ -44,7 +57,7 @@ export const useAuthStore = create((set) => ({
       return applyAdminSession(set, data);
     } catch (err) {
       const error = err.response?.data?.error || err.message || 'Login failed';
-      set({ isLoading: false, error, user: null, token: null });
+      set({ isLoading: false, error, user: null, token: null, refreshToken: null });
       return { success: false, error };
     }
   },
@@ -65,35 +78,58 @@ export const useAuthStore = create((set) => ({
       return applyAdminSession(set, data);
     } catch (err) {
       const error = err.response?.data?.error || err.message || 'Google login failed';
-      set({ isLoading: false, error, user: null, token: null });
+      set({ isLoading: false, error, user: null, token: null, refreshToken: null });
       return { success: false, error };
     }
   },
 
   fetchMe: async () => {
-    if (!getToken()) {
-      set({ user: null, token: null });
+    if (!getToken() && !getRefreshToken()) {
+      set({ user: null, token: null, refreshToken: null });
       return null;
     }
     set({ isLoading: true });
     try {
       const { data } = await api.get('/api/auth/me');
       if (!data?.user?.isPlatformAdmin) {
-        setToken(null);
-        set({ user: null, token: null, isLoading: false, error: 'Not a platform admin' });
+        clearAuth();
+        set({ user: null, token: null, refreshToken: null, isLoading: false, error: 'Not a platform admin' });
         return null;
       }
-      set({ user: data.user, token: getToken(), isLoading: false, error: null });
+      set({
+        user: data.user,
+        token: getToken(),
+        refreshToken: getRefreshToken(),
+        isLoading: false,
+        error: null,
+      });
       return data.user;
-    } catch {
-      setToken(null);
-      set({ user: null, token: null, isLoading: false });
+    } catch (err) {
+      // Network / refresh failure that kept tokens → keep trying later
+      if (!err.response || !navigator.onLine) {
+        set({ isLoading: false });
+        return getToken() ? { offline: true } : null;
+      }
+      if (!getRefreshToken()) {
+        clearAuth();
+        set({ user: null, token: null, refreshToken: null, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
       return null;
     }
   },
 
-  logout: () => {
-    setToken(null);
-    set({ user: null, token: null, error: null });
+  logout: async () => {
+    const refreshToken = getRefreshToken();
+    try {
+      if (refreshToken) {
+        await api.post('/api/auth/logout', { refreshToken });
+      }
+    } catch {
+      /* ignore */
+    }
+    clearAuth();
+    set({ user: null, token: null, refreshToken: null, error: null });
   },
 }));

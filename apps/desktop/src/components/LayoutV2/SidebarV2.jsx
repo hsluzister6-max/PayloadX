@@ -16,6 +16,40 @@ import { localStorageService } from '@/services/localStorageService';
 import { useConnectivityStore } from '@/store/connectivityStore';
 import RequestTypeFilter, { matchesRequestTypeFilter, REQUEST_TYPE_FILTERS, TypeIcon } from '@/components/LayoutV2/RequestTypeFilter';
 import CollectionPickerModal from '@/components/LayoutV2/CollectionPickerModal';
+import { dedupeById, filterRequestsForCollection, folderKey, idStr, idsEqual, requestKey } from '@/utils/ids';
+import { avatarInitial, hasUsableAvatar } from '@/components/Profile/UserAvatar';
+
+function RailProfileAvatar({ user, active, onClick }) {
+  const src = hasUsableAvatar(user?.avatar) ? String(user.avatar).trim() : '';
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  const showPhoto = Boolean(src) && !failed;
+
+  return (
+    <button
+      type="button"
+      className={`sdbv2-activity-avatar ${active ? 'sdbv2-activity-avatar--active' : ''}`}
+      onClick={onClick}
+      title={user?.email || 'Profile'}
+    >
+      {showPhoto ? (
+        <img
+          src={src}
+          alt=""
+          className="sdbv2-activity-avatar__img"
+          draggable={false}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span className="user-avatar-letter">{avatarInitial(user)}</span>
+      )}
+    </button>
+  );
+}
 
 const NAV_ITEMS = [
     {
@@ -331,16 +365,19 @@ export default function SidebarV2({
     // Use a derived state for grouped collections to avoid recalculating during render
     const collectionsByProject = useMemo(() => {
         return collections.reduce((acc, col) => {
-            const pid = col.projectId;
+            const pid = idStr(col.projectId);
+            if (!pid) return acc;
             if (!acc[pid]) acc[pid] = [];
-            acc[pid].push(col);
+            if (!acc[pid].some((existing) => idsEqual(existing._id, col._id))) {
+                acc[pid].push(col);
+            }
             return acc;
         }, {});
     }, [collections]);
 
     const requestTypeCounts = useMemo(() => {
         const scoped = currentProject
-            ? requests.filter((r) => r.projectId === currentProject._id || (collectionsByProject[currentProject._id] || []).some((c) => c._id === r.collectionId))
+            ? requests.filter((r) => idsEqual(r.projectId, currentProject._id) || (collectionsByProject[idStr(currentProject._id)] || []).some((c) => idsEqual(c._id, r.collectionId)))
             : requests;
         return scoped.reduce((acc, r) => {
             const key = r.protocol || 'http';
@@ -421,7 +458,7 @@ export default function SidebarV2({
     useEffect(() => {
         if (filteredCollections.length > 0) {
             expandedCollections.forEach(id => {
-                const possessesData = requests.some(r => r.collectionId === id);
+                const possessesData = requests.some((r) => idsEqual(r.collectionId, id));
                 const isCurrentlyLoading = loadingCollections[id];
                 const isInitialized = initializedCollections.has(id);
 
@@ -1084,13 +1121,11 @@ export default function SidebarV2({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                     </button>
-                    <button
-                        className={`sdbv2-activity-avatar ${activeV2Nav === 'profile' ? 'sdbv2-activity-avatar--active' : ''}`}
-                        onClick={() => setActiveV2Nav('profile')}
-                        title={user?.email || 'Profile'}
-                    >
-                        {(user?.name || user?.email)?.[0]?.toUpperCase() || 'U'}
-                    </button>
+                    <RailProfileAvatar
+                      user={user}
+                      active={activeV2Nav === 'profile'}
+                      onClick={() => setActiveV2Nav('profile')}
+                    />
                 </div>
             </nav>
 
@@ -1198,10 +1233,20 @@ export default function SidebarV2({
                             </div>
                             <div className="flex flex-col gap-0.5 overflow-y-auto pr-1 flex-1 min-h-0">
                                 {(() => {
-                                    const projectCollections = collections.filter((c) => c.projectId === currentProject?._id);
-                                    const colIds = new Set(projectCollections.map((c) => c._id));
+                                    const projectCollections = collections.filter((c) => idsEqual(c.projectId, currentProject?._id));
+                                    const colIds = new Set(projectCollections.map((c) => idStr(c._id)));
+                                    const seen = new Set();
                                     const recent = requests
-                                        .filter((r) => colIds.has(r.collectionId))
+                                        .filter((r) => {
+                                            const cid = idStr(r.collectionId);
+                                            const key = requestKey(r);
+                                            if (!colIds.has(cid)) return false;
+                                            if (key) {
+                                                if (seen.has(key)) return false;
+                                                seen.add(key);
+                                            }
+                                            return true;
+                                        })
                                         .slice()
                                         .sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
                                         .slice(0, 20);
@@ -1321,14 +1366,14 @@ export default function SidebarV2({
                                 <div className="flex-1 overflow-y-auto pr-1 mt-1">
                                     {currentProject ? (
                                         (() => {
-                                            const projectCollections = collectionsByProject[currentProject._id] || [];
+                                            const projectCollections = collectionsByProject[idStr(currentProject._id)] || [];
                                             if (projectCollections.length === 0) {
                                                 return <p className="sdbv2-empty-note p-4 text-center">No collections in this project</p>;
                                             }
 
                                             return projectCollections.map((col) => {
                                                 // Load requests for this collection from storage if not already in store
-                                                const storeRequests = requests.filter(r => r.collectionId === col._id);
+                                                const storeRequests = filterRequestsForCollection(requests, col._id);
                                                 const localRequests = (storeRequests.length > 0
                                                     ? storeRequests
                                                     : localStorageService.getRequests(col._id)
@@ -1414,7 +1459,7 @@ export default function SidebarV2({
                                     {showCollectionsSection && (
                                         <div className="flex flex-col gap-0.5 mt-0.5">
                                             {/* Collections for the active project — no project row (project is selected in the header) */}
-                                            {(collectionsByProject[currentProject._id] || []).map((col) => {
+                                            {(collectionsByProject[idStr(currentProject._id)] || []).map((col) => {
                                                 const isExp = expandedCollections.has(col._id);
                                                 return (
                                                     <div key={col._id} className="sdbv2-tree-node">
@@ -1475,7 +1520,7 @@ export default function SidebarV2({
                                                                     <>
                                                                         <RecursiveFolderListV2
                                                                             folders={col.folders || []}
-                                                                            requests={filteredRequests.filter(r => r.collectionId === col._id)}
+                                                                            requests={filterRequestsForCollection(filteredRequests, col._id)}
                                                                             parentId={null}
                                                                             collectionId={col._id}
                                                                             expandedFolders={expandedFolders}
@@ -1487,12 +1532,12 @@ export default function SidebarV2({
                                                                             onAddRequest={handleQuickCreateRequest}
                                                                             onFolderContextMenu={showFolderContextMenu}
                                                                         />
-                                                                        {filteredRequests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length === 0 && (
+                                                                        {filterRequestsForCollection(filteredRequests, col._id).length === 0 && (col.folders || []).length === 0 && (
                                                                             <div className="sdbv2-empty-note py-1 pl-4 opacity-50">
                                                                                 {requestTypeFilter !== 'all' ? 'No requests of this type' : 'Empty collection'}
                                                                             </div>
                                                                         )}
-                                                                        {filteredRequests.filter(r => r.collectionId === col._id).length === 0 && (col.folders || []).length > 0 && requestTypeFilter !== 'all' && (
+                                                                        {filterRequestsForCollection(filteredRequests, col._id).length === 0 && (col.folders || []).length > 0 && requestTypeFilter !== 'all' && (
                                                                             <div className="sdbv2-empty-note py-1 pl-4 opacity-50">No requests of this type</div>
                                                                         )}
                                                                     </>
@@ -1635,19 +1680,21 @@ function RecursiveFolderListV2({
     onAddRequest,
     onFolderContextMenu
 }) {
-    const normalizedParentId = parentId || null;
+    const uniqueFolders = dedupeById(folders || [], 'id');
+    const uniqueRequests = dedupeById(requests || []);
+    const normalizedParentId = parentId ? idStr(parentId) : '';
 
-    const currentLevelFolders = folders.filter(f => (f.parentId || null) === normalizedParentId);
-    const currentLevelRequests = requests.filter(r => (r.folderId || null) === normalizedParentId);
+    const currentLevelFolders = uniqueFolders.filter((f) => idStr(f.parentId || '') === normalizedParentId);
+    const currentLevelRequests = uniqueRequests.filter((r) => idStr(r.folderId || '') === normalizedParentId);
 
     return (
         <>
             {currentLevelFolders.map((folder) => {
-                const folderId = folder.id || folder._id;
+                const folderId = folderKey(folder);
                 const isExpanded = expandedFolders.has(folderId);
 
-                const childRequests = requests.filter(r => (r.folderId || null) === folderId);
-                const childFolders = folders.filter(f => (f.parentId || null) === folderId);
+                const childRequests = uniqueRequests.filter((r) => idStr(r.folderId) === idStr(folderId));
+                const childFolders = uniqueFolders.filter((f) => idStr(f.parentId) === idStr(folderId));
                 const totalItems = childRequests.length + childFolders.length;
 
                 return (
@@ -1686,8 +1733,8 @@ function RecursiveFolderListV2({
                         {isExpanded && (
                             <div className="sdbv2-indent">
                                 <RecursiveFolderListV2
-                                    folders={folders}
-                                    requests={requests}
+                                    folders={uniqueFolders}
+                                    requests={uniqueRequests}
                                     parentId={folderId}
                                     collectionId={collectionId}
                                     expandedFolders={expandedFolders}
@@ -1707,10 +1754,10 @@ function RecursiveFolderListV2({
 
             {currentLevelRequests.map((req) => (
                 <SidebarRequest
-                    key={req._id || req.id}
+                    key={requestKey(req) || req.id}
                     request={req}
                     onSelect={onSelectRequest}
-                    isActive={currentRequestId === req._id}
+                    isActive={idsEqual(currentRequestId, req._id)}
                     onContextMenu={onContextMenu ? (e) => onContextMenu(e, req) : undefined}
                 />
             ))}

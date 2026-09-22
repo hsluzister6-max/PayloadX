@@ -13,6 +13,8 @@ import { save } from '@tauri-apps/api/dialog';
 import { writeTextFile } from '@tauri-apps/api/fs';
 import { exportToPostman } from '@/utils/postmanExporter';
 import { confirmDialog } from '@/utils/confirmDialog';
+import { filterRequestsForCollection } from '@/utils/ids';
+import UserAvatar from '@/components/Profile/UserAvatar';
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
@@ -257,13 +259,11 @@ export default function Sidebar() {
   };
 
   const filteredRequests = (collectionId) =>
-    requests.filter(
-      (r) =>
-        r.collectionId === collectionId &&
-        (searchQuery
-          ? r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    filterRequestsForCollection(requests, collectionId).filter((r) =>
+      searchQuery
+        ? r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           r.url.toLowerCase().includes(searchQuery.toLowerCase())
-          : true)
+        : true
     );
 
   return (
@@ -559,10 +559,14 @@ export default function Sidebar() {
             className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-surface-400 hover:text-tx-primary hover:bg-surface-800 transition-all w-full"
           >
             <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+              className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 overflow-hidden"
               style={{ background: 'var(--surface-3)', color: 'var(--text-primary)', border: '1px solid var(--border-2)' }}
             >
-              {user?.name?.[0]?.toUpperCase()}
+              <UserAvatar
+                user={user}
+                className="w-full h-full flex items-center justify-center overflow-hidden"
+                imgClassName="w-full h-full object-cover"
+              />
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="text-xs text-tx-primary truncate leading-tight">{user?.name}</p>
