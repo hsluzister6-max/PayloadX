@@ -20,7 +20,7 @@ export const useSocketStore = create((set, get) => ({
 
   connect: () => {
     // Always follow the active server selection:
-    //   cloud (payloadx) → https://payload-x-884697093779.europe-west1.run.app
+    //   cloud (payloadx) → https://payloadx.impactrealty.ae
     //   local            → URL the user entered
     const SOCKET_URL = getServerBaseUrl();
 
